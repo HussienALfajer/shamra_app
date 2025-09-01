@@ -1,0 +1,79 @@
+import '../models/order.dart';
+import '../services/order_service.dart';
+
+class OrderRepository {
+  // Create order
+  Future<Order> createOrder({
+    required String customerId,
+    required String branchId,
+    required List<OrderItem> items,
+    required double taxAmount,
+    required double discountAmount,
+    String? notes,
+  }) async {
+    try {
+      return await OrderService.createOrder(
+        customerId: customerId,
+        branchId: branchId,
+        items: items,
+        taxAmount: taxAmount,
+        discountAmount: discountAmount,
+        notes: notes,
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Get orders for customer
+  Future<List<Order>> getCustomerOrders({
+    required String customerId,
+    int page = 1,
+    int limit = 20,
+    String? status,
+  }) async {
+    try {
+      return await OrderService.getCustomerOrders(
+        customerId: customerId,
+        page: page,
+        limit: limit,
+        status: status,
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Get order by ID
+  Future<Order> getOrderById(String orderId) async {
+    try {
+      return await OrderService.getOrderById(orderId);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Get order by number
+  Future<Order> getOrderByNumber(String orderNumber) async {
+    try {
+      return await OrderService.getOrderByNumber(orderNumber);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Update order status
+  Future<Order> updateOrderStatus({
+    required String orderId,
+    required String status,
+  }) async {
+    try {
+      return await OrderService.updateOrderStatus(
+        orderId: orderId,
+        status: status,
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+}
