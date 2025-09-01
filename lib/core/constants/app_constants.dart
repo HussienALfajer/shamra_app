@@ -7,12 +7,14 @@ class ApiConstants {
   static const String register = '/auth/register';
   static const String profile = '/auth/profile';
   static const String logout = '/auth/logout';
-
+  static const String selectBranch = '/auth/select-branch';
   static const String products = '/products';
   static const String categories = '/categories';
   static const String branches = '/branches';
   static const String customers = '/customers';
   static const String orders = '/orders';
+  // my orders
+  static const String myOrders = '/orders/my';
 
   // Product specific
   static const String featuredProducts = '/products/featured';
@@ -38,6 +40,7 @@ class AppConstants {
   static const String tokenKey = 'jwt_token';
   static const String refreshTokenKey = 'jwt_refresh_token';
   static const String userKey = 'user_data';
+  static const String branchIdKey = 'branch_id';
   static const String languageKey = 'app_language';
   static const String themeKey = 'app_theme';
 

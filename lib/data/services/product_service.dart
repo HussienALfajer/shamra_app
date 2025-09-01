@@ -31,10 +31,10 @@ class ProductService {
         'products': (data['data'] as List)
             .map((item) => Product.fromJson(item))
             .toList(),
-        'totalPages': data['totalPages'] ?? 1,
-        'currentPage': data['currentPage'] ?? 1,
-        'totalItems': data['totalItems'] ?? 0,
-        'hasNextPage': data['hasNextPage'] ?? false,
+        'totalPages': data['pagination']['pages'] ?? 1,
+        'currentPage': data['pagination']['page'] ?? 1,
+        'totalItems': data['pagination']['total'] ?? 0,
+        'hasNextPage': data['pagination']['hasNext'] ?? false,
       };
     } on DioException catch (e) {
       throw _handleError(e);
@@ -76,7 +76,9 @@ class ProductService {
   // Get product by ID
   static Future<Product> getProductById(String productId) async {
     try {
-      final response = await DioService.get('${ApiConstants.products}/$productId');
+      final response = await DioService.get(
+        '${ApiConstants.products}/$productId',
+      );
       return Product.fromJson(response.data['data']);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -86,7 +88,9 @@ class ProductService {
   // Get product by SKU
   static Future<Product> getProductBySku(String sku) async {
     try {
-      final response = await DioService.get('${ApiConstants.products}/sku/$sku');
+      final response = await DioService.get(
+        '${ApiConstants.products}/sku/$sku',
+      );
       return Product.fromJson(response.data['data']);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -96,7 +100,9 @@ class ProductService {
   // Get product by slug
   static Future<Product> getProductBySlug(String slug) async {
     try {
-      final response = await DioService.get('${ApiConstants.products}/slug/$slug');
+      final response = await DioService.get(
+        '${ApiConstants.products}/slug/$slug',
+      );
       return Product.fromJson(response.data['data']);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -158,7 +164,7 @@ class ProductService {
     if (error.response?.data != null) {
       return error.response!.data['message'] ?? 'Something went wrong';
     }
-    
+
     switch (error.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:

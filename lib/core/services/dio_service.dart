@@ -1,4 +1,6 @@
 import 'package:dio/dio.dart';
+import 'package:pretty_dio_logger/pretty_dio_logger.dart';
+import 'package:flutter/foundation.dart';
 import '../constants/app_constants.dart';
 import 'storage_service.dart';
 
@@ -24,7 +26,28 @@ class DioService {
   }
 
   static void _addInterceptors() {
-    // Request interceptor
+    // Add Pretty Dio Logger (only in debug mode)
+    if (kDebugMode) {
+      _dio.interceptors.add(
+        PrettyDioLogger(
+          requestHeader: true,
+          requestBody: true,
+          responseHeader: true,
+          responseBody: false,
+          error: true,
+          compact: false,
+          maxWidth: 90,
+          enabled: kDebugMode,
+          filter: (options, args) {
+            // You can filter which requests to log
+            // For example, exclude certain endpoints
+            return !options.path.contains('/auth/refresh');
+          },
+        ),
+      );
+    }
+
+    // Add authentication interceptor
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
@@ -33,28 +56,14 @@ class DioService {
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
-
-          print('REQUEST[${options.method}] => PATH: ${options.path}');
-          print('REQUEST DATA: ${options.data}');
-          
           handler.next(options);
         },
-        onResponse: (response, handler) {
-          print('RESPONSE[${response.statusCode}] => PATH: ${response.requestOptions.path}');
-          print('RESPONSE DATA: ${response.data}');
-          
-          handler.next(response);
-        },
         onError: (error, handler) {
-          print('ERROR[${error.response?.statusCode}] => PATH: ${error.requestOptions.path}');
-          print('ERROR MESSAGE: ${error.message}');
-          
           // Handle token expiration
           if (error.response?.statusCode == 401) {
             StorageService.removeToken();
             // You can add navigation to login page here
           }
-          
           handler.next(error);
         },
       ),

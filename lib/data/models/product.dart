@@ -66,8 +66,12 @@ class Product {
       isOnSale: json['isOnSale'] ?? false,
       slug: json['slug'] ?? '',
       images: List<String>.from(json['images'] ?? []),
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+        json['createdAt'] ?? DateTime.now().toIso8601String(),
+      ),
+      updatedAt: DateTime.parse(
+        json['updatedAt'] ?? DateTime.now().toIso8601String(),
+      ),
     );
   }
 
@@ -98,19 +102,20 @@ class Product {
   }
 
   double get displayPrice => isOnSale && salePrice != null ? salePrice! : price;
-  
+
   bool get hasDiscount => isOnSale && salePrice != null && salePrice! < price;
-  
+
   double? get discountPercentage {
     if (!hasDiscount) return null;
     return ((price - salePrice!) / price) * 100;
   }
-  
+
   String get displayName => nameAr.isNotEmpty ? nameAr : name;
-  
-  String get displayDescription => descriptionAr?.isNotEmpty == true ? descriptionAr! : (description ?? '');
-  
+
+  String get displayDescription =>
+      descriptionAr?.isNotEmpty == true ? descriptionAr! : (description ?? '');
+
   bool get inStock => stockQuantity > 0;
-  
+
   String get firstImage => images.isNotEmpty ? images.first : '';
 }

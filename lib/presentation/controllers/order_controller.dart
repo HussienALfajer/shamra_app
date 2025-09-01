@@ -39,13 +39,9 @@ class OrderController extends GetxController {
       _isLoading.value = true;
       _errorMessage.value = '';
 
-      final orders = await _orderRepository.getCustomerOrders(
-        customerId: authController.currentUser!.id,
-        limit: 50,
-      );
+      final orders = await _orderRepository.getCustomerOrders();
 
       _orders.value = orders;
-
     } catch (e) {
       _errorMessage.value = e.toString();
       Get.snackbar(
@@ -122,7 +118,6 @@ class OrderController extends GetxController {
       );
 
       return true;
-
     } catch (e) {
       _errorMessage.value = e.toString();
       Get.snackbar(
@@ -184,7 +179,9 @@ class OrderController extends GetxController {
 
   // Get orders by status
   List<Order> getOrdersByStatus(String status) {
-    return _orders.where((order) => order.status.toLowerCase() == status.toLowerCase()).toList();
+    return _orders
+        .where((order) => order.status.toLowerCase() == status.toLowerCase())
+        .toList();
   }
 
   // Get pending orders
@@ -205,7 +202,10 @@ class OrderController extends GetxController {
   // Calculate order summary
   Map<String, dynamic> get orderSummary {
     final totalOrders = _orders.length;
-    final totalAmount = _orders.fold(0.0, (sum, order) => sum + order.totalAmount);
+    final totalAmount = _orders.fold(
+      0.0,
+      (sum, order) => sum + order.totalAmount,
+    );
     final pendingCount = pendingOrders.length;
     final deliveredCount = deliveredOrders.length;
 
@@ -254,10 +254,7 @@ class OrderController extends GetxController {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Close'),
-          ),
+          TextButton(onPressed: () => Get.back(), child: const Text('Close')),
           ElevatedButton(
             onPressed: () {
               Get.back();

@@ -48,6 +48,21 @@ class AuthService {
     }
   }
 
+  // selecte branch return new access_token and refresh_token
+  static Future<AuthResponseApi> selectBranch({
+    required String branchId,
+  }) async {
+    try {
+      final response = await DioService.post(
+        ApiConstants.selectBranch,
+        data: {'branchId': branchId},
+      );
+      return AuthResponseApi.fromJson(response.data);
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   // Get Profile
   static Future<User> getProfile() async {
     try {

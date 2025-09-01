@@ -11,12 +11,12 @@ class ProductController extends GetxController {
   final RxList<Product> _featuredProducts = <Product>[].obs;
   final RxList<Product> _onSaleProducts = <Product>[].obs;
   final RxList<Product> _searchResults = <Product>[].obs;
-  
+
   final RxBool _isLoading = false.obs;
   final RxBool _isLoadingMore = false.obs;
   final RxBool _hasMoreData = true.obs;
   final RxString _errorMessage = ''.obs;
-  
+
   final RxInt _currentPage = 1.obs;
   final RxString _currentCategoryId = ''.obs;
   final RxString _searchQuery = ''.obs;
@@ -26,12 +26,12 @@ class ProductController extends GetxController {
   List<Product> get featuredProducts => _featuredProducts;
   List<Product> get onSaleProducts => _onSaleProducts;
   List<Product> get searchResults => _searchResults;
-  
+
   bool get isLoading => _isLoading.value;
   bool get isLoadingMore => _isLoadingMore.value;
   bool get hasMoreData => _hasMoreData.value;
   String get errorMessage => _errorMessage.value;
-  
+
   int get currentPage => _currentPage.value;
   String get currentCategoryId => _currentCategoryId.value;
   String get searchQuery => _searchQuery.value;
@@ -64,9 +64,10 @@ class ProductController extends GetxController {
       final result = await _productRepository.getProducts(
         page: _currentPage.value,
         limit: 20,
-        categoryId: categoryId ?? _currentCategoryId.value,
-        search: search ?? _searchQuery.value,
+        // categoryId: categoryId ?? _currentCategoryId.value,
+        // search: search ?? _searchQuery.value,
       );
+      print("NO ERROR IN PRODUCT CONTROLLER");
 
       final newProducts = result['products'] as List<Product>;
 
@@ -82,11 +83,10 @@ class ProductController extends GetxController {
       if (categoryId != null) {
         _currentCategoryId.value = categoryId;
       }
-      
+
       if (search != null) {
         _searchQuery.value = search;
       }
-
     } catch (e) {
       _errorMessage.value = e.toString();
       Get.snackbar(
@@ -96,6 +96,8 @@ class ProductController extends GetxController {
         colorText: Colors.white,
         snackPosition: SnackPosition.TOP,
       );
+      _isLoading.value = false;
+      _isLoadingMore.value = false;
     } finally {
       _isLoading.value = false;
       _isLoadingMore.value = false;
@@ -151,7 +153,6 @@ class ProductController extends GetxController {
 
       _searchResults.value = products;
       _searchQuery.value = query;
-
     } catch (e) {
       _errorMessage.value = e.toString();
       Get.snackbar(

@@ -71,6 +71,26 @@ class AuthRepository {
     }
   }
 
+  // select branch return new access_token and refresh_token
+  Future<AuthResponseApi> selectBranch({required String branchId}) async {
+    try {
+      final response = await AuthService.selectBranch(branchId: branchId);
+      if (response.data.token != null) {
+        await StorageService.saveToken(response.data.token);
+      }
+      if (response.data.refreshToken != null) {
+        await StorageService.saveRefreshToken(response.data.refreshToken);
+      }
+      if (response.data.user != null) {
+        await StorageService.saveUserData(response.data.user.toJson());
+      }
+      await StorageService.saveBranchId(branchId);
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // Get user profile
   Future<User> getProfile() async {
     try {

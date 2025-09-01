@@ -21,6 +21,15 @@ class StorageService {
     await storage.remove(AppConstants.tokenKey);
   }
 
+  // Branch id management
+  static Future<void> saveBranchId(String branchId) async {
+    await storage.write(AppConstants.branchIdKey, branchId);
+  }
+
+  static String? getBranchId() {
+    return storage.read<String>(AppConstants.branchIdKey);
+  }
+
   // User data management
   static Future<void> saveUserData(Map<String, dynamic> userData) async {
     await storage.write(AppConstants.userKey, userData);

@@ -33,22 +33,9 @@ class OrderService {
   }
 
   // Get orders for customer
-  static Future<List<Order>> getCustomerOrders({
-    required String customerId,
-    int page = 1,
-    int limit = 20,
-    String? status,
-  }) async {
+  static Future<List<Order>> getCustomerOrders() async {
     try {
-      final response = await DioService.get(
-        ApiConstants.orders,
-        queryParameters: {
-          'customerId': customerId,
-          'page': page,
-          'limit': limit,
-          if (status != null) 'status': status,
-        },
-      );
+      final response = await DioService.get(ApiConstants.myOrders);
 
       return (response.data['data'] as List)
           .map((item) => Order.fromJson(item))
@@ -71,7 +58,9 @@ class OrderService {
   // Get order by number
   static Future<Order> getOrderByNumber(String orderNumber) async {
     try {
-      final response = await DioService.get('${ApiConstants.orders}/number/$orderNumber');
+      final response = await DioService.get(
+        '${ApiConstants.orders}/number/$orderNumber',
+      );
       return Order.fromJson(response.data['data']);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -100,7 +89,7 @@ class OrderService {
     if (error.response?.data != null) {
       return error.response!.data['message'] ?? 'Something went wrong';
     }
-    
+
     switch (error.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:

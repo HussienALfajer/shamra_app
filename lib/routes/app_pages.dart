@@ -2,9 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shamra_app/presentation/pages/auth/login_page.dart';
 import 'package:shamra_app/presentation/pages/home/home_page.dart';
+import 'package:shamra_app/presentation/pages/main/main_page.dart';
 import 'package:shamra_app/presentation/pages/splash/splash_page.dart';
 import 'app_routes.dart';
 import '../core/bindings/initial_binding.dart';
+import '../presentation/controllers/auth_controller.dart';
+import '../presentation/controllers/main_controller.dart';
+import '../presentation/controllers/product_controller.dart';
+import '../presentation/controllers/cart_controller.dart';
+import '../presentation/controllers/order_controller.dart';
 
 // Import pages (we'll create these next)
 // import '../presentation/pages/splash/splash_page.dart';
@@ -48,9 +54,8 @@ class AppPages {
     // Main Navigation
     GetPage(
       name: Routes.main,
-      page: () =>
-          const Scaffold(body: Center(child: Text('Main Page'))), // MainPage(),
-      binding: InitialBinding(),
+      page: () => const MainPage(),
+      binding: MainBinding(),
     ),
     GetPage(name: Routes.home, page: () => HomePage(), binding: HomeBinding()),
 
@@ -170,4 +175,49 @@ class AppPages {
       ), // ContactUsPage(),
     ),
   ];
+}
+
+// Binding Classes
+class AuthBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut<AuthController>(() => AuthController());
+  }
+}
+
+class MainBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut<MainController>(() => MainController());
+    Get.lazyPut<CartController>(() => CartController());
+  }
+}
+
+class HomeBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut<ProductController>(() => ProductController());
+    Get.lazyPut<CartController>(() => CartController());
+  }
+}
+
+class ProductBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut<ProductController>(() => ProductController());
+  }
+}
+
+class CartBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut<CartController>(() => CartController());
+  }
+}
+
+class OrderBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut<OrderController>(() => OrderController());
+  }
 }

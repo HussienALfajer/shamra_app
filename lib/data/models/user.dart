@@ -8,6 +8,8 @@ class User {
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String branchId;
+  final String selectedBranch;
 
   User({
     required this.id,
@@ -19,6 +21,8 @@ class User {
     required this.isActive,
     required this.createdAt,
     required this.updatedAt,
+    required this.branchId,
+    required this.selectedBranch,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -30,8 +34,14 @@ class User {
       phoneNumber: json['phoneNumber'],
       role: json['role'] ?? 'customer',
       isActive: json['isActive'] ?? true,
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+        json['createdAt'] ?? DateTime.now().toIso8601String(),
+      ),
+      updatedAt: DateTime.parse(
+        json['updatedAt'] ?? DateTime.now().toIso8601String(),
+      ),
+      branchId: json['branchId'] ?? '',
+      selectedBranch: json['selectedBranch'] ?? '',
     );
   }
 
@@ -46,6 +56,8 @@ class User {
       'isActive': isActive,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'branchId': branchId,
+      'selectedBranch': selectedBranch,
     };
   }
 
@@ -72,6 +84,8 @@ class User {
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      branchId: branchId ?? this.branchId,
+      selectedBranch: selectedBranch ?? this.selectedBranch,
     );
   }
 }

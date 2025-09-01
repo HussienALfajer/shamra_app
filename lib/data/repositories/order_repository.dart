@@ -26,19 +26,9 @@ class OrderRepository {
   }
 
   // Get orders for customer
-  Future<List<Order>> getCustomerOrders({
-    required String customerId,
-    int page = 1,
-    int limit = 20,
-    String? status,
-  }) async {
+  Future<List<Order>> getCustomerOrders() async {
     try {
-      return await OrderService.getCustomerOrders(
-        customerId: customerId,
-        page: page,
-        limit: limit,
-        status: status,
-      );
+      return await OrderService.getCustomerOrders();
     } catch (e) {
       rethrow;
     }
