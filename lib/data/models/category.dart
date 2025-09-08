@@ -1,28 +1,18 @@
 class Category {
   final String id;
   final String name;
-  final String nameAr;
   final String? description;
-  final String? descriptionAr;
-  final String slug;
-  final String? parentId;
   final bool isActive;
   final int sortOrder;
-  final List<Category> children;
   final DateTime createdAt;
   final DateTime updatedAt;
 
   Category({
     required this.id,
     required this.name,
-    required this.nameAr,
     this.description,
-    this.descriptionAr,
-    required this.slug,
-    this.parentId,
     required this.isActive,
     required this.sortOrder,
-    required this.children,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -32,14 +22,9 @@ class Category {
       return Category(
         id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
         name: json['name']?.toString() ?? '',
-        nameAr: json['nameAr']?.toString() ?? '',
         description: json['description']?.toString(),
-        descriptionAr: json['descriptionAr']?.toString(),
-        slug: json['slug']?.toString() ?? '',
-        parentId: json['parentId']?.toString(),
         isActive: _parseBool(json['isActive'], defaultValue: true),
         sortOrder: _parseInt(json['sortOrder']),
-        children: _parseChildren(json['children']),
         createdAt: _parseDateTime(json['createdAt']),
         updatedAt: _parseDateTime(json['updatedAt']),
       );
@@ -69,25 +54,6 @@ class Category {
     return 0;
   }
 
-  static List<Category> _parseChildren(dynamic value) {
-    if (value == null) return [];
-    if (value is List) {
-      return value
-          .map((child) {
-            try {
-              return Category.fromJson(child as Map<String, dynamic>);
-            } catch (e) {
-              print('Error parsing child category: $e');
-              return null;
-            }
-          })
-          .where((category) => category != null)
-          .cast<Category>()
-          .toList();
-    }
-    return [];
-  }
-
   static DateTime _parseDateTime(dynamic value) {
     if (value == null) return DateTime.now();
     if (value is String) {
@@ -104,25 +70,15 @@ class Category {
     return {
       'id': id,
       'name': name,
-      'nameAr': nameAr,
       'description': description,
-      'descriptionAr': descriptionAr,
-      'slug': slug,
-      'parentId': parentId,
       'isActive': isActive,
       'sortOrder': sortOrder,
-      'children': children.map((child) => child.toJson()).toList(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
   }
 
-  String get displayName => nameAr.isNotEmpty ? nameAr : name;
+  String get displayName => name;
 
-  String get displayDescription =>
-      descriptionAr?.isNotEmpty == true ? descriptionAr! : (description ?? '');
-
-  bool get hasChildren => children.isNotEmpty;
-
-  bool get isParent => parentId == null;
+  String get displayDescription => (description ?? '');
 }

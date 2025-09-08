@@ -12,10 +12,7 @@ class CategoryService {
     try {
       final response = await DioService.get(
         ApiConstants.categories,
-        queryParameters: {
-          'page': page,
-          'limit': limit,
-        },
+        queryParameters: {'page': page, 'limit': limit},
       );
 
       return (response.data['data'] as List)
@@ -27,26 +24,27 @@ class CategoryService {
   }
 
   // Get category tree (hierarchical structure)
-  static Future<List<Category>> getCategoryTree() async {
-    try {
-      final response = await DioService.get('${ApiConstants.categories}/tree');
-      
-      return (response.data['data'] as List)
-          .map((item) => Category.fromJson(item))
-          .toList();
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
-  }
+  // static Future<List<Category>> getCategoryTree() async {
+  //   try {
+  //     final response = await DioService.get('${ApiConstants.categories}/tree');
+
+  //     return (response.data['data'] as List)
+  //         .map((item) => Category.fromJson(item))
+  //         .toList();
+  //   } on DioException catch (e) {
+  //     throw _handleError(e);
+  //   }
+  // }
 
   // Get category by ID
-  static Future<Category> getCategoryById(String categoryId, {bool withChildren = false}) async {
+  static Future<Category> getCategoryById(
+    String categoryId, {
+    bool withChildren = false,
+  }) async {
     try {
       final response = await DioService.get(
         '${ApiConstants.categories}/$categoryId',
-        queryParameters: {
-          'withChildren': withChildren,
-        },
+        queryParameters: {'withChildren': withChildren},
       );
 
       return Category.fromJson(response.data['data']);
@@ -56,13 +54,14 @@ class CategoryService {
   }
 
   // Get category by slug
-  static Future<Category> getCategoryBySlug(String slug, {bool withChildren = false}) async {
+  static Future<Category> getCategoryBySlug(
+    String slug, {
+    bool withChildren = false,
+  }) async {
     try {
       final response = await DioService.get(
         '${ApiConstants.categories}/slug/$slug',
-        queryParameters: {
-          'withChildren': withChildren,
-        },
+        queryParameters: {'withChildren': withChildren},
       );
 
       return Category.fromJson(response.data['data']);
@@ -76,7 +75,7 @@ class CategoryService {
     if (error.response?.data != null) {
       return error.response!.data['message'] ?? 'Something went wrong';
     }
-    
+
     switch (error.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:

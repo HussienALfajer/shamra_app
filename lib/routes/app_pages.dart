@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shamra_app/presentation/pages/auth/login_page.dart';
+import 'package:shamra_app/presentation/pages/auth/register_page.dart';
 import 'package:shamra_app/presentation/pages/home/home_page.dart';
 import 'package:shamra_app/presentation/pages/main/main_page.dart';
 import 'package:shamra_app/presentation/pages/splash/splash_page.dart';
+import 'package:shamra_app/presentation/pages/branch/branch_selection_page.dart';
 import 'app_routes.dart';
 import '../core/bindings/initial_binding.dart';
 import '../presentation/controllers/auth_controller.dart';
@@ -11,6 +13,7 @@ import '../presentation/controllers/main_controller.dart';
 import '../presentation/controllers/product_controller.dart';
 import '../presentation/controllers/cart_controller.dart';
 import '../presentation/controllers/order_controller.dart';
+import '../presentation/controllers/branch_controller.dart';
 
 // Import pages (we'll create these next)
 // import '../presentation/pages/splash/splash_page.dart';
@@ -45,10 +48,15 @@ class AppPages {
     ),
     GetPage(
       name: Routes.register,
-      page: () => const Scaffold(
-        body: Center(child: Text('Register Page')),
-      ), // RegisterPage(),
+      page: () => RegisterPage(),
       binding: AuthBinding(),
+    ),
+
+    // Branch Selection
+    GetPage(
+      name: Routes.branchSelection,
+      page: () => const BranchSelectionPage(),
+      binding: BranchBinding(),
     ),
 
     // Main Navigation
@@ -219,5 +227,12 @@ class OrderBinding extends Bindings {
   @override
   void dependencies() {
     Get.lazyPut<OrderController>(() => OrderController());
+  }
+}
+
+class BranchBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut<BranchController>(() => BranchController());
   }
 }

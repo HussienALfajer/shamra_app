@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/constants/colors.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../controllers/auth_controller.dart';
 
 class SplashPage extends StatefulWidget {
@@ -11,8 +10,9 @@ class SplashPage extends StatefulWidget {
   State<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
+class _SplashPageState extends State<SplashPage>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
 
@@ -24,37 +24,42 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
   }
 
   void _initializeAnimation() {
-    _animationController = AnimationController(
-      duration: const Duration(seconds: 2),
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.8, curve: Curves.easeOut),
+      ),
+    );
 
-    _scaleAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.elasticOut,
-    ));
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.2, 1.0, curve: Curves.elasticOut),
+      ),
+    );
 
-    _animationController.forward();
+    _controller.forward();
   }
 
   void _navigateToNextScreen() {
-    Future.delayed(const Duration(seconds: 3), () {
-      final authController = Get.find<AuthController>();
-      
-      if (authController.isLoggedIn) {
-        Get.offAllNamed('/main');
-      } else {
+    Future.delayed(const Duration(milliseconds: 2500), () async {
+      if (!mounted) return;
+
+      try {
+        final authController = Get.find<AuthController>();
+        authController.checkLoginStatus();
+
+        if (authController.isLoggedIn) {
+          Get.offAllNamed('/branch-selection');
+        } else {
+          Get.offAllNamed('/login');
+        }
+      } catch (e) {
         Get.offAllNamed('/login');
       }
     });
@@ -62,96 +67,76 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.primary,
-      body: SafeArea(
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Logo
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: ScaleTransition(
-                      scale: _scaleAnimation,
-                      child: Container(
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: AppColors.primary,
+        body: Center(
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return FadeTransition(
+                opacity: _fadeAnimation,
+                child: ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Logo Container
+                      Container(
                         width: 120,
                         height: 120,
                         decoration: BoxDecoration(
                           color: AppColors.white,
-                          borderRadius: BorderRadius.circular(60),
+                          borderRadius: BorderRadius.circular(30),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.black.withOpacity(0.2),
-                              spreadRadius: 2,
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
+                              color: AppColors.black.withOpacity(0.1),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.shopping_bag,
-                          size: 60,
-                          color: AppColors.primary,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Image.asset(
+                            'assets/images/shamra_logo.png',
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(
+                                Icons.storefront_rounded,
+                                size: 60,
+                                color: AppColors.primary,
+                              );
+                            },
+                          ),
                         ),
                       ),
-                    ),
-                  ),
 
-                  const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                  // App Name
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Text(
-                      AppConstants.appName,
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.white,
-                        letterSpacing: 1.2,
+                      // App Name
+                      const Text(
+                        'شمرا',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.white,
+                          letterSpacing: 1.0,
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-
-                  const SizedBox(height: 8),
-
-                  // Tagline
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: const Text(
-                      'Your Electronics Partner',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: AppColors.white,
-                        fontWeight: FontWeight.w300,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 60),
-
-                  // Loading indicator
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: const CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
-                      strokeWidth: 2,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
+                ),
+              );
+            },
+          ),
         ),
       ),
     );

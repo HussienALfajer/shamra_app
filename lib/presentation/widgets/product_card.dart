@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:get/get.dart';
+import 'package:shamra_app/data/utils/helpers.dart';
 import '../../data/models/product.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/app_constants.dart';
@@ -24,11 +25,10 @@ class ProductCard extends StatelessWidget {
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: onTap ?? () => Get.toNamed('/product-details', arguments: product),
+        onTap:
+            onTap ?? () => Get.toNamed('/product-details', arguments: product),
         borderRadius: BorderRadius.circular(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,17 +42,17 @@ class ProductCard extends StatelessWidget {
                   borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
                 ),
                 child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                  child: product.firstImage.isNotEmpty
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(12),
+                  ),
+                  child: product.mainImage.isNotEmpty
                       ? CachedNetworkImage(
-                          imageUrl: product.firstImage,
+                          imageUrl: HelperMethod.getImageUrl(product.mainImage),
                           fit: BoxFit.cover,
                           placeholder: (context, url) => Container(
                             color: AppColors.lightGrey,
                             child: const Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
+                              child: CircularProgressIndicator(strokeWidth: 2),
                             ),
                           ),
                           errorWidget: (context, url, error) => Container(
@@ -153,7 +153,9 @@ class ProductCard extends StatelessWidget {
                         // Add to Cart Button
                         if (showAddToCart && product.inStock)
                           Obx(() {
-                            final isInCart = cartController.isInCart(product.id);
+                            final isInCart = cartController.isInCart(
+                              product.id,
+                            );
                             return InkWell(
                               onTap: () {
                                 if (isInCart) {
@@ -166,11 +168,15 @@ class ProductCard extends StatelessWidget {
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: isInCart ? AppColors.secondary : AppColors.primary,
+                                  color: isInCart
+                                      ? AppColors.secondary
+                                      : AppColors.primary,
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Icon(
-                                  isInCart ? Icons.remove_shopping_cart : Icons.add_shopping_cart,
+                                  isInCart
+                                      ? Icons.remove_shopping_cart
+                                      : Icons.add_shopping_cart,
                                   color: AppColors.white,
                                   size: 16,
                                 ),
@@ -184,7 +190,10 @@ class ProductCard extends StatelessWidget {
                     if (!product.inStock)
                       Container(
                         margin: const EdgeInsets.only(top: 4),
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.error.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),

@@ -52,7 +52,7 @@ class MainController extends GetxController {
 
   // Load initial data for main page
   Future<void> loadInitialData() async {
-    _isLoading.value = true;
+    // _isLoading.value = true;
     _errorMessage.value = '';
 
     try {

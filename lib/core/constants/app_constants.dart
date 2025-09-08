@@ -1,6 +1,7 @@
 // API Constants
 class ApiConstants {
-  static const String baseUrl = 'http://192.168.74.23:3000/api/v1';
+  static const String baseUrl = 'http://192.168.74.21:3000/api/v1';
+  static const String storageUrl = 'http://192.168.74.21:3000';
 
   // Endpoints
   static const String login = '/auth/login';
@@ -10,6 +11,7 @@ class ApiConstants {
   static const String selectBranch = '/auth/select-branch';
   static const String products = '/products';
   static const String categories = '/categories';
+  static const String subCategories = '/sub-categories';
   static const String branches = '/branches';
   static const String customers = '/customers';
   static const String orders = '/orders';

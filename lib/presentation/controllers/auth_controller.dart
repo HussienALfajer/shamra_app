@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import 'package:shamra_app/routes/app_routes.dart';
 import '../../data/models/user.dart';
 import '../../data/repositories/auth_repository.dart';
 
@@ -48,13 +49,15 @@ class AuthController extends GetxController {
         _isLoggedIn.value = true;
 
         Get.snackbar(
-          'Success',
-          'Welcome back, ${_currentUser.value?.firstName}!',
+          'نجح تسجيل الدخول',
+          'مرحباً بك، ${_currentUser.value?.firstName}!',
           backgroundColor: Colors.green,
           colorText: Colors.white,
           snackPosition: SnackPosition.TOP,
         );
 
+        // Navigate to branch selection after successful login
+        Get.offAllNamed(Routes.branchSelection);
         return true;
       }
 

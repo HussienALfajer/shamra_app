@@ -39,7 +39,6 @@ class CartItem {
     return OrderItem(
       productId: product.id,
       productName: product.name,
-      productSku: product.sku,
       quantity: quantity,
       price: price,
     );

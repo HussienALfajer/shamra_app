@@ -1,14 +1,12 @@
 class OrderItem {
   final String productId;
   final String productName;
-  final String productSku;
   final int quantity;
   final double price;
 
   OrderItem({
     required this.productId,
     required this.productName,
-    required this.productSku,
     required this.quantity,
     required this.price,
   });
@@ -17,7 +15,6 @@ class OrderItem {
     return OrderItem(
       productId: json['productId'] ?? '',
       productName: json['productName'] ?? '',
-      productSku: json['productSku'] ?? '',
       quantity: json['quantity'] ?? 0,
       price: (json['price'] ?? 0.0).toDouble(),
     );
@@ -27,7 +24,6 @@ class OrderItem {
     return {
       'productId': productId,
       'productName': productName,
-      'productSku': productSku,
       'quantity': quantity,
       'price': price,
     };
@@ -75,9 +71,11 @@ class Order {
       orderNumber: json['orderNumber'] ?? '',
       customerId: json['customerId'] ?? '',
       branchId: json['branchId'] ?? '',
-      items: (json['items'] as List<dynamic>?)
-          ?.map((item) => OrderItem.fromJson(item))
-          .toList() ?? [],
+      items:
+          (json['items'] as List<dynamic>?)
+              ?.map((item) => OrderItem.fromJson(item))
+              .toList() ??
+          [],
       subtotal: (json['subtotal'] ?? 0.0).toDouble(),
       taxAmount: (json['taxAmount'] ?? 0.0).toDouble(),
       discountAmount: (json['discountAmount'] ?? 0.0).toDouble(),
@@ -85,8 +83,12 @@ class Order {
       status: json['status'] ?? 'pending',
       isPaid: json['isPaid'] ?? false,
       notes: json['notes'],
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+        json['createdAt'] ?? DateTime.now().toIso8601String(),
+      ),
+      updatedAt: DateTime.parse(
+        json['updatedAt'] ?? DateTime.now().toIso8601String(),
+      ),
     );
   }
 
@@ -110,7 +112,7 @@ class Order {
   }
 
   int get totalItems => items.fold(0, (sum, item) => sum + item.quantity);
-  
+
   String get statusDisplay {
     switch (status.toLowerCase()) {
       case 'pending':

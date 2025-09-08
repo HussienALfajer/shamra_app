@@ -30,18 +30,18 @@ class ShamraApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
 
       // Theme configuration
-      theme: AppTheme.lightTheme,
+      theme: AppTheme.lightMode,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.light,
 
       // Navigation configuration
-      initialRoute: Routes.main, // Changed to main for testing
+      initialRoute: Routes.splash, // Start from login to test branch selection
       getPages: AppPages.routes,
       initialBinding: InitialBinding(),
 
       // Localization (you can add this later)
-      // locale: const Locale('en', 'US'),
-      // fallbackLocale: const Locale('en', 'US'),
+      locale: const Locale('ar', 'SA'),
+      fallbackLocale: const Locale('ar', 'SA'),
 
       // Default transitions
       defaultTransition: Transition.cupertino,
