@@ -11,17 +11,16 @@ import '../../../data/models/category.dart';
 import '../../controllers/main_controller.dart';
 import '../../controllers/cart_controller.dart';
 import '../../controllers/category_controller.dart';
+import '../../controllers/product_controller.dart';
+import '../../controllers/banner_controller.dart';
+import '../../widgets/banner_widget.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/common_widgets.dart';
 import '../cart/cart_page.dart';
 import '../order/order_page.dart';
 import '../product/product_page.dart';
 import '../profile/profile_page.dart';
-import '../favorite/favorites_page.dart';
 
-/// الصفحة الرئيسية للتنقل بين الأقسام (الرئيسية - المنتجات - السلة - الطلبات - الحساب)
-/// تستخدم IndexedStack للحفاظ على حالة كل صفحة
-/// تدعم النظام التفاعلي مع عداد المنتجات في السلة
 class MainPage extends StatelessWidget {
   const MainPage({super.key});
 
@@ -159,6 +158,7 @@ class MainPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
+
               /// النص مع أنيميشن
               AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 200),
@@ -220,6 +220,7 @@ class MainPage extends StatelessWidget {
                       size: 24,
                     ),
                   ),
+
                   /// Badge مع أنيميشن متطور
                   if (badgeCount > 0)
                     Positioned(
@@ -265,6 +266,7 @@ class MainPage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 4),
+
               /// النص مع أنيميشن
               AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 200),
@@ -285,7 +287,7 @@ class MainPage extends StatelessWidget {
 }
 
 /// الصفحة الرئيسية للمستخدم (Home داخل MainPage)
-/// تعرض البحث، الفئات، والمنتجات المختلفة
+/// تعرض البانرات، الفئات، والمنتجات المختلفة
 class CustomerHomePage extends StatelessWidget {
   const CustomerHomePage({super.key});
 
@@ -303,18 +305,24 @@ class CustomerHomePage extends StatelessWidget {
             /// شريط التطبيق العلوي مع الشعار والإجراءات
             _buildSliverAppBar(),
 
-            /// شريط البحث المحسّن
+            /// البانرات الإعلانية
             SliverToBoxAdapter(
-              child: _buildSearchSection(controller),
+              child: GetBuilder<BannerController>(
+                init: BannerController(),
+                builder: (bannerController) => Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    BannerCarousel(
+                      height: 200,
+                      autoPlay: true,
+                      autoPlayInterval: const Duration(seconds: 4),
+                      showDots: true,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
             ),
-
-            /// نتائج البحث (إذا وجدت)
-            Obx(() {
-              if (controller.searchQuery.isNotEmpty) {
-                return _buildSearchResults(controller);
-              }
-              return const SliverToBoxAdapter(child: SizedBox.shrink());
-            }),
 
             /// الفئات الرئيسية
             SliverToBoxAdapter(
@@ -391,22 +399,56 @@ class CustomerHomePage extends StatelessWidget {
     );
   }
 
-  /// دالة التنقل إلى صفحة المنتجات مع التبويبة المحددة - محدثة
   void _navigateToProducts(int initialTab) {
-    // تغيير التبويب في MainController إلى صفحة المنتجات
     final mainController = Get.find<MainController>();
     mainController.changeTab(1);
 
-    // إرسال التبويبة المطلوبة للـ ProductsTabController مباشرة
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
-        final tabController = Get.find<ProductsTabController>();
-        tabController.changeTab(initialTab);
+        final productController = Get.find<ProductController>();
+        final uiController = Get.find<ProductsUIController>();
+
+        ProductTab targetTab;
+        switch (initialTab) {
+          case 1:
+            targetTab = ProductTab.featured;
+            break;
+          case 2:
+            targetTab = ProductTab.onSale;
+            break;
+          default:
+            targetTab = ProductTab.all;
+        }
+
+        uiController.changeTab(initialTab);
+        productController.switchToTab(targetTab);
       } catch (e) {
-        // إذا لم يكن الـ controller موجود، قم بإنشاؤه وتعيين التبويبة
-        Get.put(ProductsTabController());
-        final tabController = Get.find<ProductsTabController>();
-        tabController.changeTab(initialTab);
+        print('خطأ في التنقل إلى صفحة المنتجات: $e');
+
+        if (!Get.isRegistered<ProductController>()) {
+          Get.put(ProductController());
+        }
+        if (!Get.isRegistered<ProductsUIController>()) {
+          Get.put(ProductsUIController());
+        }
+
+        final productController = Get.find<ProductController>();
+        final uiController = Get.find<ProductsUIController>();
+
+        ProductTab targetTab;
+        switch (initialTab) {
+          case 1:
+            targetTab = ProductTab.featured;
+            break;
+          case 2:
+            targetTab = ProductTab.onSale;
+            break;
+          default:
+            targetTab = ProductTab.all;
+        }
+
+        uiController.changeTab(initialTab);
+        productController.switchToTab(targetTab);
       }
     });
   }
@@ -419,11 +461,7 @@ class CustomerHomePage extends StatelessWidget {
       elevation: 1,
       title: Row(
         children: [
-          Image.asset(
-            AppConstants.logoPath,
-            width: 40,
-            height: 40,
-          ),
+          Image.asset(AppConstants.logoPath, width: 40, height: 40),
           const SizedBox(width: 8),
           const Text(
             'Shamra',
@@ -437,147 +475,22 @@ class CustomerHomePage extends StatelessWidget {
       ),
       actions: [
         IconButton(
+          icon: const Icon(Icons.search, color: AppColors.textPrimary),
+          onPressed: () =>  Get.toNamed(Routes.search),
+        ),
+        IconButton(
           icon: const Icon(Icons.favorite_border, color: AppColors.textPrimary),
           onPressed: () => Get.toNamed(Routes.favorites),
         ),
         IconButton(
-          icon: const Icon(Icons.notifications_outlined, color: AppColors.textPrimary),
+          icon: const Icon(
+            Icons.notifications_outlined,
+            color: AppColors.textPrimary,
+          ),
           onPressed: () => Get.toNamed(Routes.notifications),
         ),
       ],
     );
-  }
-
-  /// بناء قسم البحث المحسّن
-  Widget _buildSearchSection(MainController controller) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: ShamraTextField(
-        hintText: 'ابحث عن المنتجات...',
-        icon: Icons.search,
-        controller: controller.searchController,
-        suffixIcon: Obx(() {
-          return controller.searchQuery.isNotEmpty
-              ? IconButton(
-            icon: const Icon(Icons.clear, color: AppColors.grey),
-            onPressed: controller.clearSearch,
-          )
-              : const SizedBox.shrink();
-        }),
-        onChanged: (value) {
-          if (value.trim().isNotEmpty) {
-            controller.searchProducts(value.trim());
-          } else {
-            controller.clearSearch();
-          }
-        },
-      ),
-    );
-  }
-
-  /// بناء نتائج البحث
-  Widget _buildSearchResults(MainController controller) {
-    if (controller.isSearching) {
-      return SliverToBoxAdapter(
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          height: 100,
-          child: const Center(
-            child: LoadingWidget(message: "جاري البحث..."),
-          ),
-        ),
-      );
-    }
-
-    if (controller.searchResults.isNotEmpty) {
-      return SliverToBoxAdapter(
-        child: Container(
-          margin: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.search, color: AppColors.primary, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    'نتائج البحث عن "${controller.searchQuery}"',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const Spacer(),
-                  ShamraChip(
-                    label: '${controller.searchResults.length} منتج',
-                    isSelected: true,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 300,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  itemCount: controller.searchResults.length,
-                  itemBuilder: (context, index) {
-                    final product = controller.searchResults[index];
-                    return SizedBox(
-                      width: 170,
-                      child: ProductCard(
-                        product: product,
-                        onTap: () => Get.toNamed(
-                          Routes.productDetails,
-                          arguments: product,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-              const ShamraDivider(),
-            ],
-          ),
-        ),
-      );
-    } else {
-      return SliverToBoxAdapter(
-        child: ShamraCard(
-          margin: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Icon(
-                Icons.search_off,
-                size: 48,
-                color: AppColors.grey,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'لا توجد نتائج للبحث عن "${controller.searchQuery}"',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'جرب كلمات مختلفة أو تحقق من الإملاء',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
   }
 
   /// بناء قسم الفئات الرئيسية
@@ -643,9 +556,13 @@ class CustomerHomePage extends StatelessWidget {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: category.image != null && category.image!.isNotEmpty
+                          child:
+                          category.image != null &&
+                              category.image!.isNotEmpty
                               ? CachedNetworkImage(
-                            imageUrl: HelperMethod.getImageUrl(category.image!),
+                            imageUrl: HelperMethod.getImageUrl(
+                              category.image!,
+                            ),
                             fit: BoxFit.cover,
                             placeholder: (context, url) => const Center(
                               child: CircularProgressIndicator(
@@ -656,7 +573,10 @@ class CustomerHomePage extends StatelessWidget {
                               ),
                             ),
                             errorWidget: (context, url, error) =>
-                            const Icon(Icons.broken_image, color: AppColors.grey),
+                            const Icon(
+                              Icons.broken_image,
+                              color: AppColors.grey,
+                            ),
                           )
                               : const Icon(
                             Icons.category,
@@ -725,10 +645,7 @@ class CustomerHomePage extends StatelessWidget {
                     ),
                   ],
                 ),
-                TextButton(
-                  onPressed: onSeeAll,
-                  child: const Text('عرض الكل'),
-                ),
+                TextButton(onPressed: onSeeAll, child: const Text('عرض الكل')),
               ],
             ),
           ),
@@ -748,10 +665,8 @@ class CustomerHomePage extends StatelessWidget {
                     product: product,
                     width: 170,
                     isGridView: false,
-                    onTap: () => Get.toNamed(
-                      Routes.productDetails,
-                      arguments: product,
-                    ),
+                    onTap: () =>
+                        Get.toNamed(Routes.productDetails, arguments: product.id),
                   ),
                 );
               },

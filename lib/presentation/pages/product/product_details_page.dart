@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shamra_app/data/services/product_service.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../data/models/product.dart';
 import '../../../../data/utils/helpers.dart';
@@ -22,218 +23,59 @@ class ProductDetailsPage extends StatefulWidget {
 
 class _ProductDetailsPageState extends State<ProductDetailsPage>
     with TickerProviderStateMixin {
-  // متحكمات الأنيميشن
+
+  // Repositories and Services
+  final ProductRepository _productRepository = ProductRepository();
+
+  // Animation Controllers
   late AnimationController _animationController;
   late AnimationController _fabAnimationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _slideAnimation;
   late Animation<double> _fabScaleAnimation;
 
-  // متحكمات الصفحة
+  // Page Controllers
   final ScrollController _scrollController = ScrollController();
   final PageController _pageController = PageController();
+
+  // Controllers
   final favController = Get.find<FavoriteController>();
 
+  // Timers
   Timer? _autoSliderTimer;
 
-  // حالة الصفحة
+  // State Variables
   int _currentImageIndex = 0;
   bool _isAppBarExpanded = true;
   bool _showFab = false;
   Product? product;
+  bool isLoadingProduct = true;
+  String productError = '';
 
-  // للمنتجات المشابهة
-  final ProductRepository _productRepository = ProductRepository();
+  // Similar Products State
   List<Product> similarProducts = [];
-  bool isLoadingSimilar = true;
+  bool isLoadingSimilar = false;
   String similarProductsError = '';
 
   @override
   void initState() {
     super.initState();
-
-    // الحصول على المنتج من المعاملات
-    product = Get.arguments as Product?;
-    if (product == null) {
-      Get.back();
-      return;
-    }
-
     _initializeAnimations();
     _setupScrollListener();
-    _setupAutoSlider();
-    _loadSimilarProducts();
+    _loadProductData();
   }
 
-  /// تحميل المنتجات المشابهة بناءً على خوارزمية الشبه
-  Future<void> _loadSimilarProducts() async {
-    if (product == null) return;
-
-    try {
-      setState(() {
-        isLoadingSimilar = true;
-        similarProductsError = '';
-      });
-
-      List<Product> allProducts = [];
-
-      // المرحلة 1: جلب منتجات من نفس الفئة الفرعية
-      if (product!.subCategoryId?.isNotEmpty == true) {
-        final subCategoryResult = await _productRepository.getProducts(
-          categoryId: product!.categoryId,
-          limit: 50,
-        );
-        final subCategoryProducts =
-            (subCategoryResult['products'] as List<Product>?)
-                ?.where(
-                  (p) =>
-                      p.subCategoryId == product!.subCategoryId &&
-                      p.id != product!.id,
-                )
-                .toList() ??
-            [];
-        allProducts.addAll(subCategoryProducts);
-      }
-
-      // المرحلة 2: إضافة منتجات من نفس الفئة الرئيسية إذا لم نصل للعدد المطلوب
-      if (allProducts.length < 20) {
-        final categoryResult = await _productRepository.getProducts(
-          categoryId: product!.categoryId,
-          limit: 100,
-        );
-        final categoryProducts =
-            (categoryResult['products'] as List<Product>?)
-                ?.where(
-                  (p) =>
-                      p.id != product!.id &&
-                      !allProducts.any((existing) => existing.id == p.id),
-                )
-                .toList() ??
-            [];
-        allProducts.addAll(categoryProducts);
-      }
-
-      // المرحلة 3: إضافة منتجات من نفس النطاق السعري إذا لم نصل للعدد المطلوب
-      if (allProducts.length < 20) {
-        final priceRangeProducts = await _getSimilarPriceProducts();
-        allProducts.addAll(
-          priceRangeProducts.where(
-            (p) => !allProducts.any((existing) => existing.id == p.id),
-          ),
-        );
-      }
-
-      // ترتيب المنتجات حسب درجة الشبه
-      final sortedProducts = _sortProductsBySimilarity(allProducts);
-
-      if (mounted) {
-        setState(() {
-          similarProducts = sortedProducts.take(20).toList();
-          isLoadingSimilar = false;
-        });
-      }
-    } catch (e) {
-      print('خطأ في تحميل المنتجات المشابهة: $e');
-      if (mounted) {
-        setState(() {
-          isLoadingSimilar = false;
-          similarProductsError = 'فشل في تحميل المنتجات المشابهة';
-          similarProducts = [];
-        });
-      }
-    }
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _fabAnimationController.dispose();
+    _scrollController.dispose();
+    _pageController.dispose();
+    _autoSliderTimer?.cancel();
+    super.dispose();
   }
 
-  /// جلب منتجات من نطاق سعري مشابه
-  Future<List<Product>> _getSimilarPriceProducts() async {
-    final currentPrice = product!.displayPrice;
-    final priceRange = currentPrice * 0.3; // نطاق 30% من السعر الحالي
-    final minPrice = currentPrice - priceRange;
-    final maxPrice = currentPrice + priceRange;
-
-    try {
-      // جلب منتجات عشوائية للمقارنة السعرية
-      final result = await _productRepository.getProducts(limit: 50);
-      final products = result['products'] as List<Product>? ?? [];
-
-      return products
-          .where(
-            (p) =>
-                p.id != product!.id &&
-                p.displayPrice >= minPrice &&
-                p.displayPrice <= maxPrice,
-          )
-          .toList();
-    } catch (e) {
-      return [];
-    }
-  }
-
-  /// ترتيب المنتجات حسب درجة الشبه
-  List<Product> _sortProductsBySimilarity(List<Product> products) {
-    return products..sort((a, b) {
-      int scoreA = _calculateSimilarityScore(a);
-      int scoreB = _calculateSimilarityScore(b);
-      return scoreB.compareTo(scoreA); // ترتيب تنازلي
-    });
-  }
-
-  /// حساب درجة الشبه بين منتج ومنتج المرجع
-  int _calculateSimilarityScore(Product compareProduct) {
-    int score = 0;
-
-    // نفس الفئة الفرعية (أعلى أولوية)
-    if (compareProduct.subCategoryId == product!.subCategoryId) {
-      score += 50;
-    }
-
-    // نفس الفئة الرئيسية
-    if (compareProduct.categoryId == product!.categoryId) {
-      score += 30;
-    }
-
-    // نفس العلامة التجارية
-    if (compareProduct.brand == product!.brand &&
-        product!.brand?.isNotEmpty == true) {
-      score += 25;
-    }
-
-    // نطاق سعري مشابه (± 30%)
-    final priceDifference =
-        (compareProduct.displayPrice - product!.displayPrice).abs();
-    final priceThreshold = product!.displayPrice * 0.3;
-    if (priceDifference <= priceThreshold) {
-      score += 20;
-    }
-
-    // نفس حالة العرض (مميز/عادي)
-    if (compareProduct.isFeatured == product!.isFeatured) {
-      score += 10;
-    }
-
-    // كلاهما في عرض أو لا
-    if (compareProduct.hasDiscount == product!.hasDiscount) {
-      score += 10;
-    }
-
-    return score;
-  }
-
-  void _setupAutoSlider() {
-    if (product!.images.length > 1) {
-      _autoSliderTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
-        if (_pageController.hasClients && mounted) {
-          int nextPage = (_currentImageIndex + 1) % product!.images.length;
-          _pageController.animateToPage(
-            nextPage,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          );
-        }
-      });
-    }
-  }
-
+  /// Initialize animations
   void _initializeAnimations() {
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1200),
@@ -259,10 +101,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         curve: Curves.elasticOut,
       ),
     );
-
-    _animationController.forward();
   }
 
+  /// Setup scroll listener for app bar and FAB animations
   void _setupScrollListener() {
     _scrollController.addListener(() {
       final isExpanded = _scrollController.offset < 200;
@@ -288,65 +129,355 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
     });
   }
 
-  @override
-  void dispose() {
-    _animationController.dispose();
-    _fabAnimationController.dispose();
-    _scrollController.dispose();
-    _pageController.dispose();
-    _autoSliderTimer?.cancel();
-    super.dispose();
+  /// Load product data from arguments
+  Future<void> _loadProductData() async {
+    try {
+      final arguments = Get.arguments;
+
+  if (arguments is String) {
+        // Product ID passed - fetch product data
+        final productData = await _productRepository.getProductById(arguments);
+
+        if (mounted) {
+          setState(() {
+            if (productData != null) {
+              product = productData;
+              isLoadingProduct = false;
+              productError = '';
+
+              _startAnimations();
+              _setupAutoSlider();
+              _loadSimilarProducts();
+            } else {
+              isLoadingProduct = false;
+              productError = 'المنتج غير موجود';
+            }
+          });
+        }
+
+      } else {
+        // Invalid arguments
+        if (mounted) {
+          setState(() {
+            isLoadingProduct = false;
+            productError = 'خطأ في تحميل المنتج';
+          });
+        }
+      }
+    } catch (e) {
+      print('خطأ في تحميل بيانات المنتج: $e');
+      if (mounted) {
+        setState(() {
+          isLoadingProduct = false;
+          productError = 'فشل في تحميل المنتج';
+        });
+      }
+    }
+  }
+
+  /// Start animations after product is loaded
+  void _startAnimations() {
+    _animationController.forward();
+  }
+
+  /// Setup auto slider for product images
+  void _setupAutoSlider() {
+    if (product?.images.isNotEmpty == true && product!.images.length > 1) {
+      _autoSliderTimer?.cancel();
+      _autoSliderTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+        if (_pageController.hasClients && mounted && product != null) {
+          int nextPage = (_currentImageIndex + 1) % product!.images.length;
+          _pageController.animateToPage(
+            nextPage,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        }
+      });
+    }
+  }
+
+  /// Load similar products based on similarity algorithm
+  Future<void> _loadSimilarProducts() async {
+    if (product == null) return;
+
+    try {
+      setState(() {
+        isLoadingSimilar = true;
+        similarProductsError = '';
+      });
+
+      List<Product> allProducts = [];
+
+      // Stage 1: Get products from same subcategory
+      if (product!.subCategoryId?.isNotEmpty == true) {
+        final subCategoryResult = await _productRepository.getProducts(
+          categoryId: product!.categoryId,
+          limit: 50,
+        );
+        final subCategoryProducts = (subCategoryResult['products'] as List<Product>?)
+            ?.where((p) => p.subCategoryId == product!.subCategoryId && p.id != product!.id)
+            .toList() ?? [];
+        allProducts.addAll(subCategoryProducts);
+      }
+
+      // Stage 2: Add products from same main category if needed
+      if (allProducts.length < 20) {
+        final categoryResult = await _productRepository.getProducts(
+          categoryId: product!.categoryId,
+          limit: 100,
+        );
+        final categoryProducts = (categoryResult['products'] as List<Product>?)
+            ?.where((p) => p.id != product!.id && !allProducts.any((existing) => existing.id == p.id))
+            .toList() ?? [];
+        allProducts.addAll(categoryProducts);
+      }
+
+      // Stage 3: Add products from similar price range if needed
+      if (allProducts.length < 20) {
+        final priceRangeProducts = await _getSimilarPriceProducts();
+        allProducts.addAll(
+          priceRangeProducts.where((p) => !allProducts.any((existing) => existing.id == p.id)),
+        );
+      }
+
+      // Sort products by similarity score
+      final sortedProducts = _sortProductsBySimilarity(allProducts);
+
+      if (mounted) {
+        setState(() {
+          similarProducts = sortedProducts.take(20).toList();
+          isLoadingSimilar = false;
+        });
+      }
+    } catch (e) {
+      print('خطأ في تحميل المنتجات المشابهة: $e');
+      if (mounted) {
+        setState(() {
+          isLoadingSimilar = false;
+          similarProductsError = 'فشل في تحميل المنتجات المشابهة';
+          similarProducts = [];
+        });
+      }
+    }
+  }
+
+  /// Get products with similar price range
+  Future<List<Product>> _getSimilarPriceProducts() async {
+    final currentPrice = product!.displayPrice;
+    final priceRange = currentPrice * 0.3; // 30% price range
+    final minPrice = currentPrice - priceRange;
+    final maxPrice = currentPrice + priceRange;
+
+    try {
+      final result = await _productRepository.getProducts(limit: 50);
+      final products = result['products'] as List<Product>? ?? [];
+
+      return products
+          .where((p) => p.id != product!.id &&
+          p.displayPrice >= minPrice &&
+          p.displayPrice <= maxPrice)
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Sort products by similarity score
+  List<Product> _sortProductsBySimilarity(List<Product> products) {
+    return products..sort((a, b) {
+      int scoreA = _calculateSimilarityScore(a);
+      int scoreB = _calculateSimilarityScore(b);
+      return scoreB.compareTo(scoreA); // Descending order
+    });
+  }
+
+  /// Calculate similarity score between products
+  int _calculateSimilarityScore(Product compareProduct) {
+    int score = 0;
+
+    // Same subcategory (highest priority)
+    if (compareProduct.subCategoryId == product!.subCategoryId) {
+      score += 50;
+    }
+
+    // Same main category
+    if (compareProduct.categoryId == product!.categoryId) {
+      score += 30;
+    }
+
+    // Same brand
+    if (compareProduct.brand == product!.brand && product!.brand?.isNotEmpty == true) {
+      score += 25;
+    }
+
+    // Similar price range (±30%)
+    final priceDifference = (compareProduct.displayPrice - product!.displayPrice).abs();
+    final priceThreshold = product!.displayPrice * 0.3;
+    if (priceDifference <= priceThreshold) {
+      score += 20;
+    }
+
+    // Same featured status
+    if (compareProduct.isFeatured == product!.isFeatured) {
+      score += 10;
+    }
+
+    // Same discount status
+    if (compareProduct.hasDiscount == product!.hasDiscount) {
+      score += 10;
+    }
+
+    return score;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (product == null) return const SizedBox.shrink();
-
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.background,
-        body: FadeTransition(
-          opacity: _fadeAnimation,
-          child: CustomScrollView(
-            controller: _scrollController,
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              _buildSliverAppBar(),
-              SliverToBoxAdapter(
-                child: AnimatedBuilder(
-                  animation: _slideAnimation,
-                  builder: (context, child) {
-                    return Transform.translate(
-                      offset: Offset(0, _slideAnimation.value),
-                      child: Column(
-                        children: [
-                          _buildProductInfo(),
-                          _buildPriceSection(),
-                          _buildDescriptionSection(),
-                          _buildSpecificationsSection(),
-                          _buildStockInfo(),
-                          _buildSimilarProducts(), // المنتجات المشابهة المحدثة
+        body: _buildBody(),
+        bottomNavigationBar: product != null ? _buildBottomBar() : null,
+      ),
+    );
+  }
 
-                          const SizedBox(height: 100),
-                        ],
-                      ),
-                    );
-                  },
+  Widget _buildBody() {
+    if (isLoadingProduct) {
+      return _buildLoadingState();
+    }
+
+    if (productError.isNotEmpty || product == null) {
+      return _buildErrorState();
+    }
+
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: CustomScrollView(
+        controller: _scrollController,
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          _buildSliverAppBar(),
+          SliverToBoxAdapter(
+            child: AnimatedBuilder(
+              animation: _slideAnimation,
+              builder: (context, child) {
+                return Transform.translate(
+                  offset: Offset(0, _slideAnimation.value),
+                  child: Column(
+                    children: [
+                      _buildProductInfo(),
+                      _buildPriceSection(),
+                      _buildDescriptionSection(),
+                      _buildSpecificationsSection(),
+                      _buildStockInfo(),
+                      _buildSimilarProducts(),
+                      const SizedBox(height: 100),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.white,
+        elevation: 0,
+        leading: IconButton(
+          onPressed: () => Get.back(),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          color: AppColors.textPrimary,
+        ),
+        title: const Text(
+          'تفاصيل المنتج',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+      body: const Center(
+        child: LoadingWidget(
+          message: "جاري تحميل المنتج...",
+          size: 50,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.white,
+        elevation: 0,
+        leading: IconButton(
+          onPressed: () => Get.back(),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          color: AppColors.textPrimary,
+        ),
+        title: const Text(
+          'تفاصيل المنتج',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+      body: Center(
+        child: ShamraCard(
+          margin: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+              const SizedBox(height: 16),
+              Text(
+                productError.isNotEmpty ? productError : 'فشل في تحميل المنتج',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
                 ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ShamraButton(
+                    text: 'إعادة المحاولة',
+                    onPressed: _loadProductData,
+                    isOutlined: true,
+                    width: 120,
+                  ),
+                  const SizedBox(width: 12),
+                  ShamraButton(
+                    text: 'العودة',
+                    onPressed: () => Get.back(),
+                    width: 120,
+                  ),
+                ],
               ),
             ],
           ),
         ),
-        bottomNavigationBar: _buildBottomBar(),
       ),
     );
   }
 
   Widget _buildSliverAppBar() {
-    final images = product!.images.isNotEmpty
-        ? product!.images
-        : [product!.mainImage];
+    final images = product!.images.isNotEmpty ? product!.images : [product!.mainImage];
 
     return SliverAppBar(
       expandedHeight: 400,
@@ -387,7 +518,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
             ],
           ),
           child: Obx(
-            () => IconButton(
+                () => IconButton(
               icon: Icon(
                 favController.isFavorite(product!.id)
                     ? Icons.favorite
@@ -446,7 +577,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
           ),
           child: Stack(
             children: [
-              // عرض الصور
+              // Product Images
               if (images.isNotEmpty)
                 SizedBox(
                   height: 400,
@@ -481,18 +612,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                               child: const Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(
-                                    Icons.broken_image_outlined,
-                                    size: 64,
-                                    color: AppColors.grey,
-                                  ),
+                                  Icon(Icons.broken_image_outlined, size: 64, color: AppColors.grey),
                                   SizedBox(height: 8),
                                   Text(
                                     'صورة غير متاحة',
-                                    style: TextStyle(
-                                      color: AppColors.textSecondary,
-                                      fontSize: 14,
-                                    ),
+                                    style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
                                   ),
                                 ],
                               ),
@@ -504,7 +628,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                   ),
                 ),
 
-              // مؤشرات الصور
+              // Image Indicators
               if (images.length > 1)
                 Positioned(
                   bottom: 20,
@@ -528,16 +652,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                   ),
                 ),
 
-              // شارة الخصم
+              // Discount Badge
               if (product!.hasDiscount)
                 Positioned(
                   top: 100,
                   right: 20,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [Colors.red, Colors.red.shade700],
@@ -556,11 +677,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.local_offer_rounded,
-                          color: AppColors.white,
-                          size: 16,
-                        ),
+                        const Icon(Icons.local_offer_rounded, color: AppColors.white, size: 16),
                         const SizedBox(width: 4),
                         Text(
                           'خصم ${product!.discountPercentage?.toStringAsFixed(0)}%',
@@ -575,16 +692,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                   ),
                 ),
 
-              // شارة المميز
+              // Featured Badge
               if (product!.isFeatured)
                 Positioned(
                   top: 100,
                   left: 20,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: AppColors.secondaryGradient,
@@ -603,11 +717,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.star_rounded,
-                          color: AppColors.white,
-                          size: 16,
-                        ),
+                        Icon(Icons.star_rounded, color: AppColors.white, size: 16),
                         SizedBox(width: 4),
                         Text(
                           'مميز',
@@ -646,7 +756,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // اسم المنتج
+          // Product Name
           Text(
             product!.displayName,
             style: const TextStyle(
@@ -659,17 +769,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
 
           const SizedBox(height: 8),
 
-          // العلامة التجارية والموديل
+          // Brand and Model
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
               if (product!.brand != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -686,10 +793,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
 
               if (product!.model != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppColors.secondary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -708,7 +812,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
 
           const SizedBox(height: 16),
 
-          // التقييم والمراجعات (مؤقت)
+          // Rating and Reviews (temporary)
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -717,9 +821,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                   Row(
                     children: List.generate(5, (index) {
                       return Icon(
-                        index < 4
-                            ? Icons.star_rounded
-                            : Icons.star_border_rounded,
+                        index < 4 ? Icons.star_rounded : Icons.star_border_rounded,
                         color: AppColors.secondary,
                         size: 20,
                       );
@@ -739,13 +841,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
               const SizedBox(height: 8),
               TextButton.icon(
                 onPressed: () {
-                  // TODO: الانتقال للتقييمات
+                  // TODO: Navigate to reviews
                 },
-                icon: const Icon(
-                  Icons.reviews_outlined,
-                  size: 16,
-                  color: AppColors.primary,
-                ),
+                icon: const Icon(Icons.reviews_outlined, size: 16, color: AppColors.primary),
                 label: const Text(
                   'عرض التقييمات',
                   style: TextStyle(
@@ -783,11 +881,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.price_change_rounded,
-                color: AppColors.primary,
-                size: 24,
-              ),
+              const Icon(Icons.price_change_rounded, color: AppColors.primary, size: 24),
               const SizedBox(width: 8),
               const Text(
                 'السعر',
@@ -805,7 +899,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
           Wrap(
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              // السعر الحالي
+              // Current Price
               Text(
                 product!.formattedPrice,
                 style: const TextStyle(
@@ -817,7 +911,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
 
               const SizedBox(width: 12),
 
-              // السعر الأصلي (في حالة الخصم)
+              // Original Price (if discounted)
               if (product!.hasDiscount) ...[
                 Text(
                   product!.formattedOriginalPrice,
@@ -833,10 +927,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                 const SizedBox(width: 10),
 
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppColors.success.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -880,11 +971,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.description_rounded,
-                color: AppColors.primary,
-                size: 20,
-              ),
+              const Icon(Icons.description_rounded, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
               const Text(
                 'وصف المنتج',
@@ -913,7 +1000,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
   }
 
   Widget _buildSpecificationsSection() {
-    // فحص وجود المواصفات
     if (product!.specifications == null || product!.specifications!.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -937,11 +1023,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.tune_rounded,
-                color: AppColors.primary,
-                size: 20,
-              ),
+              const Icon(Icons.tune_rounded, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
               const Text(
                 'المواصفات والتفاصيل',
@@ -956,9 +1038,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
 
           const SizedBox(height: 16),
 
-          // المواصفات الديناميكية من product.specifications
           ...product!.specifications!.entries.map(
-            (entry) => Container(
+                (entry) => Container(
               margin: const EdgeInsets.only(bottom: 12),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1010,24 +1091,17 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
     );
   }
 
-  /// دالة مساعدة للحصول على أيقونة مناسبة للمواصفة
   IconData _getIconForSpecification(String key) {
     final keyLower = key.toLowerCase();
-    if (keyLower.contains('screen') ||
-        keyLower.contains('display') ||
-        keyLower.contains('شاشة')) {
+    if (keyLower.contains('screen') || keyLower.contains('display') || keyLower.contains('شاشة')) {
       return Icons.tv_rounded;
     } else if (keyLower.contains('camera') || keyLower.contains('كاميرا')) {
       return Icons.camera_alt_rounded;
     } else if (keyLower.contains('battery') || keyLower.contains('بطارية')) {
       return Icons.battery_full_rounded;
-    } else if (keyLower.contains('storage') ||
-        keyLower.contains('memory') ||
-        keyLower.contains('ذاكرة')) {
+    } else if (keyLower.contains('storage') || keyLower.contains('memory') || keyLower.contains('ذاكرة')) {
       return Icons.memory_rounded;
-    } else if (keyLower.contains('processor') ||
-        keyLower.contains('cpu') ||
-        keyLower.contains('معالج')) {
+    } else if (keyLower.contains('processor') || keyLower.contains('cpu') || keyLower.contains('معالج')) {
       return Icons.memory_rounded;
     } else if (keyLower.contains('weight') || keyLower.contains('وزن')) {
       return Icons.fitness_center_rounded;
@@ -1042,9 +1116,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
     }
   }
 
-  /// دالة مساعدة لتنسيق مفتاح المواصفة
   String _formatSpecificationKey(String key) {
-    // يمكن إضافة منطق تنسيق المفاتيح هنا إذا لزم الأمر
     return key;
   }
 
@@ -1074,9 +1146,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
-              product!.inStock
-                  ? Icons.inventory_rounded
-                  : Icons.inventory_2_outlined,
+              product!.inStock ? Icons.inventory_rounded : Icons.inventory_2_outlined,
               color: product!.inStock ? AppColors.success : AppColors.error,
               size: 20,
             ),
@@ -1093,9 +1163,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: product!.inStock
-                        ? AppColors.success
-                        : AppColors.error,
+                    color: product!.inStock ? AppColors.success : AppColors.error,
                   ),
                 ),
 
@@ -1107,9 +1175,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                         : 'متبقي ${product!.stockQuantity} قطع فقط',
                     style: TextStyle(
                       fontSize: 12,
-                      color: product!.stockQuantity > 10
-                          ? AppColors.success
-                          : AppColors.warning,
+                      color: product!.stockQuantity > 10 ? AppColors.success : AppColors.warning,
                     ),
                   ),
                 ],
@@ -1138,21 +1204,15 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
     );
   }
 
-  /// عرض المنتجات المشابهة المحدث والمحسن
   Widget _buildSimilarProducts() {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 24, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // عنوان القسم
           Row(
             children: [
-              const Icon(
-                Icons.recommend_rounded,
-                color: AppColors.primary,
-                size: 24,
-              ),
+              const Icon(Icons.recommend_rounded, color: AppColors.primary, size: 24),
               const SizedBox(width: 8),
               const Text(
                 'منتجات مشابهة',
@@ -1165,10 +1225,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
               const Spacer(),
               if (similarProducts.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -1187,21 +1244,19 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
 
           const SizedBox(height: 16),
 
-          // محتوى المنتجات المشابهة
           if (isLoadingSimilar)
             _buildSimilarProductsLoading()
           else if (similarProductsError.isNotEmpty)
             _buildSimilarProductsError()
           else if (similarProducts.isEmpty)
-            _buildNoSimilarProducts()
-          else
-            _buildSimilarProductsList(),
+              _buildNoSimilarProducts()
+            else
+              _buildSimilarProductsList(),
         ],
       ),
     );
   }
 
-  /// عرض حالة التحميل للمنتجات المشابهة
   Widget _buildSimilarProductsLoading() {
     return SizedBox(
       height: 280,
@@ -1225,7 +1280,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
     );
   }
 
-  /// عرض حالة الخطأ للمنتجات المشابهة
   Widget _buildSimilarProductsError() {
     return ShamraCard(
       padding: const EdgeInsets.all(20),
@@ -1254,7 +1308,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
     );
   }
 
-  /// عرض حالة عدم وجود منتجات مشابهة
   Widget _buildNoSimilarProducts() {
     return ShamraCard(
       padding: const EdgeInsets.all(20),
@@ -1282,11 +1335,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
     );
   }
 
-  /// عرض قائمة المنتجات المشابهة
   Widget _buildSimilarProductsList() {
     return Column(
       children: [
-        // شرح كيفية اختيار المنتجات المشابهة
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -1313,7 +1364,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
 
         const SizedBox(height: 16),
 
-        // قائمة المنتجات
         SizedBox(
           height: 290,
           child: ListView.builder(
@@ -1326,13 +1376,17 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
               return Container(
                 width: 170,
                 margin: const EdgeInsets.only(left: 12),
-                child: _buildSimilarProductCard(similarProduct),
+                child: ProductCard(
+                  product: similarProduct,
+                  onTap: () => Get.offAndToNamed('/product-details', arguments: similarProduct),
+                  matchPercent: _calculateSimilarityScore(similarProduct),
+                  matchThreshold: 60,
+                ),
               );
             },
           ),
         ),
 
-        // زر عرض المزيد إذا كان هناك منتجات أكثر
         if (similarProducts.length >= 20)
           Container(
             margin: const EdgeInsets.only(top: 16),
@@ -1352,21 +1406,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
             ),
           ),
       ],
-    );
-  }
-
-  /// بناء كرت منتج مشابه
-  Widget _buildSimilarProductCard(Product similarProduct) {
-    final similarityScore = _calculateSimilarityScore(
-      similarProduct,
-    ); // موجود عندك
-
-    return ProductCard(
-      product: similarProduct,
-      onTap: () =>
-          Get.offAndToNamed('/product-details', arguments: similarProduct),
-      matchPercent: similarityScore,
-      matchThreshold: 60,
     );
   }
 
@@ -1391,7 +1430,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         child: SafeArea(
           child: Row(
             children: [
-              // أدوات التحكم في الكمية (إذا كان في السلة)
               if (isInCart) ...[
                 Container(
                   padding: const EdgeInsets.only(right: 100, left: 100),
@@ -1403,14 +1441,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                     mainAxisSize: MainAxisSize.max,
                     children: [
                       IconButton(
-                        onPressed: () =>
-                            cartController.decrementQuantity(product!.id),
-                        icon: const Icon(
-                          Icons.remove_rounded,
-                          color: AppColors.primary,
-                        ),
+                        onPressed: () => cartController.decrementQuantity(product!.id),
+                        icon: const Icon(Icons.remove_rounded, color: AppColors.primary),
                       ),
-
                       Container(
                         constraints: const BoxConstraints(minWidth: 40),
                         child: Text(
@@ -1423,21 +1456,15 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                           ),
                         ),
                       ),
-
                       IconButton(
-                        onPressed: () =>
-                            cartController.incrementQuantity(product!.id),
-                        icon: const Icon(
-                          Icons.add_rounded,
-                          color: AppColors.primary,
-                        ),
+                        onPressed: () => cartController.incrementQuantity(product!.id),
+                        icon: const Icon(Icons.add_rounded, color: AppColors.primary),
                       ),
                     ],
                   ),
                 ),
               ],
 
-              // أزرار إضافة للسلة
               Expanded(
                 child: Row(
                   children: [
@@ -1445,9 +1472,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                       Expanded(
                         child: ShamraButton(
                           text: 'إضافة للسلة',
-                          onPressed: product!.inStock
-                              ? () => cartController.addToCart(product!)
-                              : null,
+                          onPressed: product!.inStock ? () => cartController.addToCart(product!) : null,
                           isOutlined: true,
                           icon: Icons.add_shopping_cart_rounded,
                           height: 56,
@@ -1462,27 +1487,5 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         ),
       );
     });
-  }
-  /// معالجة الشراء الفوري
-  void _handleBuyNow(CartController cartController, bool isInCart) {
-    final authController = Get.find<AuthController>();
-
-    if (!authController.isLoggedIn) {
-      ShamraSnackBar.show(
-        context: context,
-        message: 'يرجى تسجيل الدخول أولاً',
-        type: SnackBarType.warning,
-        actionLabel: 'تسجيل دخول',
-        onAction: () => Get.toNamed('/login'),
-      );
-      return;
-    }
-
-    if (!isInCart) {
-      cartController.addToCart(product!);
-    }
-
-    // الانتقال لصفحة الدفع
-    Get.toNamed('/checkout');
   }
 }

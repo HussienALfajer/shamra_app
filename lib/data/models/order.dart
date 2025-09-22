@@ -35,7 +35,6 @@ class OrderItem {
 class Order {
   final String id;
   final String orderNumber;
-  final String customerId;
   final String branchId;
   final List<OrderItem> items;
   final double subtotal;
@@ -51,7 +50,6 @@ class Order {
   Order({
     required this.id,
     required this.orderNumber,
-    required this.customerId,
     required this.branchId,
     required this.items,
     required this.subtotal,
@@ -69,7 +67,6 @@ class Order {
     return Order(
       id: json['_id'] ?? json['id'] ?? '',
       orderNumber: json['orderNumber'] ?? '',
-      customerId: json['customerId'] ?? '',
       branchId: json['branchId'] ?? '',
       items:
           (json['items'] as List<dynamic>?)
@@ -96,7 +93,6 @@ class Order {
     return {
       'id': id,
       'orderNumber': orderNumber,
-      'customerId': customerId,
       'branchId': branchId,
       'items': items.map((item) => item.toJson()).toList(),
       'subtotal': subtotal,

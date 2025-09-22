@@ -25,7 +25,7 @@ class OrderService {
           if (notes != null) 'notes': notes,
         },
       );
-
+      print(response.data['data']);
       return Order.fromJson(response.data['data']);
     } on DioException catch (e) {
       throw _handleError(e);

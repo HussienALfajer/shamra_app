@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shamra_app/presentation/controllers/banner_controller.dart';
 import 'package:shamra_app/presentation/pages/auth/login_page.dart';
 import 'package:shamra_app/presentation/pages/auth/register_page.dart';
-import 'package:shamra_app/presentation/pages/home/home_page.dart';
 import 'package:shamra_app/presentation/pages/main/main_page.dart';
 import 'package:shamra_app/presentation/pages/splash/welcome_page.dart';
 import 'package:shamra_app/presentation/pages/branch/branch_selection_page.dart';
@@ -11,6 +11,7 @@ import '../presentation/pages/category/category_details_page.dart';
 import '../presentation/pages/favorite/favorites_page.dart';
 import '../presentation/pages/product/product_page.dart';
 import '../presentation/pages/product/product_details_page.dart';
+import '../presentation/pages/serach/serach_page.dart';
 import '../presentation/pages/splash/splash.dart';
 import 'app_routes.dart';
 import '../core/bindings/initial_binding.dart';
@@ -29,6 +30,7 @@ class AppPages {
   static const String initial = Routes.splash;
 
   static final routes = [
+
     // Splash & Onboarding
     GetPage(
       name: Routes.splash,
@@ -66,11 +68,6 @@ class AppPages {
       page: () => const MainPage(),
       binding: MainBinding(),
     ),
-    GetPage(
-        name: Routes.home,
-        page: () => HomePage(),
-        binding: HomeBinding()
-    ),
 
     // Favorites
     GetPage(
@@ -82,10 +79,7 @@ class AppPages {
     // Category Details
     GetPage(
       name: Routes.categoryDetails,
-      page: () => CategoryDetailsPage(
-        categoryId: Get.arguments['categoryId'],
-        categoryName: Get.arguments['categoryName'],
-      ),
+      page: () => CategoryDetailsPage(),
       binding: ProductBinding(),
     ),
 
@@ -119,15 +113,6 @@ class AppPages {
     ),
 
     // Search
-    GetPage(
-      name: Routes.search,
-      page: () => const Scaffold(
-        body: Center(child: Text('Search Page')),
-      ),
-      binding: ProductBinding(),
-    ),
-
-
 
     // Categories
     GetPage(
@@ -139,77 +124,60 @@ class AppPages {
     // Cart & Checkout
     GetPage(
       name: Routes.cart,
-      page: () => const Scaffold(
-        body: Center(child: Text('Cart Page')),
-      ),
+      page: () => const Scaffold(body: Center(child: Text('Cart Page'))),
       binding: CartBinding(),
     ),
     GetPage(
       name: Routes.checkout,
-      page: () => const Scaffold(
-        body: Center(child: Text('Checkout Page')),
-      ),
+      page: () => const Scaffold(body: Center(child: Text('Checkout Page'))),
       binding: OrderBinding(),
     ),
 
     // Orders
     GetPage(
       name: Routes.orders,
-      page: () => const Scaffold(
-        body: Center(child: Text('Order List Page')),
-      ),
+      page: () => const Scaffold(body: Center(child: Text('Order List Page'))),
       binding: OrderBinding(),
     ),
     GetPage(
       name: Routes.orderDetails,
-      page: () => const Scaffold(
-        body: Center(child: Text('Order Details Page')),
-      ),
+      page: () =>
+          const Scaffold(body: Center(child: Text('Order Details Page'))),
       binding: OrderBinding(),
     ),
 
     // Profile
     GetPage(
       name: Routes.profile,
-      page: () => const Scaffold(
-        body: Center(child: Text('Profile Page')),
-      ),
+      page: () => const Scaffold(body: Center(child: Text('Profile Page'))),
       binding: AuthBinding(),
     ),
     GetPage(
       name: Routes.editProfile,
-      page: () => const Scaffold(
-        body: Center(child: Text('Edit Profile Page')),
-      ),
+      page: () =>
+          const Scaffold(body: Center(child: Text('Edit Profile Page'))),
       binding: AuthBinding(),
     ),
     GetPage(
       name: Routes.changePassword,
-      page: () => const Scaffold(
-        body: Center(child: Text('Change Password Page')),
-      ),
+      page: () =>
+          const Scaffold(body: Center(child: Text('Change Password Page'))),
       binding: AuthBinding(),
     ),
 
     // Settings & Info
     GetPage(
       name: Routes.settings,
-      page: () => const Scaffold(
-        body: Center(child: Text('Settings Page')),
-      ),
+      page: () => const Scaffold(body: Center(child: Text('Settings Page'))),
       binding: InitialBinding(),
     ),
     GetPage(
       name: Routes.about,
-      page: () => const Scaffold(
-        body: Center(child: Text('About Page')),
-      ),
+      page: () => const Scaffold(body: Center(child: Text('About Page'))),
     ),
     GetPage(
       name: Routes.contactUs,
-      page: () => const Scaffold(
-        body: Center(child: Text('Contact Us Page')),
-      ),
+      page: () => const Scaffold(body: Center(child: Text('Contact Us Page'))),
     ),
 
     // Product Details
@@ -250,6 +218,7 @@ class MainBinding extends Bindings {
     Get.lazyPut<MainController>(() => MainController());
     Get.lazyPut<CartController>(() => CartController());
     Get.lazyPut<AuthController>(() => AuthController());
+    Get.lazyPut<BannerController>(() => BannerController(), fenix: true);
   }
 }
 
@@ -318,5 +287,15 @@ class FavoriteBinding extends Bindings {
   void dependencies() {
     Get.lazyPut<ProductController>(() => ProductController());
     // FavoriteController already permanent في InitialBinding
+  }
+}
+
+class SearchBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut<SearchController>(() => SearchController());
+    // يمكن إضافة controllers أخرى إذا لزم الأمر
+    Get.lazyPut<ProductController>(() => ProductController());
+    Get.lazyPut<CategoryController>(() => CategoryController());
   }
 }

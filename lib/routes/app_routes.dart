@@ -18,7 +18,6 @@ class Routes {
   static const String saleProducts = '/products/sale';
   static const String search = '/search';
 
-
   static const favorites = '/favorites';
 
 

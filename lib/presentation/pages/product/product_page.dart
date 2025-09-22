@@ -9,17 +9,44 @@ import '../../widgets/common_widgets.dart';
 import '../../widgets/product_card.dart';
 import '../../../data/models/product.dart';
 
-/// صفحة المنتجات الرئيسية مع نظام التبويبات والفلترة
-/// تعرض المنتجات في ثلاث تبويبات: الكل، المميزة، العروض
-/// تدعم البحث والفلترة حسب الفئات والفئات الفرعية
-class ProductsPage extends StatelessWidget {
+class ProductsPage extends StatefulWidget {
   const ProductsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // تهيئة الـ Controllers عند بناء الصفحة
-    _initializeControllers();
+  State<ProductsPage> createState() => _ProductsPageState();
+}
 
+class _ProductsPageState extends State<ProductsPage> {
+  late ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
+    _initializeControllers();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// Listen for scroll events to trigger load more
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      // Load more when user is 200px from bottom
+      final controller = Get.find<ProductController>();
+      if (!controller.isLoadingMore && controller.hasMoreData) {
+        controller.loadMoreProducts();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -27,10 +54,10 @@ class ProductsPage extends StatelessWidget {
         body: SafeArea(
           child: Column(
             children: [
-              /// شريط التطبيق المخصص مع البحث والتبويبات
+              /// شريط التطبيق المخصص
               _buildCustomAppBar(),
 
-              /// محتوى التبويبات (المنتجات)
+              /// محتوى التبويبات
               Expanded(child: _buildTabContent()),
             ],
           ),
@@ -39,56 +66,109 @@ class ProductsPage extends StatelessWidget {
     );
   }
 
-  /// تهيئة الـ Controllers والبيانات
+  /// تهيئة الـ Controllers
   void _initializeControllers() {
-    // التأكد من وجود الـ Controllers
-    if (!Get.isRegistered<ProductsTabController>()) {
-      Get.put(ProductsTabController());
+    // تسجيل Controllers إذا لم تكن مسجلة
+    if (!Get.isRegistered<ProductController>()) {
+      Get.put(ProductController());
     }
     if (!Get.isRegistered<ProductsUIController>()) {
       Get.put(ProductsUIController());
     }
 
-    // تحميل البيانات بشكل غير متزامن
+    // التحقق من التبويبة المطلوبة من Arguments
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadInitialData();
-    });
-  }
-
-  /// تحميل البيانات الأولية
-  Future<void> _loadInitialData() async {
-    try {
-      final productController = Get.find<ProductController>();
-
-      // تحميل جميع أنواع المنتجات بشكل متوازي
-      await Future.wait([
-        productController.refreshProducts(),
-        productController.loadFeaturedProducts(),
-        productController.loadOnSaleProducts(),
-      ]);
-
-      // التحقق من التبويبة المطلوبة من Arguments
       final args = Get.arguments as Map<String, dynamic>?;
       if (args != null && args.containsKey('initialTab')) {
         final initialTab = args['initialTab'] as int;
-        final tabController = Get.find<ProductsTabController>();
-        if (initialTab >= 0 && initialTab < 3) {
-          tabController.changeTab(initialTab);
-        }
+        _switchToTabByIndex(initialTab);
+      } else {
+        // تحميل التبويبة الافتراضية (الكل)
+        _switchToTabByIndex(0);
       }
+    });
+  }
+
+  /// التبديل إلى تبويبة بالرقم مع استدعاء الدالة المناسبة
+  void _switchToTabByIndex(int index) {
+    try {
+      final controller = Get.find<ProductController>();
+      final uiController = Get.find<ProductsUIController>();
+
+      ProductTab tab;
+      switch (index) {
+        case 1:
+          tab = ProductTab.featured;
+          break;
+        case 2:
+          tab = ProductTab.onSale;
+          break;
+        default:
+          tab = ProductTab.all;
+      }
+
+      // تحديث UI Controller
+      uiController.changeTab(index);
+
+      // التبديل إلى التبويبة وتحميل البيانات المناسبة
+      _switchToTabAndLoadData(tab);
+
     } catch (e) {
-      // إظهار رسالة خطأ باستخدام ShamraSnackBar
-      if (Get.context != null) {
-        ShamraSnackBar.show(
-          context: Get.context!,
-          message: 'خطأ في تحميل البيانات',
-          type: SnackBarType.error,
-        );
-      }
+      print('خطأ في تبديل التبويبة: $e');
     }
   }
 
-  /// بناء شريط التطبيق المخصص مع التبويبات
+  /// التبديل إلى التبويبة وتحميل البيانات المناسبة
+  Future<void> _switchToTabAndLoadData(ProductTab tab) async {
+    final controller = Get.find<ProductController>();
+
+    try {
+      switch (tab) {
+        case ProductTab.featured:
+          await controller.switchToTab(ProductTab.featured);
+          // إذا لم تكن البيانات محملة، قم بتحميلها
+          if (!controller.isCurrentTabLoaded) {
+            await _loadFeaturedProducts();
+          }
+          break;
+        case ProductTab.onSale:
+          await controller.switchToTab(ProductTab.onSale);
+          // إذا لم تكن البيانات محملة، قم بتحميلها
+          if (!controller.isCurrentTabLoaded) {
+            await _loadOnSaleProducts();
+          }
+          break;
+        default:
+          await controller.switchToTab(ProductTab.all);
+          // إذا لم تكن البيانات محملة، قم بتحميلها
+          if (!controller.isCurrentTabLoaded) {
+            await _loadAllProducts();
+          }
+      }
+    } catch (e) {
+      print('خطأ في تحميل بيانات التبويبة: $e');
+    }
+  }
+
+  /// تحميل جميع المنتجات
+  Future<void> _loadAllProducts() async {
+    final controller = Get.find<ProductController>();
+    await controller.switchToTab(ProductTab.all);
+  }
+
+  /// تحميل المنتجات المميزة
+  Future<void> _loadFeaturedProducts() async {
+    final controller = Get.find<ProductController>();
+    await controller.switchToTab(ProductTab.featured);
+  }
+
+  /// تحميل المنتجات المخفضة
+  Future<void> _loadOnSaleProducts() async {
+    final controller = Get.find<ProductController>();
+    await controller.switchToTab(ProductTab.onSale);
+  }
+
+  /// بناء شريط التطبيق المخصص
   Widget _buildCustomAppBar() {
     return Container(
       decoration: BoxDecoration(
@@ -109,7 +189,7 @@ class ProductsPage extends StatelessWidget {
           /// شريط التبويبات
           _buildTabBar(),
 
-          /// شريط البحث والفلاتر (يظهر عند الحاجة)
+          /// شريط البحث والفلاتر (للتبويبة "الكل" فقط)
           _buildSearchAndFilters(),
         ],
       ),
@@ -139,18 +219,43 @@ class ProductsPage extends StatelessWidget {
             /// أيقونات التحكم
             Row(
               children: [
-                uiController.showSearchField
-                    ? _buildClearFiltersButton()
-                    : Container(),
-                const SizedBox(width: 6),
+                // زر مسح الفلاتر (يظهر فقط في التبويبة "الكل")
+                GetBuilder<ProductController>(
+                  builder: (controller) {
+                    if (!controller.filtersAvailableForCurrentTab ||
+                        !controller.hasActiveFilters) {
+                      return const SizedBox.shrink();
+                    }
 
-                /// أيقونة البحث
-                _buildActionButton(
-                  icon: uiController.showSearchField
-                      ? Icons.close_rounded
-                      : Icons.search_rounded,
-                  isActive: uiController.showSearchField,
-                  onPressed: () => uiController.toggleSearch(),
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: ShamraChip(
+                        label: 'مسح الفلاتر',
+                        icon: Icons.clear_all_rounded,
+                        onTap: () => _clearAllFilters(),
+                      ),
+                    );
+                  },
+                ),
+
+                /// أيقونة البحث (تظهر فقط للتبويبة "الكل")
+                GetBuilder<ProductController>(
+                  builder: (controller) {
+                    if (!controller.filtersAvailableForCurrentTab) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: _buildActionButton(
+                        icon: uiController.showSearchField
+                            ? Icons.close_rounded
+                            : Icons.search_rounded,
+                        isActive: uiController.showSearchField,
+                        onPressed: () => uiController.toggleSearch(),
+                      ),
+                    );
+                  },
                 ),
 
                 const SizedBox(width: 6),
@@ -169,7 +274,7 @@ class ProductsPage extends StatelessWidget {
     );
   }
 
-  /// بناء زر العمل في شريط التطبيق
+  /// بناء زر العمل
   Widget _buildActionButton({
     required IconData icon,
     bool isActive = false,
@@ -196,8 +301,6 @@ class ProductsPage extends StatelessWidget {
             ),
             padding: EdgeInsets.zero,
           ),
-
-          /// نقطة الإشعار
           if (hasNotification)
             Positioned(
               top: 10,
@@ -218,8 +321,8 @@ class ProductsPage extends StatelessWidget {
 
   /// بناء شريط التبويبات
   Widget _buildTabBar() {
-    return GetBuilder<ProductsTabController>(
-      builder: (tabController) => Container(
+    return GetBuilder<ProductsUIController>(
+      builder: (uiController) => Container(
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
@@ -228,26 +331,22 @@ class ProductsPage extends StatelessWidget {
         ),
         child: Row(
           children: [
-            _buildTabItem('الكل', 0, tabController),
-            _buildTabItem('المميزة', 1, tabController),
-            _buildTabItem('العروض', 2, tabController),
+            _buildTabItem('الكل', 0, uiController),
+            _buildTabItem('المميزة', 1, uiController),
+            _buildTabItem('العروض', 2, uiController),
           ],
         ),
       ),
     );
   }
 
-  /// بناء عنصر التبويب الفردي
-  Widget _buildTabItem(
-      String title,
-      int index,
-      ProductsTabController controller,
-      ) {
-    final isSelected = controller.currentTabIndex == index;
+  /// بناء عنصر التبويب
+  Widget _buildTabItem(String title, int index, ProductsUIController uiController) {
+    final isSelected = uiController.currentTabIndex == index;
 
     return Expanded(
       child: GestureDetector(
-        onTap: () => controller.changeTab(index),
+        onTap: () => _onTabTapped(index, uiController),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -278,48 +377,73 @@ class ProductsPage extends StatelessWidget {
     );
   }
 
-  /// بناء شريط البحث والفلاتر
+  /// معالج النقر على التبويبة
+  void _onTabTapped(int index, ProductsUIController uiController) {
+    if (index != uiController.currentTabIndex) {
+      // Reset scroll position when switching tabs
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+
+      _switchToTabByIndex(index);
+    }
+  }
+
+  /// بناء شريط البحث والفلاتر (للتبويبة "الكل" فقط)
   Widget _buildSearchAndFilters() {
     return GetBuilder<ProductsUIController>(
-      builder: (uiController) => AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        height: uiController.showSearchField ? null : 0,
-        child: uiController.showSearchField
-            ? Container(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 5),
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadowColor.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              /// حقل البحث
-              _buildSearchField(uiController),
-              const SizedBox(height: 10),
+      builder: (uiController) => GetBuilder<ProductController>(
+        builder: (controller) {
+          // إخفاء الفلاتر إذا لم تكن متاحة للتبويبة الحالية
+          if (!controller.filtersAvailableForCurrentTab) {
+            return const SizedBox.shrink();
+          }
 
-              /// فلاتر الفئات
-              Row(
-                children: [
-                  Expanded(child: _buildCategoryFilter(uiController)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _buildSubCategoryFilter(uiController)),
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            height: uiController.showSearchField ? null : 0,
+            child: uiController.showSearchField
+                ? Container(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 5),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.shadowColor.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
                 ],
               ),
-            ],
-          ),
-        )
-            : const SizedBox.shrink(),
+              child: Column(
+                children: [
+                  /// حقل البحث
+                  _buildSearchField(uiController),
+                  const SizedBox(height: 10),
+
+                  /// فلاتر الفئات
+                  Row(
+                    children: [
+                      Expanded(child: _buildCategoryFilter(uiController)),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildSubCategoryFilter(uiController)),
+                    ],
+                  ),
+                ],
+              ),
+            )
+                : const SizedBox.shrink(),
+          );
+        },
       ),
     );
   }
 
-  /// بناء حقل البحث باستخدام ShamraTextField
+  /// بناء حقل البحث
   Widget _buildSearchField(ProductsUIController uiController) {
     return ShamraTextField(
       hintText: 'ابحث عن المنتجات...',
@@ -369,8 +493,7 @@ class ProductsPage extends StatelessWidget {
         items: [
           _buildDropdownItem('', 'جميع الفئات الفرعية'),
           ...subCategoryController.filteredSubCategories.map(
-                (subCategory) =>
-                _buildDropdownItem(subCategory.id, subCategory.displayName),
+                (subCategory) => _buildDropdownItem(subCategory.id, subCategory.displayName),
           ),
         ],
         onChanged: (value) => uiController.onSubCategoryChanged(value),
@@ -442,30 +565,7 @@ class ProductsPage extends StatelessWidget {
     );
   }
 
-  /// بناء زر مسح جميع الفلاتر
-  Widget _buildClearFiltersButton() {
-    return GetBuilder<ProductController>(
-      builder: (productController) => Obx(() {
-        final hasActiveFilters =
-            productController.searchQuery.isNotEmpty ||
-                productController.currentCategoryId.isNotEmpty ||
-                productController.currentSubCategoryId.isNotEmpty;
-
-        if (!hasActiveFilters) return const SizedBox.shrink();
-
-        return Padding(
-          padding: const EdgeInsets.only(top: 1),
-          child: ShamraChip(
-            label: 'مسح الفلاتر',
-            icon: Icons.clear_all_rounded,
-            onTap: () => _clearAllFilters(),
-          ),
-        );
-      }),
-    );
-  }
-
-  /// مسح جميع الفلاتر المطبقة
+  /// مسح جميع الفلاتر
   void _clearAllFilters() {
     try {
       final productController = Get.find<ProductController>();
@@ -496,111 +596,84 @@ class ProductsPage extends StatelessWidget {
     }
   }
 
-  /// بناء محتوى التبويبات حسب التبويب المحدد
+  /// بناء محتوى التبويبات
   Widget _buildTabContent() {
-    return GetBuilder<ProductsTabController>(
-      builder: (tabController) {
-        switch (tabController.currentTabIndex) {
-          case 1:
-            return _buildFeaturedProductsTab();
-          case 2:
-            return _buildSaleProductsTab();
-          default:
-            return _buildAllProductsTab();
-        }
-      },
-    );
-  }
-
-  /// بناء تبويبة جميع المنتجات
-  Widget _buildAllProductsTab() {
     return GetBuilder<ProductController>(
       builder: (controller) => Obx(() {
-        final productsToShow = controller.searchQuery.isNotEmpty
-            ? controller.searchResults
-            : controller.products;
-
         // حالة التحميل
-        if (controller.isLoading && productsToShow.isEmpty) {
+        if (controller.isLoading && controller.currentProducts.isEmpty) {
           return _buildProductsShimmer();
         }
 
         // حالة عدم وجود منتجات
-        if (productsToShow.isEmpty) {
+        if (controller.currentProducts.isEmpty) {
           return EmptyStateWidget(
-            icon: Icons.inventory_2_outlined,
-            title: 'لا توجد منتجات',
-            message: _getEmptyMessage(controller),
+            icon: _getEmptyStateIcon(controller.currentTab),
+            title: _getEmptyStateTitle(controller.currentTab),
+            message: _getEmptyStateMessage(controller.currentTab, controller),
           );
         }
 
-        // عرض شبكة المنتجات
-        return _buildProductGrid(productsToShow, controller);
+        // عرض شبكة المنتجات مع ScrollController
+        return _buildProductGrid(controller.currentProducts, controller);
       }),
     );
   }
 
-  /// بناء تبويبة المنتجات المميزة
-  Widget _buildFeaturedProductsTab() {
-    return GetBuilder<ProductController>(
-      builder: (controller) => Obx(() {
-        final productsToShow = controller.searchQuery.isNotEmpty
-            ? controller.searchResults
-            : controller.featuredProducts;
-        // حالة التحميل
-        if (controller.isLoading && productsToShow.isEmpty) {
-          return _buildProductsShimmer();
-        }
-
-        // حالة عدم وجود منتجات مميزة
-        if (productsToShow.isEmpty) {
-          return const EmptyStateWidget(
-            icon: Icons.star_outline,
-            title: 'لا توجد منتجات مميزة',
-            message: 'لا توجد منتجات مميزة حالياً',
-          );
-        }
-
-        // عرض المنتجات المميزة
-        return _buildProductGrid(productsToShow, controller);
-      }),
-    );
+  /// الحصول على أيقونة الحالة الفارغة
+  IconData _getEmptyStateIcon(ProductTab tab) {
+    switch (tab) {
+      case ProductTab.featured:
+        return Icons.star_outline;
+      case ProductTab.onSale:
+        return Icons.local_offer_outlined;
+      default:
+        return Icons.inventory_2_outlined;
+    }
   }
 
-  /// بناء تبويبة منتجات العروض
-  Widget _buildSaleProductsTab() {
-    return GetBuilder<ProductController>(
-      builder: (controller) => Obx(() {
-        // حالة التحميل
-        if (controller.isLoading && controller.onSaleProducts.isEmpty) {
-          return _buildProductsShimmer();
-        }
-
-        // حالة عدم وجود عروض
-        if (controller.onSaleProducts.isEmpty) {
-          return const EmptyStateWidget(
-            icon: Icons.local_offer_outlined,
-            title: 'لا توجد عروض',
-            message: 'لا توجد منتجات في العروض حالياً',
-          );
-        }
-
-        // عرض منتجات العروض
-        return _buildProductGrid(controller.onSaleProducts, controller);
-      }),
-    );
+  /// الحصول على عنوان الحالة الفارغة
+  String _getEmptyStateTitle(ProductTab tab) {
+    switch (tab) {
+      case ProductTab.featured:
+        return 'لا توجد منتجات مميزة';
+      case ProductTab.onSale:
+        return 'لا توجد عروض';
+      default:
+        return 'لا توجد منتجات';
+    }
   }
 
-  /// بناء شبكة المنتجات مع دعم السحب للتحديث والتحميل اللانهائي
-  Widget _buildProductGrid(
-      List<Product> products,
-      ProductController controller,
-      ) {
+  /// الحصول على رسالة الحالة الفارغة
+  String _getEmptyStateMessage(ProductTab tab, ProductController controller) {
+    if (controller.searchQuery.isNotEmpty) {
+      return 'لا توجد نتائج للبحث عن "${controller.searchQuery}"';
+    }
+
+    switch (tab) {
+      case ProductTab.featured:
+        return 'لا توجد منتجات مميزة حالياً';
+      case ProductTab.onSale:
+        return 'لا توجد منتجات في العروض حالياً';
+      default:
+        if (controller.currentCategoryId.isNotEmpty) {
+          if (controller.currentSubCategoryId.isNotEmpty) {
+            return 'لا توجد منتجات في هذه الفئة الفرعية';
+          }
+          return 'لا توجد منتجات في هذه الفئة';
+        }
+        return 'لا توجد منتجات متاحة حالياً';
+    }
+  }
+
+  /// بناء شبكة المنتجات مع ScrollController
+  Widget _buildProductGrid(List<Product> products, ProductController controller) {
     return RefreshIndicator(
-      onRefresh: controller.refreshProducts,
+      onRefresh: () => controller.refreshCurrentTab(),
       color: AppColors.primary,
       backgroundColor: AppColors.white,
       child: GridView.builder(
+        controller: _scrollController, // استخدام ScrollController
         padding: const EdgeInsets.all(16),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
@@ -608,26 +681,23 @@ class ProductsPage extends StatelessWidget {
           crossAxisSpacing: 16,
           mainAxisSpacing: 20,
         ),
-        itemCount: products.length + (controller.hasMoreData ? 1 : 0),
+        itemCount: products.length + (controller.hasMoreData && controller.isLoadingMore ? 1 : 0),
         itemBuilder: (context, index) {
           /// مؤشر التحميل للصفحات التالية
-          if (index == products.length) {
-            if (controller.isLoadingMore) {
-              return const Center(child: LoadingWidget(size: 20));
-            } else {
-              /// تحميل المزيد من المنتجات تلقائياً
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                controller.loadMoreProducts();
-              });
-              return const SizedBox.shrink();
-            }
+          if (index == products.length && controller.hasMoreData) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: LoadingWidget(size: 20),
+              ),
+            );
           }
 
-          /// كارت المنتج الفردي
+          /// كارت المنتج
           final product = products[index];
           return ProductCard(
             product: product,
-            onTap: () => Get.toNamed(Routes.productDetails, arguments: product),
+            onTap: () => Get.toNamed(Routes.productDetails, arguments: product.id),
           );
         },
       ),
@@ -654,23 +724,9 @@ class ProductsPage extends StatelessWidget {
       ),
     );
   }
-
-  /// الحصول على رسالة الحالة الفارغة المناسبة
-  String _getEmptyMessage(ProductController controller) {
-    if (controller.searchQuery.isNotEmpty) {
-      return 'لا توجد نتائج للبحث عن "${controller.searchQuery}"';
-    } else if (controller.currentCategoryId.isNotEmpty) {
-      if (controller.currentSubCategoryId.isNotEmpty) {
-        return 'لا توجد منتجات في هذه الفئة الفرعية';
-      }
-      return 'لا توجد منتجات في هذه الفئة';
-    }
-    return 'لا توجد منتجات متاحة حالياً';
-  }
 }
 
-/// Controller لإدارة حالة واجهة المستخدم للمنتجات
-/// يتحكم في البحث والفلاتر وعرض/إخفاء العناصر
+/// Controller محسن لإدارة حالة واجهة المستخدم
 class ProductsUIController extends GetxController {
   /// متحكم النص للبحث
   final searchController = TextEditingController();
@@ -679,18 +735,34 @@ class ProductsUIController extends GetxController {
   final RxBool _showSearchField = false.obs;
   final RxString _selectedCategoryId = ''.obs;
   final RxString _selectedSubCategoryId = ''.obs;
+  final RxInt _currentTabIndex = 0.obs;
 
-  /// Getters للحصول على قيم الحالة
+  /// Getters
   bool get showSearchField => _showSearchField.value;
-
   String get selectedCategoryId => _selectedCategoryId.value;
-
   String get selectedSubCategoryId => _selectedSubCategoryId.value;
+  int get currentTabIndex => _currentTabIndex.value;
 
   @override
   void onClose() {
     searchController.dispose();
     super.onClose();
+  }
+
+  /// تغيير التبويبة
+  void changeTab(int index) {
+    if (_currentTabIndex.value != index) {
+      _currentTabIndex.value = index;
+
+      // إخفاء البحث عند تغيير التبويبة
+      if (_showSearchField.value) {
+        _showSearchField.value = false;
+      }
+
+      // مسح الفلاتر عند تغيير التبويبة
+      clearAllFilters();
+      update();
+    }
   }
 
   /// تبديل عرض حقل البحث
@@ -702,7 +774,7 @@ class ProductsUIController extends GetxController {
     update();
   }
 
-  /// مسح البحث وإعادة تعيين النتائج
+  /// مسح البحث
   void clearSearch() {
     searchController.clear();
     try {
@@ -719,7 +791,7 @@ class ProductsUIController extends GetxController {
     }
   }
 
-  /// تغيير نص البحث وتشغيل البحث
+  /// تغيير نص البحث
   void onSearchChanged(String value) {
     try {
       final productController = Get.find<ProductController>();
@@ -735,7 +807,7 @@ class ProductsUIController extends GetxController {
     }
   }
 
-  /// تغيير الفئة المحددة وتحديث المنتجات
+  /// تغيير الفئة المحددة
   void onCategoryChanged(String? value) {
     _selectedCategoryId.value = value ?? '';
     _selectedSubCategoryId.value = '';
@@ -746,11 +818,7 @@ class ProductsUIController extends GetxController {
 
       if (value?.isNotEmpty == true) {
         productController.getProductsByCategory(value!);
-
-        /// تحميل الفئات الفرعية للفئة المحددة
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          subCategoryController.loadSubCategoriesByCategory(value);
-        });
+        subCategoryController.loadSubCategoriesByCategory(value);
       } else {
         productController.clearCategoryFilter();
         subCategoryController.clearFilters();
@@ -777,7 +845,6 @@ class ProductsUIController extends GetxController {
       if (value?.isNotEmpty == true) {
         productController.filterBySubCategory(value!);
       } else {
-        /// العودة لفلترة الفئة الرئيسية فقط
         if (_selectedCategoryId.isNotEmpty) {
           productController.getProductsByCategory(_selectedCategoryId.value);
         } else {
@@ -796,91 +863,11 @@ class ProductsUIController extends GetxController {
     update();
   }
 
-  /// مسح جميع الفلاتر وإعادة تعيين الحالة
+  /// مسح جميع الفلاتر
   void clearAllFilters() {
     _selectedCategoryId.value = '';
     _selectedSubCategoryId.value = '';
     searchController.clear();
     update();
-  }
-}
-
-/// Controller لإدارة التبويبات مع تحسين الأداء
-/// يدير التنقل بين تبويبات: الكل، المميزة، العروض
-class ProductsTabController extends GetxController {
-  final RxInt _currentTabIndex = 0.obs;
-  bool _isDataLoaded = false;
-
-  /// Getters للحصول على الحالة الحالية
-  int get currentTabIndex => _currentTabIndex.value;
-
-  bool get isDataLoaded => _isDataLoaded;
-
-  @override
-  void onInit() {
-    super.onInit();
-    // تحميل البيانات عند إنشاء الـ controller
-    _preloadData();
-  }
-
-  /// تحميل البيانات مسبقاً لتحسين الأداء
-  Future<void> _preloadData() async {
-    if (_isDataLoaded) return;
-
-    try {
-      final productController = Get.find<ProductController>();
-
-      // تحميل جميع البيانات بشكل متوازي
-      await Future.wait([
-        productController.refreshProducts(),
-        productController.loadFeaturedProducts(),
-        productController.loadOnSaleProducts(),
-      ]);
-
-      _isDataLoaded = true;
-    } catch (e) {
-      if (Get.context != null) {
-        ShamraSnackBar.show(
-          context: Get.context!,
-          message: 'خطأ في تحميل البيانات',
-          type: SnackBarType.error,
-        );
-      }
-    }
-  }
-
-  /// تغيير التبويب المحدد مع مسح الفلاتر
-  void changeTab(int index) {
-    if (index != _currentTabIndex.value) {
-      _currentTabIndex.value = index;
-
-      // تحميل البيانات إذا لم تكن محملة
-      if (!_isDataLoaded) {
-        _preloadData();
-      }
-
-      /// مسح الفلاتر عند تغيير التبويب
-      try {
-        final uiController = Get.find<ProductsUIController>();
-        uiController.clearAllFilters();
-
-        /// مسح فلاتر المنتجات
-        final productController = Get.find<ProductController>();
-        final subCategoryController = Get.find<SubCategoryController>();
-
-        productController.clearAllFilters();
-        subCategoryController.clearFilters();
-      } catch (e) {
-        if (Get.context != null) {
-          ShamraSnackBar.show(
-            context: Get.context!,
-            message: 'خطأ في مسح الفلاتر',
-            type: SnackBarType.error,
-          );
-        }
-      }
-
-      update();
-    }
   }
 }

@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import 'package:shamra_app/presentation/controllers/banner_controller.dart';
 import '../../data/models/product.dart';
 import '../../data/models/category.dart';
 import '../../data/repositories/product_repository.dart';
@@ -72,6 +73,7 @@ class MainController extends GetxController {
         loadOnSaleProducts(),
         loadRecentProducts(),
         loadCategories(),
+        loadBanners(),
       ]);
     } catch (e) {
       _errorMessage.value = e.toString();
@@ -88,8 +90,8 @@ class MainController extends GetxController {
   // --- 🔹 تحميل المنتجات المميزة ---
   Future<void> loadFeaturedProducts() async {
     try {
-      final products = await _productRepository.getFeaturedProducts(limit: 20);
-      _featuredProducts.value = products as List<Product>;
+      final products = await _productRepository.getFeaturedProducts(limit: 10);
+      _featuredProducts.value = products['products'];
     } catch (e) {
       print('Error loading featured products: $e');
     }
@@ -98,8 +100,8 @@ class MainController extends GetxController {
   // --- 🔹 تحميل المنتجات المخفّضة ---
   Future<void> loadOnSaleProducts() async {
     try {
-      final products = await _productRepository.getOnSaleProducts(limit: 20);
-      _onSaleProducts.value = products as List<Product>;
+      final products = await _productRepository.getOnSaleProducts(limit: 10);
+      _onSaleProducts.value = products['products'];
     } catch (e) {
       print('Error loading on sale products: $e');
     }
@@ -127,6 +129,15 @@ class MainController extends GetxController {
       _isLoadingCategories.value = false;
     }
   }
+  Future<void> loadBanners() async {
+    try {
+      BannerController bannerController= Get.find<BannerController>();
+       await bannerController.loadBanners(refresh: true);
+    } catch (e) {
+      print('Error loading Banners: $e');
+    }
+  }
+
 
   // --- 🔹 البحث ---
   Future<void> searchProducts(String query) async {

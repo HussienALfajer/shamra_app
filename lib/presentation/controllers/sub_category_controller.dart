@@ -29,43 +29,45 @@ class SubCategoryController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    loadSubCategories();
+    // loadSubCategories();
   }
 
-  // Load all sub-categories
-  Future<void> loadSubCategories({
-    String? categoryId,
-    bool? isActive = true,
-  }) async {
-    try {
-      _isLoading.value = true;
-      _errorMessage.value = '';
-
-      final subCategories = await _subCategoryRepository.getSubCategories(
-        limit: 100,
-        categoryId: categoryId,
-        isActive: isActive,
-      );
-
-      _subCategories.value = subCategories;
-      _filteredSubCategories.value = subCategories;
-
-      if (categoryId != null) {
-        _selectedCategoryId.value = categoryId;
-      }
-    } catch (e) {
-      _errorMessage.value = e.toString();
-      Get.snackbar(
-        'خطأ',
-        'فشل في تحميل الفئات الفرعية: ${e.toString()}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-      );
-    } finally {
-      _isLoading.value = false;
-    }
-  }
+  // // Load all sub-categories
+  // Future<void> loadSubCategories({
+  //   String? categoryId,
+  //   bool? isActive = true,
+  // }) async {
+  //   try {
+  //     _isLoading.value = true;
+  //     _errorMessage.value = '';
+  //
+  //     final subCategories = await _subCategoryRepository.getSubCategories(
+  //       limit: 100,
+  //       categoryId: categoryId,
+  //       isActive: isActive,
+  //     );
+  //
+  //     _subCategories.value = subCategories;
+  //     _filteredSubCategories.value = subCategories;
+  //
+  //     if (categoryId != null) {
+  //       _selectedCategoryId.value = categoryId;
+  //     }
+  //     _isLoading.value =false;
+  //
+  //   } catch (e) {
+  //     _errorMessage.value = e.toString();
+  //     Get.snackbar(
+  //       'خطأ',
+  //       'فشل في تحميل الفئات الفرعية: ${e.toString()}',
+  //       backgroundColor: Colors.red,
+  //       colorText: Colors.white,
+  //       snackPosition: SnackPosition.TOP,
+  //     );
+  //   } finally {
+  //     _isLoading.value = false;
+  //   }
+  // }
 
   // Load sub-categories by category ID
   Future<void> loadSubCategoriesByCategory(String categoryId) async {
@@ -78,6 +80,8 @@ class SubCategoryController extends GetxController {
           .getSubCategoriesByCategory(categoryId);
       _subCategories.value = subCategories;
       _filteredSubCategories.value = subCategories;
+      _isLoading.value = false;
+      print("==================FIIIIIIIIIIIIIIIIINALLLLLLLLLLLLLLLLLLLLLLYYYYYYYYYYYY");
     } catch (e) {
       _errorMessage.value = e.toString();
       Get.snackbar(
@@ -163,6 +167,7 @@ class SubCategoryController extends GetxController {
   // Select sub-category
   void selectSubCategory(SubCategory? subCategory) {
     _selectedSubCategory.value = subCategory;
+
   }
 
   // Clear selected sub-category
@@ -199,69 +204,8 @@ class SubCategoryController extends GetxController {
     return _subCategories.where((subCategory) => subCategory.isActive).toList();
   }
 
-  // Load sub-categories by type
-  Future<void> loadSubCategoriesByType(
-    SubCategoryType type, {
-    String? categoryId,
-  }) async {
-    try {
-      _isLoading.value = true;
-      _errorMessage.value = '';
 
-      final subCategories = await _subCategoryRepository.getSubCategoriesByType(
-        type: type,
-        limit: 100,
-        categoryId: categoryId,
-      );
 
-      _subCategories.value = subCategories;
-      _filteredSubCategories.value = subCategories;
-      _selectedType.value = type;
-    } catch (e) {
-      _errorMessage.value = e.toString();
-      Get.snackbar(
-        'خطأ',
-        'فشل في تحميل الفئات الفرعية: ${e.toString()}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-      );
-    } finally {
-      _isLoading.value = false;
-    }
-  }
-
-  // Search sub-categories remotely
-  Future<void> searchSubCategoriesRemote(
-    String query, {
-    String? categoryId,
-  }) async {
-    try {
-      _isLoading.value = true;
-      _errorMessage.value = '';
-
-      final subCategories = await _subCategoryRepository.searchSubCategories(
-        query: query,
-        limit: 100,
-        categoryId: categoryId,
-      );
-
-      _subCategories.value = subCategories;
-      _filteredSubCategories.value = subCategories;
-      _searchQuery.value = query;
-    } catch (e) {
-      _errorMessage.value = e.toString();
-      Get.snackbar(
-        'خطأ',
-        'فشل في البحث: ${e.toString()}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-      );
-    } finally {
-      _isLoading.value = false;
-    }
-  }
 
   // Get sub-category count by category
   int getSubCategoryCountByCategory(String categoryId) {
@@ -281,13 +225,13 @@ class SubCategoryController extends GetxController {
   }
 
   // Refresh sub-categories
-  Future<void> refreshSubCategories() async {
-    await loadSubCategories(
-      categoryId: _selectedCategoryId.isNotEmpty
-          ? _selectedCategoryId.value
-          : null,
-    );
-  }
+  // Future<void> refreshSubCategories() async {
+  //   await loadSubCategories(
+  //     categoryId: _selectedCategoryId.isNotEmpty
+  //         ? _selectedCategoryId.value
+  //         : null,
+  //   );
+  // }
 
   // Reset controller state
   void reset() {

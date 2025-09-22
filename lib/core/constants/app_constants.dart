@@ -1,7 +1,7 @@
 // API Constants
 class ApiConstants {
-  static const String baseUrl = 'http://192.168.74.37:3000/api/v1';
-  static const String storageUrl = 'http://192.168.74.37:3000';
+  static const String baseUrl = 'http://192.168.1.107:3000/api/v1';
+  static const String storageUrl = 'http://192.168.1.107:3000';
 
   // Endpoints
   static const String login = '/auth/login';

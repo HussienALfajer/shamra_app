@@ -78,7 +78,7 @@ class FavoritesPage extends StatelessWidget {
                   product: product,
                   onTap: () => Get.toNamed(
                     Routes.productDetails,
-                    arguments: product,
+                    arguments: product.id,
                   ),
                 );
               },
