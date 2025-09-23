@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shamra_app/presentation/pages/search/search_page.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/colors.dart';
@@ -73,16 +74,14 @@ class MainPage extends StatelessWidget {
                       activeIcon: Icons.home_rounded,
                       label: 'الرئيسية',
                       currentIndex: mainController.currentIndex.value,
-                      onTap: () => mainController.changeTab(0),
-                    ),
+                      onTap: () => mainController.onNavTap(0),                    ),
                     _buildNavItem(
                       index: 1,
                       icon: Icons.grid_view_outlined,
                       activeIcon: Icons.grid_view_rounded,
                       label: 'المنتجات',
                       currentIndex: mainController.currentIndex.value,
-                      onTap: () => mainController.changeTab(1),
-                    ),
+                      onTap: () => mainController.onNavTap(1),                    ),
                     _buildNavItemWithBadge(
                       index: 2,
                       icon: Icons.shopping_cart_outlined,
@@ -90,24 +89,21 @@ class MainPage extends StatelessWidget {
                       label: 'السلة',
                       currentIndex: mainController.currentIndex.value,
                       badgeCount: cartController.itemCount,
-                      onTap: () => mainController.changeTab(2),
-                    ),
+                      onTap: () => mainController.onNavTap(2),                    ),
                     _buildNavItem(
                       index: 3,
                       icon: Icons.receipt_long_outlined,
                       activeIcon: Icons.receipt_long_rounded,
                       label: 'الطلبات',
                       currentIndex: mainController.currentIndex.value,
-                      onTap: () => mainController.changeTab(3),
-                    ),
+                      onTap: () => mainController.onNavTap(3),                    ),
                     _buildNavItem(
                       index: 4,
                       icon: Icons.person_outline_rounded,
                       activeIcon: Icons.person_rounded,
                       label: 'الحساب',
                       currentIndex: mainController.currentIndex.value,
-                      onTap: () => mainController.changeTab(4),
-                    ),
+                      onTap: () => mainController.onNavTap(4),                    ),
                   ],
                 ),
               ),
@@ -301,6 +297,7 @@ class CustomerHomePage extends StatelessWidget {
         onRefresh: controller.refreshData,
         color: AppColors.primary,
         child: CustomScrollView(
+          controller: controller.homeScrollController,
           slivers: [
             /// شريط التطبيق العلوي مع الشعار والإجراءات
             _buildSliverAppBar(),
@@ -401,7 +398,7 @@ class CustomerHomePage extends StatelessWidget {
 
   void _navigateToProducts(int initialTab) {
     final mainController = Get.find<MainController>();
-    mainController.changeTab(1);
+    mainController.onNavTap(1);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
@@ -476,7 +473,7 @@ class CustomerHomePage extends StatelessWidget {
       actions: [
         IconButton(
           icon: const Icon(Icons.search, color: AppColors.textPrimary),
-          onPressed: () =>  Get.toNamed(Routes.search),
+          onPressed: () =>  Get.to(SearchPage()),
         ),
         IconButton(
           icon: const Icon(Icons.favorite_border, color: AppColors.textPrimary),

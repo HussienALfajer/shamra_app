@@ -8,6 +8,7 @@ import '../../../data/models/cart.dart';
 import '../../../routes/app_routes.dart';
 import '../../controllers/cart_controller.dart';
 import '../../controllers/auth_controller.dart';
+import '../../controllers/main_controller.dart';
 import '../../controllers/order_controller.dart';
 import '../../widgets/common_widgets.dart';
 
@@ -21,25 +22,21 @@ class CartPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cartController = Get.find<CartController>();
+    final main = Get.find<MainController>(); // ✅
 
     // التأكد من وجود OrderController
     Get.put(OrderController());
 
     return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
+        textDirection: TextDirection.rtl,
+        child: WillPopScope(
+          onWillPop: () async {
+            final handled = main.backToPreviousTab();
+            return !handled;
+          },
+          child: Scaffold(
         appBar: CustomAppBar(
           title: "السلة",
-          actions: [
-            IconButton(
-              onPressed: cartController.showCartSummary,
-              icon: Icon(
-                Icons.shopping_bag_outlined,
-                color: AppColors.black,
-                size: 25,
-              ),
-            ),
-          ],
         ),
         backgroundColor: AppColors.background,
         body: GetBuilder<CartController>(
@@ -52,12 +49,13 @@ class CartPage extends StatelessWidget {
             if (cartController.isEmpty) {
               return _buildEmptyCart();
             }
-
+            final main = Get.find<MainController>();
             return Column(
               children: [
                 /// 🔹 قائمة المنتجات
                 Expanded(
                   child: ListView.builder(
+                    controller: main.cartScrollController, // ✅
                     padding: const EdgeInsets.all(16),
                     itemCount: cartController.items.length,
                     itemBuilder: (context, index) {
@@ -74,14 +72,14 @@ class CartPage extends StatelessWidget {
           }),
         ),
       ),
-    );
+    ));
   }
 
   /// 🔹 عنصر منتج داخل السلة
   Widget _buildCartItemCard(CartItem cartItem, CartController cartController) {
     return ShamraCard(
       onTap: () =>
-          Get.toNamed(Routes.productDetails, arguments: cartItem.product),
+          Get.toNamed(Routes.productDetails, arguments: cartItem.product.id),
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       child: Row(
@@ -332,10 +330,6 @@ class CartPage extends StatelessWidget {
         discountAmount: 0.0,
       );
 
-      if (success) {
-        // الطلب تم بنجاح - الانتقال لصفحة الطلبات
-        Get.offNamed(Routes.orders);
-      }
 
     } catch (e) {
       ShamraSnackBar.show(
@@ -433,7 +427,7 @@ class CartPage extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${cartController.total.toStringAsFixed(0)} ر.س',
+                        '${cartController.total.toStringAsFixed(0)} \$',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,

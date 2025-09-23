@@ -23,7 +23,6 @@ class ProductDetailsPage extends StatefulWidget {
 
 class _ProductDetailsPageState extends State<ProductDetailsPage>
     with TickerProviderStateMixin {
-
   // Repositories and Services
   final ProductRepository _productRepository = ProductRepository();
 
@@ -134,7 +133,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
     try {
       final arguments = Get.arguments;
 
-  if (arguments is String) {
+      if (arguments is String) {
         // Product ID passed - fetch product data
         final productData = await _productRepository.getProductById(arguments);
 
@@ -154,7 +153,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
             }
           });
         }
-
       } else {
         // Invalid arguments
         if (mounted) {
@@ -215,9 +213,15 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
           categoryId: product!.categoryId,
           limit: 50,
         );
-        final subCategoryProducts = (subCategoryResult['products'] as List<Product>?)
-            ?.where((p) => p.subCategoryId == product!.subCategoryId && p.id != product!.id)
-            .toList() ?? [];
+        final subCategoryProducts =
+            (subCategoryResult['products'] as List<Product>?)
+                ?.where(
+                  (p) =>
+                      p.subCategoryId == product!.subCategoryId &&
+                      p.id != product!.id,
+                )
+                .toList() ??
+            [];
         allProducts.addAll(subCategoryProducts);
       }
 
@@ -227,9 +231,15 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
           categoryId: product!.categoryId,
           limit: 100,
         );
-        final categoryProducts = (categoryResult['products'] as List<Product>?)
-            ?.where((p) => p.id != product!.id && !allProducts.any((existing) => existing.id == p.id))
-            .toList() ?? [];
+        final categoryProducts =
+            (categoryResult['products'] as List<Product>?)
+                ?.where(
+                  (p) =>
+                      p.id != product!.id &&
+                      !allProducts.any((existing) => existing.id == p.id),
+                )
+                .toList() ??
+            [];
         allProducts.addAll(categoryProducts);
       }
 
@@ -237,7 +247,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
       if (allProducts.length < 20) {
         final priceRangeProducts = await _getSimilarPriceProducts();
         allProducts.addAll(
-          priceRangeProducts.where((p) => !allProducts.any((existing) => existing.id == p.id)),
+          priceRangeProducts.where(
+            (p) => !allProducts.any((existing) => existing.id == p.id),
+          ),
         );
       }
 
@@ -274,9 +286,12 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
       final products = result['products'] as List<Product>? ?? [];
 
       return products
-          .where((p) => p.id != product!.id &&
-          p.displayPrice >= minPrice &&
-          p.displayPrice <= maxPrice)
+          .where(
+            (p) =>
+                p.id != product!.id &&
+                p.displayPrice >= minPrice &&
+                p.displayPrice <= maxPrice,
+          )
           .toList();
     } catch (e) {
       return [];
@@ -307,12 +322,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
     }
 
     // Same brand
-    if (compareProduct.brand == product!.brand && product!.brand?.isNotEmpty == true) {
+    if (compareProduct.brand == product!.brand &&
+        product!.brand?.isNotEmpty == true) {
       score += 25;
     }
 
     // Similar price range (±30%)
-    final priceDifference = (compareProduct.displayPrice - product!.displayPrice).abs();
+    final priceDifference =
+        (compareProduct.displayPrice - product!.displayPrice).abs();
     final priceThreshold = product!.displayPrice * 0.3;
     if (priceDifference <= priceThreshold) {
       score += 20;
@@ -406,10 +423,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         ),
       ),
       body: const Center(
-        child: LoadingWidget(
-          message: "جاري تحميل المنتج...",
-          size: 50,
-        ),
+        child: LoadingWidget(message: "جاري تحميل المنتج...", size: 50),
       ),
     );
   }
@@ -477,7 +491,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
   }
 
   Widget _buildSliverAppBar() {
-    final images = product!.images.isNotEmpty ? product!.images : [product!.mainImage];
+    final images = product!.images.isNotEmpty
+        ? product!.images
+        : [product!.mainImage];
 
     return SliverAppBar(
       expandedHeight: 400,
@@ -518,7 +534,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
             ],
           ),
           child: Obx(
-                () => IconButton(
+            () => IconButton(
               icon: Icon(
                 favController.isFavorite(product!.id)
                     ? Icons.favorite
@@ -552,17 +568,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                 offset: const Offset(0, 2),
               ),
             ],
-          ),
-          child: IconButton(
-            onPressed: () {
-              ShamraSnackBar.show(
-                context: context,
-                message: 'تم نسخ رابط المنتج',
-                type: SnackBarType.info,
-              );
-            },
-            icon: const Icon(Icons.share_rounded),
-            color: AppColors.textPrimary,
           ),
         ),
       ],
@@ -612,11 +617,18 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                               child: const Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.broken_image_outlined, size: 64, color: AppColors.grey),
+                                  Icon(
+                                    Icons.broken_image_outlined,
+                                    size: 64,
+                                    color: AppColors.grey,
+                                  ),
                                   SizedBox(height: 8),
                                   Text(
                                     'صورة غير متاحة',
-                                    style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 14,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -658,7 +670,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                   top: 100,
                   right: 20,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [Colors.red, Colors.red.shade700],
@@ -677,7 +692,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.local_offer_rounded, color: AppColors.white, size: 16),
+                        const Icon(
+                          Icons.local_offer_rounded,
+                          color: AppColors.white,
+                          size: 16,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           'خصم ${product!.discountPercentage?.toStringAsFixed(0)}%',
@@ -698,7 +717,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                   top: 100,
                   left: 20,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: AppColors.secondaryGradient,
@@ -717,7 +739,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.star_rounded, color: AppColors.white, size: 16),
+                        Icon(
+                          Icons.star_rounded,
+                          color: AppColors.white,
+                          size: 16,
+                        ),
                         SizedBox(width: 4),
                         Text(
                           'مميز',
@@ -776,7 +802,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
             children: [
               if (product!.brand != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -793,7 +822,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
 
               if (product!.model != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.secondary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -821,7 +853,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                   Row(
                     children: List.generate(5, (index) {
                       return Icon(
-                        index < 4 ? Icons.star_rounded : Icons.star_border_rounded,
+                        index < 4
+                            ? Icons.star_rounded
+                            : Icons.star_border_rounded,
                         color: AppColors.secondary,
                         size: 20,
                       );
@@ -843,7 +877,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                 onPressed: () {
                   // TODO: Navigate to reviews
                 },
-                icon: const Icon(Icons.reviews_outlined, size: 16, color: AppColors.primary),
+                icon: const Icon(
+                  Icons.reviews_outlined,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
                 label: const Text(
                   'عرض التقييمات',
                   style: TextStyle(
@@ -881,7 +919,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         children: [
           Row(
             children: [
-              const Icon(Icons.price_change_rounded, color: AppColors.primary, size: 24),
+              const Icon(
+                Icons.price_change_rounded,
+                color: AppColors.primary,
+                size: 24,
+              ),
               const SizedBox(width: 8),
               const Text(
                 'السعر',
@@ -927,7 +969,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                 const SizedBox(width: 10),
 
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.success.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -971,7 +1016,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         children: [
           Row(
             children: [
-              const Icon(Icons.description_rounded, color: AppColors.primary, size: 20),
+              const Icon(
+                Icons.description_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               const Text(
                 'وصف المنتج',
@@ -1023,7 +1072,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         children: [
           Row(
             children: [
-              const Icon(Icons.tune_rounded, color: AppColors.primary, size: 20),
+              const Icon(
+                Icons.tune_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               const Text(
                 'المواصفات والتفاصيل',
@@ -1039,7 +1092,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
           const SizedBox(height: 16),
 
           ...product!.specifications!.entries.map(
-                (entry) => Container(
+            (entry) => Container(
               margin: const EdgeInsets.only(bottom: 12),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1093,15 +1146,21 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
 
   IconData _getIconForSpecification(String key) {
     final keyLower = key.toLowerCase();
-    if (keyLower.contains('screen') || keyLower.contains('display') || keyLower.contains('شاشة')) {
+    if (keyLower.contains('screen') ||
+        keyLower.contains('display') ||
+        keyLower.contains('شاشة')) {
       return Icons.tv_rounded;
     } else if (keyLower.contains('camera') || keyLower.contains('كاميرا')) {
       return Icons.camera_alt_rounded;
     } else if (keyLower.contains('battery') || keyLower.contains('بطارية')) {
       return Icons.battery_full_rounded;
-    } else if (keyLower.contains('storage') || keyLower.contains('memory') || keyLower.contains('ذاكرة')) {
+    } else if (keyLower.contains('storage') ||
+        keyLower.contains('memory') ||
+        keyLower.contains('ذاكرة')) {
       return Icons.memory_rounded;
-    } else if (keyLower.contains('processor') || keyLower.contains('cpu') || keyLower.contains('معالج')) {
+    } else if (keyLower.contains('processor') ||
+        keyLower.contains('cpu') ||
+        keyLower.contains('معالج')) {
       return Icons.memory_rounded;
     } else if (keyLower.contains('weight') || keyLower.contains('وزن')) {
       return Icons.fitness_center_rounded;
@@ -1146,7 +1205,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
-              product!.inStock ? Icons.inventory_rounded : Icons.inventory_2_outlined,
+              product!.inStock
+                  ? Icons.inventory_rounded
+                  : Icons.inventory_2_outlined,
               color: product!.inStock ? AppColors.success : AppColors.error,
               size: 20,
             ),
@@ -1163,7 +1224,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: product!.inStock ? AppColors.success : AppColors.error,
+                    color: product!.inStock
+                        ? AppColors.success
+                        : AppColors.error,
                   ),
                 ),
 
@@ -1175,7 +1238,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                         : 'متبقي ${product!.stockQuantity} قطع فقط',
                     style: TextStyle(
                       fontSize: 12,
-                      color: product!.stockQuantity > 10 ? AppColors.success : AppColors.warning,
+                      color: product!.stockQuantity > 10
+                          ? AppColors.success
+                          : AppColors.warning,
                     ),
                   ),
                 ],
@@ -1212,7 +1277,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         children: [
           Row(
             children: [
-              const Icon(Icons.recommend_rounded, color: AppColors.primary, size: 24),
+              const Icon(
+                Icons.recommend_rounded,
+                color: AppColors.primary,
+                size: 24,
+              ),
               const SizedBox(width: 8),
               const Text(
                 'منتجات مشابهة',
@@ -1225,7 +1294,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
               const Spacer(),
               if (similarProducts.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -1249,9 +1321,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
           else if (similarProductsError.isNotEmpty)
             _buildSimilarProductsError()
           else if (similarProducts.isEmpty)
-              _buildNoSimilarProducts()
-            else
-              _buildSimilarProductsList(),
+            _buildNoSimilarProducts()
+          else
+            _buildSimilarProductsList(),
         ],
       ),
     );
@@ -1378,7 +1450,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                 margin: const EdgeInsets.only(left: 12),
                 child: ProductCard(
                   product: similarProduct,
-                  onTap: () => Get.offAndToNamed('/product-details', arguments: similarProduct),
+                  onTap: () => Get.offAndToNamed(
+                    '/product-details',
+                    arguments: similarProduct,
+                  ),
                   matchPercent: _calculateSimilarityScore(similarProduct),
                   matchThreshold: 60,
                 ),
@@ -1441,8 +1516,12 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                     mainAxisSize: MainAxisSize.max,
                     children: [
                       IconButton(
-                        onPressed: () => cartController.decrementQuantity(product!.id),
-                        icon: const Icon(Icons.remove_rounded, color: AppColors.primary),
+                        onPressed: () =>
+                            cartController.decrementQuantity(product!.id),
+                        icon: const Icon(
+                          Icons.remove_rounded,
+                          color: AppColors.primary,
+                        ),
                       ),
                       Container(
                         constraints: const BoxConstraints(minWidth: 40),
@@ -1457,8 +1536,12 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                         ),
                       ),
                       IconButton(
-                        onPressed: () => cartController.incrementQuantity(product!.id),
-                        icon: const Icon(Icons.add_rounded, color: AppColors.primary),
+                        onPressed: () =>
+                            cartController.incrementQuantity(product!.id),
+                        icon: const Icon(
+                          Icons.add_rounded,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ],
                   ),
@@ -1472,7 +1555,15 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                       Expanded(
                         child: ShamraButton(
                           text: 'إضافة للسلة',
-                          onPressed: product!.inStock ? () => cartController.addToCart(product!) : null,
+                          onPressed: product!.inStock
+                              ? () => cartController.addToCart(product!)
+                              : () => ShamraSnackBar.show(
+                                  context: Get.context!,
+                                  message:
+                                      'المنتج ${product!.name} غير متوفر حاليًا، ولا يمكن إضافته إلى السلة.',
+                                  type: SnackBarType
+                                      .error, // الأفضل يكون error بدلاً من success
+                                ),
                           isOutlined: true,
                           icon: Icons.add_shopping_cart_rounded,
                           height: 56,

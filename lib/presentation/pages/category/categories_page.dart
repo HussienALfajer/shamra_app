@@ -63,13 +63,7 @@ class CategoriesPage extends StatelessWidget {
             Container(
               color: AppColors.white,
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.grey.withOpacity(0.2)),
-                ),
-                child: TextField(
+              child:  TextField(
                   controller: searchController,
                   onChanged: onSearchChanged,
                   textDirection: TextDirection.rtl,
@@ -103,7 +97,6 @@ class CategoriesPage extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
 
             // Categories content
             Expanded(
@@ -136,10 +129,12 @@ class CategoriesPage extends StatelessWidget {
 
                     // Show search results or no results message
                     if (searchQuery.value.isNotEmpty && filteredCategories.isEmpty) {
-                      return EmptyStateWidget(
-                        icon: Icons.search_off,
-                        title: "لا توجد نتائج",
-                        message: 'لا توجد فئات تطابق "${searchQuery.value}"',
+                      return SingleChildScrollView(
+                        child: EmptyStateWidget(
+                          icon: Icons.search_off,
+                          title: "لا توجد نتائج",
+                          message: 'لا توجد فئات تطابق "${searchQuery.value}"',
+                        ),
                       );
                     }
 

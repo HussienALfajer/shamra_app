@@ -221,7 +221,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(70);
+  Size get preferredSize => const Size.fromHeight(50);
 }
 
 // NEW SHAMRA WIDGETS BELOW
@@ -429,6 +429,8 @@ class ShamraButton extends StatelessWidget {
   }
 }
 
+
+
 class ShamraTextField extends StatelessWidget {
   final String label;
   final String hintText;
@@ -437,21 +439,24 @@ class ShamraTextField extends StatelessWidget {
   final String? Function(String?)? validator;
   final TextInputType? keyboardType;
   final Function(String value)? onChanged;
+  final Function(String value)? onSubmitted;
   final bool obscureText;
   final Widget? suffixIcon;
   final bool isRequired;
   final TextCapitalization textCapitalization;
   final bool isSecondary;
-  final dynamic hintColor;
-  final dynamic hintStyle;
-  final dynamic iconColor;
+  final Color? hintColor;
+  final TextStyle? hintStyle;
+  final Color? customIconColor;
 
   const ShamraTextField({
     super.key,
     required this.hintText,
     required this.icon,
+    this.label = '',
     this.controller,
     this.onChanged,
+    this.onSubmitted,
     this.validator,
     this.keyboardType,
     this.obscureText = false,
@@ -461,35 +466,37 @@ class ShamraTextField extends StatelessWidget {
     this.isSecondary = false,
     this.hintColor,
     this.hintStyle,
-    this.iconColor,
-    this.label='',
+    this.customIconColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = isSecondary ? AppColors.primaryDark : AppColors.primary;
+    final effectiveIconColor = customIconColor ??
+        (isSecondary ? AppColors.primaryDark : AppColors.primary);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        RichText(
-          text: TextSpan(
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+        if (label.isNotEmpty) ...[
+          RichText(
+            text: TextSpan(
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+              children: [
+                TextSpan(text: label),
+                if (isRequired)
+                  const TextSpan(
+                    text: ' *',
+                    style: TextStyle(color: AppColors.error),
+                  ),
+              ],
             ),
-            children: [
-              TextSpan(text: label),
-              if (isRequired)
-                const TextSpan(
-                  text: ' *',
-                  style: TextStyle(color: AppColors.error),
-                ),
-            ],
           ),
-        ),
-        const SizedBox(height: 8),
+          const SizedBox(height: 8),
+        ],
         TextFormField(
           controller: controller,
           validator: validator,
@@ -497,34 +504,40 @@ class ShamraTextField extends StatelessWidget {
           obscureText: obscureText,
           textCapitalization: textCapitalization,
           onChanged: onChanged,
+          onFieldSubmitted: onSubmitted, // ✅ استخدام onSubmitted
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           decoration: InputDecoration(
             hintText: hintText,
+            hintStyle: hintStyle ??
+                TextStyle(
+                  color: hintColor ?? AppColors.textSecondary,
+                  fontSize: 14,
+                ),
             prefixIcon: Container(
               margin: const EdgeInsets.all(12),
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: effectiveIconColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: iconColor, size: 20),
+              child: Icon(icon, color: effectiveIconColor, size: 20),
             ),
             suffixIcon: suffixIcon,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: AppColors.outline),
+              borderSide: const BorderSide(color: AppColors.outline),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: AppColors.outline),
+              borderSide: const BorderSide(color: AppColors.outline),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: iconColor, width: 2),
+              borderSide: BorderSide(color: effectiveIconColor, width: 2),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: AppColors.error, width: 2),
+              borderSide: const BorderSide(color: AppColors.error, width: 2),
             ),
             filled: true,
             fillColor: AppColors.surface,

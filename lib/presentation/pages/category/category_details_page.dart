@@ -3,6 +3,7 @@ import 'package:flutter/material.dart' hide ErrorWidget;
 import 'package:get/get.dart';
 import '../../../core/constants/colors.dart';
 import '../../../data/utils/helpers.dart';
+import '../../../routes/app_routes.dart';
 import '../../controllers/category_controller.dart';
 import '../../controllers/sub_category_controller.dart';
 import '../../widgets/common_widgets.dart';
@@ -366,10 +367,12 @@ class _ProductsGrid extends StatelessWidget {
 
           // Empty state
           if (controller.categoryProducts.isEmpty) {
-            return EmptyStateWidget(
-              icon: Icons.inventory_2_outlined,
-              title: "لا توجد منتجات",
-              message: controller.getEmptyMessage(),
+            return SingleChildScrollView(
+              child: EmptyStateWidget(
+                icon: Icons.inventory_2_outlined,
+                title: "لا توجد منتجات",
+                message: controller.getEmptyMessage(),
+              ),
             );
           }
 
@@ -402,7 +405,7 @@ class _ProductsGrid extends StatelessWidget {
                 return ProductCard(
                   product: product,
                   isGridView: true,
-                  onTap: () => Get.toNamed('/product-details', arguments: product),
+                  onTap: () => Get.toNamed(Routes.productDetails, arguments: product.id),
                 );
               },
             ),

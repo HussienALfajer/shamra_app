@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/constants/colors.dart';
 import '../../controllers/auth_controller.dart';
+import '../../controllers/main_controller.dart';
 import '../../controllers/order_controller.dart';
 import '../../widgets/common_widgets.dart';
 
@@ -53,21 +54,28 @@ class _ProfilePageState extends State<ProfilePage>
 
   @override
   Widget build(BuildContext context) {
+    final main = Get.find<MainController>();
+
     return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        body: GetBuilder<AuthController>(
-          builder: (authController) {
-            if (!authController.isLoggedIn) {
-              return _buildLoginRequired();
-            }
-            return _buildProfileContent(authController);
+        textDirection: TextDirection.rtl,
+        child: WillPopScope(
+          onWillPop: () async {
+            final handled = main.backToPreviousTab();
+            return !handled;
           },
-        ),
-      ),
-    );
-  }
+          child: Scaffold(
+            backgroundColor: AppColors.background,
+            body: GetBuilder<AuthController>(
+              builder: (authController) {
+                if (!authController.isLoggedIn) {
+                  return _buildLoginRequired();
+                }
+                return _buildProfileContent(authController);
+              },
+            ),
+          ),
+        ));
+    }
 
   Widget _buildLoginRequired() {
     return FadeTransition(
@@ -314,7 +322,8 @@ class _ProfilePageState extends State<ProfilePage>
                           decoration: BoxDecoration(
                             color: AppColors.success,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.white, width: 2),
+                            border: Border.all(
+                                color: AppColors.white, width: 2),
                           ),
                         ),
                       ),
@@ -416,12 +425,10 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  Widget _buildQuickActionItem(
-      String label,
+  Widget _buildQuickActionItem(String label,
       IconData icon,
       Color color,
-      VoidCallback onTap,
-      ) {
+      VoidCallback onTap,) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -481,7 +488,8 @@ class _ProfilePageState extends State<ProfilePage>
                   ),
                   TextButton(
                     onPressed: () => Get.toNamed('/order-analytics'),
-                    child: const Text('عرض التفاصيل',style: TextStyle(fontSize: 14),),
+                    child: const Text(
+                      'عرض التفاصيل', style: TextStyle(fontSize: 14),),
                   ),
                 ],
               ),
@@ -499,7 +507,8 @@ class _ProfilePageState extends State<ProfilePage>
                     summary['totalOrders'].toString(),
                     Icons.receipt_long_rounded,
                     AppColors.primary,
-                    '${((summary['totalOrders'] as int) * 100 / 50).clamp(0, 100).toInt()}%',
+                    '${((summary['totalOrders'] as int) * 100 / 50).clamp(
+                        0, 100).toInt()}%',
                   ),
                   _buildStatCard(
                     'إجمالي المبلغ',
@@ -513,7 +522,10 @@ class _ProfilePageState extends State<ProfilePage>
                     summary['deliveredCount'].toString(),
                     Icons.check_circle_rounded,
                     AppColors.success,
-                    '${summary['totalOrders'] > 0 ? ((summary['deliveredCount'] as int) * 100 / (summary['totalOrders'] as int)).toInt() : 0}%',
+                    '${summary['totalOrders'] > 0
+                        ? ((summary['deliveredCount'] as int) * 100 /
+                        (summary['totalOrders'] as int)).toInt()
+                        : 0}%',
                   ),
                   _buildStatCard(
                     'قيد التنفيذ',
@@ -531,13 +543,11 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  Widget _buildStatCard(
-      String label,
+  Widget _buildStatCard(String label,
       String value,
       IconData icon,
       Color color,
-      String trend,
-      ) {
+      String trend,) {
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
@@ -738,11 +748,9 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  Widget _buildSettingsSection(
-      String title,
+  Widget _buildSettingsSection(String title,
       IconData titleIcon,
-      List<Map<String, dynamic>> items,
-      ) {
+      List<Map<String, dynamic>> items,) {
     return ShamraCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -762,25 +770,24 @@ class _ProfilePageState extends State<ProfilePage>
             ],
           ),
           const SizedBox(height: 16),
-          ...items.map((item) => _buildSettingItem(
-            item['title'] as String,
-            item['subtitle'] as String,
-            item['icon'] as IconData,
-            item['action'] as VoidCallback?,
-            item['color'] as Color,
-          )),
+          ...items.map((item) =>
+              _buildSettingItem(
+                item['title'] as String,
+                item['subtitle'] as String,
+                item['icon'] as IconData,
+                item['action'] as VoidCallback?,
+                item['color'] as Color,
+              )),
         ],
       ),
     );
   }
 
-  Widget _buildSettingItem(
-      String title,
+  Widget _buildSettingItem(String title,
       String subtitle,
       IconData icon,
       VoidCallback? onTap,
-      Color color,
-      ) {
+      Color color,) {
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       child: Material(
@@ -1013,7 +1020,8 @@ class _ProfilePageState extends State<ProfilePage>
           child: Row(
             children: [
               Icon(
-                isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                isSelected ? Icons.radio_button_checked : Icons
+                    .radio_button_off,
                 color: isSelected ? AppColors.primary : AppColors.grey,
               ),
               const SizedBox(width: 16),
@@ -1102,7 +1110,8 @@ class _ProfilePageState extends State<ProfilePage>
           child: Row(
             children: [
               Icon(
-                isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                isSelected ? Icons.radio_button_checked : Icons
+                    .radio_button_off,
                 color: isSelected ? AppColors.primary : AppColors.grey,
               ),
               const SizedBox(width: 16),

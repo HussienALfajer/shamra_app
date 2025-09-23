@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/constants/colors.dart';
 import '../../../routes/app_routes.dart';
+import '../../controllers/main_controller.dart';
 import '../../controllers/order_controller.dart';
 import '../../controllers/auth_controller.dart';
 import '../../widgets/common_widgets.dart';
@@ -16,56 +17,70 @@ class OrdersPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final main = Get.find<MainController>();
     final orderController = Get.find<OrderController>();
     final authController = Get.find<AuthController>();
 
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: DefaultTabController(
-        length: 4,
-        child: Scaffold(
-          backgroundColor: AppColors.background,
-          appBar: const CustomAppBar(title: "طلباتي"),
-          body: Obx(() {
-            if (!authController.isLoggedIn) {
-              return _buildLoginRequired(context);
-            }
 
-            return Column(
-              children: [
-                _buildTabBar(),
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      _buildOrdersList(
-                        orders: orderController.orders,
-                        isLoading: orderController.isLoading,
-                        emptyMessage: "لا توجد طلبات",
+    return Directionality(
+        textDirection: TextDirection.rtl,
+        child: DefaultTabController(
+          length: 4,
+          child: WillPopScope(
+            onWillPop: () async {
+              // 1) لو داخل تبويب فرعي داخل OrdersPage → ارجع تبويب واحد
+              final controller = DefaultTabController.of(context);
+              if (controller != null && controller.index > 0) {
+                controller.animateTo(controller.index - 1);
+                return false;
+              }
+              // 2) وإلا ارجع إلى تبويب الـ BottomNav السابق
+              final handled = main.backToPreviousTab();
+              return !handled;
+            },
+            child: Scaffold(
+              backgroundColor: AppColors.background,
+              appBar: const CustomAppBar(title: "طلباتي"),
+              body: Obx(() {
+                if (!authController.isLoggedIn) {
+                  return _buildLoginRequired(context);
+                }
+
+                return Column(
+                  children: [
+                    _buildTabBar(),
+                    Expanded(
+                      child: TabBarView(
+                        children: [
+                          _buildOrdersList(
+                            orders: orderController.orders,
+                            isLoading: orderController.isLoading,
+                            emptyMessage: "لا توجد طلبات",
+                          ),
+                          _buildOrdersList(
+                            orders: orderController.activeOrders,
+                            isLoading: orderController.isLoading,
+                            emptyMessage: "لا توجد طلبات قيد التنفيذ",
+                          ),
+                          _buildOrdersList(
+                            orders: orderController.completedOrders,
+                            isLoading: orderController.isLoading,
+                            emptyMessage: "لا توجد طلبات مكتملة",
+                          ),
+                          _buildOrdersList(
+                            orders: orderController.cancelledOrders,
+                            isLoading: orderController.isLoading,
+                            emptyMessage: "لا توجد طلبات ملغية",
+                          ),
+                        ],
                       ),
-                      _buildOrdersList(
-                        orders: orderController.activeOrders,
-                        isLoading: orderController.isLoading,
-                        emptyMessage: "لا توجد طلبات قيد التنفيذ",
-                      ),
-                      _buildOrdersList(
-                        orders: orderController.completedOrders,
-                        isLoading: orderController.isLoading,
-                        emptyMessage: "لا توجد طلبات مكتملة",
-                      ),
-                      _buildOrdersList(
-                        orders: orderController.cancelledOrders,
-                        isLoading: orderController.isLoading,
-                        emptyMessage: "لا توجد طلبات ملغية",
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          }),
-        ),
-      ),
-    );
+                    ),
+                  ],
+                );
+              }),
+            ),
+          ),
+        ));
   }
 
   /// ✅ تبويب الفئات (الكل - قيد التنفيذ - مكتملة - ملغية)
@@ -124,6 +139,7 @@ class OrdersPage extends StatelessWidget {
       onRefresh: Get.find<OrderController>().refreshOrders,
       color: AppColors.primary,
       child: ListView.builder(
+        controller: Get.find<MainController>().ordersScrollController, // ✅
         padding: const EdgeInsets.all(16),
         itemCount: orders.length,
         itemBuilder: (context, index) => _buildOrderCard(orders[index]),
@@ -136,7 +152,7 @@ class OrdersPage extends StatelessWidget {
     return ShamraCard(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
-      onTap: () => Get.toNamed('/order-details', arguments: order),
+      onTap: () => Get.toNamed(Routes.orderDetails, arguments: order),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -193,7 +209,7 @@ class OrdersPage extends StatelessWidget {
                 child: _buildOrderDetail(
                   Icons.attach_money,
                   "${order.totalAmount.toStringAsFixed(0)}",
-                  "ر.س",
+                  "\$",
                   color: AppColors.primary,
                 ),
               ),
@@ -210,7 +226,7 @@ class OrdersPage extends StatelessWidget {
                   text: "عرض التفاصيل",
                   isOutlined: true,
                   onPressed: () =>
-                      Get.toNamed('/order-details', arguments: order),
+                      Get.toNamed(Routes.orderDetails, arguments: order),
                 ),
               ),
               if (order.status.toLowerCase() == "pending") ...[
@@ -302,9 +318,11 @@ class OrdersPage extends StatelessWidget {
         action: ShamraButton(
           text: "تسجيل دخول",
           icon: Icons.login,
-          onPressed: () => Get.toNamed('/login'),
+          onPressed: () => Get.toNamed(Routes.login),
         ),
       ),
     );
   }
 }
+
+

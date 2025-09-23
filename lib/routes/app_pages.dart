@@ -4,6 +4,8 @@ import 'package:shamra_app/presentation/controllers/banner_controller.dart';
 import 'package:shamra_app/presentation/pages/auth/login_page.dart';
 import 'package:shamra_app/presentation/pages/auth/register_page.dart';
 import 'package:shamra_app/presentation/pages/main/main_page.dart';
+import 'package:shamra_app/presentation/pages/order/order_details.dart';
+import 'package:shamra_app/presentation/pages/order/order_page.dart';
 import 'package:shamra_app/presentation/pages/splash/welcome_page.dart';
 import 'package:shamra_app/presentation/pages/branch/branch_selection_page.dart';
 import '../presentation/pages/category/categories_page.dart';
@@ -11,7 +13,6 @@ import '../presentation/pages/category/category_details_page.dart';
 import '../presentation/pages/favorite/favorites_page.dart';
 import '../presentation/pages/product/product_page.dart';
 import '../presentation/pages/product/product_details_page.dart';
-import '../presentation/pages/serach/serach_page.dart';
 import '../presentation/pages/splash/splash.dart';
 import 'app_routes.dart';
 import '../core/bindings/initial_binding.dart';
@@ -136,13 +137,13 @@ class AppPages {
     // Orders
     GetPage(
       name: Routes.orders,
-      page: () => const Scaffold(body: Center(child: Text('Order List Page'))),
+      page: () => const OrdersPage(),
       binding: OrderBinding(),
     ),
     GetPage(
       name: Routes.orderDetails,
       page: () =>
-          const Scaffold(body: Center(child: Text('Order Details Page'))),
+          OrderDetailsPage(),
       binding: OrderBinding(),
     ),
 

@@ -11,14 +11,62 @@ import '../widgets/common_widgets.dart'; // ✅ لإستخدام ShamraSnackBar
 /// - مسؤول عن إدارة البيانات المعروضة في الصفحة الرئيسية (MainPage / CustomerHomePage)
 /// - تحميل المنتجات (مميزة، تخفيضات، حديثة) + الفئات
 /// - البحث عن المنتجات
-/// - إدارة التنقل بين التبويبات في MainPage
+/// - إدارة التنقل بين التبويبات في MainPage + سلوك الرجوع
 class MainController extends GetxController {
   final ProductRepository _productRepository = ProductRepository();
   final CategoryRepository _categoryRepository = CategoryRepository();
 
   // --- 🔹 التنقل بين التبويبات ---
   final RxInt currentIndex = 0.obs; // التبويب الحالي
-  void changeTab(int index) => currentIndex.value = index;
+
+  // سجل التاريخ للعودة إلى التبويب السابق عبر زر الرجوع
+  final List<int> _tabHistory = [];
+
+  /// استدعِ هذي من الـ BottomNav (أو أي مكان) عند الضغط على تبويب
+  void onNavTap(int index) {
+    if (currentIndex.value == index) {
+      // نفس التبويب: مرّر للأعلى
+      scrollToTop(index);
+      return;
+    }
+    _pushHistoryIfNeeded(currentIndex.value);
+    currentIndex.value = index;
+
+    // بعد التبديل، ارجع السكروول لبداية الصفحة (jump سريع)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      scrollToTop(index, animate: false);
+    });
+  }
+
+  /// استخدمها للتبديل البرمجي بين التبويبات (من صفحات ثانية)
+  void changeTab(int index) {
+    if (currentIndex.value == index) return;
+    _pushHistoryIfNeeded(currentIndex.value);
+    currentIndex.value = index;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      scrollToTop(index, animate: false);
+    });
+  }
+
+  /// رجوع إلى التبويب السابق إن وُجد. تُرجع true إذا تم التعامل مع الرجوع.
+  bool backToPreviousTab() {
+    if (_tabHistory.isNotEmpty) {
+      final prev = _tabHistory.removeLast();
+      currentIndex.value = prev;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        scrollToTop(prev, animate: false);
+      });
+      return true;
+    }
+    return false;
+  }
+
+  void _pushHistoryIfNeeded(int index) {
+    if (_tabHistory.isEmpty || _tabHistory.last != index) {
+      _tabHistory.add(index);
+    }
+  }
 
   // --- 🔹 بيانات المنتجات والفئات ---
   final RxList<Product> _featuredProducts = <Product>[].obs;
@@ -50,6 +98,34 @@ class MainController extends GetxController {
   String get searchQuery => _searchQuery.value;
   String get errorMessage => _errorMessage.value;
 
+  // ---------------- Scroll-to-top support ----------------
+  final homeScrollController = ScrollController();
+  final productsScrollController = ScrollController();
+  final cartScrollController = ScrollController();
+  final ordersScrollController = ScrollController();
+  final profileScrollController = ScrollController();
+
+  /// مرّر لأعلى الصفحة للتبويب المحدد
+  void scrollToTop(int index, {bool animate = true}) {
+    ScrollController? c;
+    switch (index) {
+      case 0: c = homeScrollController; break;
+      case 1: c = productsScrollController; break;
+      case 2: c = cartScrollController; break;
+      case 3: c = ordersScrollController; break;
+      case 4: c = profileScrollController; break;
+    }
+    if (c != null && c.hasClients) {
+      if (animate) {
+        c.animateTo(0,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOut);
+      } else {
+        c.jumpTo(0);
+      }
+    }
+  }
+
   @override
   void onInit() {
     super.onInit();
@@ -58,6 +134,11 @@ class MainController extends GetxController {
 
   @override
   void onClose() {
+    homeScrollController.dispose();
+    productsScrollController.dispose();
+    cartScrollController.dispose();
+    ordersScrollController.dispose();
+    profileScrollController.dispose();
     searchController.dispose();
     super.onClose();
   }
@@ -129,15 +210,15 @@ class MainController extends GetxController {
       _isLoadingCategories.value = false;
     }
   }
+
   Future<void> loadBanners() async {
     try {
-      BannerController bannerController= Get.find<BannerController>();
-       await bannerController.loadBanners(refresh: true);
+      BannerController bannerController = Get.find<BannerController>();
+      await bannerController.loadBanners(refresh: true);
     } catch (e) {
       print('Error loading Banners: $e');
     }
   }
-
 
   // --- 🔹 البحث ---
   Future<void> searchProducts(String query) async {

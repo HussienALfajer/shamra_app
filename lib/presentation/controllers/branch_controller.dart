@@ -71,6 +71,11 @@ class BranchController extends GetxController {
 
       if (response.success) {
         Get.offAllNamed(Routes.main);
+        ShamraSnackBar.show(
+          context: Get.context!,
+          message: 'تم اختيار الفرع بنجاح 🎉😊',
+          type: SnackBarType.success,
+        );
       } else {
         throw Exception(
           response.message.isEmpty ? 'فشل في اختيار الفرع' : response.message,
@@ -115,6 +120,11 @@ class BranchController extends GetxController {
               Get.back(); // Close dialog
               await _authRepository.logout();
               Get.offAllNamed(Routes.login);
+              ShamraSnackBar.show(
+                context: Get.context!,
+                message: 'تم تسجيل الخروج بنجاح 👋',
+                type: SnackBarType.success,
+              );
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('تسجيل الخروج'),

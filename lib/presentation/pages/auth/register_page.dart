@@ -334,7 +334,7 @@ class _RegisterPageState extends State<RegisterPage>
                                     ),
                                     TextButton(
                                       onPressed: () {
-                                        Get.back();
+                                        Get.toNamed(Routes.login);
                                       },
                                       style: TextButton.styleFrom(
                                         padding: const EdgeInsets.symmetric(
