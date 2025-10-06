@@ -1,8 +1,9 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
-import '../../core/services/storage_service.dart';
 import '../../data/models/product.dart';
+import '../../data/models/user.dart';
 import '../../data/repositories/product_repository.dart';
+import 'auth_controller.dart'; // تأكد من استيراد AuthController
 
 enum ProductTab { all, featured, onSale }
 
@@ -36,8 +37,8 @@ class ProductController extends GetxController {
 
   // Current state observables
   final Rx<ProductTab> _currentTab = ProductTab.all.obs;
-  final RxList<Product> _currentProducts = <Product>[].obs;
-  final RxList<Product> _searchResults = <Product>[].obs;
+  final List<Product> _currentProducts = <Product>[];
+  final List<Product> _searchResults = <Product>[];
 
   final RxBool _isLoading = false.obs;
   final RxBool _isLoadingMore = false.obs;
@@ -67,8 +68,26 @@ class ProductController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Don't load any data on init - wait for tab selection
+
+    final auth = Get.find<AuthController>();
+
+    // راقب تغيّرات المستخدم (تسجيل دخول/خروج أو تحديثات)
+    ever<User?>(auth.currentUserRx, (_) async {
+      if (auth.hasBranchSelected) {
+        resetAllData();
+        await switchToTab(ProductTab.all, forceRefresh: true);
+      } else {
+        // لو ما في فرع مختار امسح البيانات
+        resetAllData();
+      }
+    });
+
+    // تحميل أولي إذا كان في جلسة وفرع محفوظين
+    if (auth.hasBranchSelected) {
+      switchToTab(ProductTab.all, forceRefresh: true);
+    }
   }
+
 
   /// Switch to a specific tab and load data if needed
   Future<void> switchToTab(ProductTab tab, {bool forceRefresh = false}) async {
@@ -110,12 +129,14 @@ class ProductController extends GetxController {
           result = await _productRepository.getFeaturedProducts(
             page: currentPage,
             limit: 20,
+            search: _searchQuery.value.isNotEmpty ? _searchQuery.value : null,
           );
           break;
         case ProductTab.onSale:
           result = await _productRepository.getOnSaleProducts(
             page: currentPage,
             limit: 20,
+            search: _searchQuery.value.isNotEmpty ? _searchQuery.value : null,
           );
           break;
       }
@@ -181,12 +202,14 @@ class ProductController extends GetxController {
           result = await _productRepository.getFeaturedProducts(
             page: currentPage,
             limit: 20,
+            search: _searchQuery.value.isNotEmpty ? _searchQuery.value : null,
           );
           break;
         case ProductTab.onSale:
           result = await _productRepository.getOnSaleProducts(
             page: currentPage,
             limit: 20,
+            search: _searchQuery.value.isNotEmpty ? _searchQuery.value : null,
           );
           break;
       }
@@ -209,18 +232,107 @@ class ProductController extends GetxController {
     }
   }
 
-  /// Refresh current tab data
+  /// Refresh current tab data with maintaining current filters and search
   Future<void> refreshCurrentTab() async {
-    await _loadTabData(_currentTab.value, refresh: true);
+    print('🔄 بدء تحديث التبويب: ${_currentTab.value} مع الحفاظ على الفلاتر');
+    print('📊 الحالة الحالية:');
+    print('  - البحث: ${_searchQuery.value}');
+    print('  - الفئة: ${_currentCategoryId.value}');
+    print('  - الفئة الفرعية: ${_currentSubCategoryId.value}');
+
+    try {
+      _isLoading.value = true;
+      _errorMessage.value = '';
+
+      // إعادة تعيين الصفحة للبداية
+      _tabPages[_currentTab.value] = 1;
+      _tabHasMoreData[_currentTab.value] = true;
+
+      Map<String, dynamic> result;
+
+      switch (_currentTab.value) {
+        case ProductTab.all:
+        // للتبويب "الكل" نحتاج للتحقق من الفلاتر النشطة
+          if (_currentCategoryId.value.isNotEmpty) {
+            // إذا كان هناك فئة مختارة
+            result = await _productRepository.getProductsByCategory(
+              categoryId: _currentCategoryId.value,
+              page: 1,
+              limit: 20,
+              search: _searchQuery.value.isNotEmpty ? _searchQuery.value : null,
+            );
+          } else if (_currentSubCategoryId.value.isNotEmpty) {
+            // إذا كانت هناك فئة فرعية مختارة
+            result = await _productRepository.getProductsBySubCategory(
+              subCategoryId: _currentSubCategoryId.value,
+              page: 1,
+              limit: 20,
+              search: _searchQuery.value.isNotEmpty ? _searchQuery.value : null,
+            );
+          } else {
+            // بحث أو عرض عام
+            result = await _productRepository.getProducts(
+              page: 1,
+              limit: 20,
+              search: _searchQuery.value.isNotEmpty ? _searchQuery.value : null,
+            );
+          }
+          break;
+
+        case ProductTab.featured:
+          result = await _productRepository.getFeaturedProducts(
+            page: 1,
+            limit: 20,
+            search: _searchQuery.value.isNotEmpty ? _searchQuery.value : null,
+          );
+          break;
+
+        case ProductTab.onSale:
+          result = await _productRepository.getOnSaleProducts(
+            page: 1,
+            limit: 20,
+            search: _searchQuery.value.isNotEmpty ? _searchQuery.value : null,
+          );
+          break;
+      }
+
+      final newProducts = result['products'] as List<Product>;
+
+      // تحديث البيانات
+      _tabProducts[_currentTab.value] = newProducts;
+      _tabHasMoreData[_currentTab.value] = result['hasNextPage'] ?? false;
+      _tabPages[_currentTab.value] = 2; // الصفحة التالية
+      _tabDataLoaded[_currentTab.value] = true;
+
+      // تحديث المنتجات الحالية
+      _updateCurrentProductsFromTab();
+
+      print('✅ تم تحديث ${newProducts.length} منتجات بنجاح');
+
+    } catch (e) {
+      _errorMessage.value = e.toString();
+      print('❌ خطأ في تحديث التبويب: $e');
+
+      if (Get.context != null) {
+        Get.snackbar(
+          'خطأ',
+          'فشل في تحديث البيانات: ${e.toString()}',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.TOP,
+          duration: const Duration(seconds: 3),
+        );
+      }
+    } finally {
+      _isLoading.value = false;
+    }
   }
 
   /// Update current products from active tab
   void _updateCurrentProductsFromTab() {
-    if (_searchQuery.value.isNotEmpty && _searchResults.isNotEmpty) {
-      _currentProducts.value = _searchResults;
-    } else {
-      _currentProducts.value = _tabProducts[_currentTab.value] ?? [];
-    }
+    _currentProducts.clear();
+    _currentProducts.addAll(_tabProducts[_currentTab.value] ?? []);
+    update(); // إخبار GetBuilder بالتحديث
   }
 
   /// Reset tab state for refresh
@@ -231,61 +343,22 @@ class ProductController extends GetxController {
     _tabDataLoaded[tab] = false;
   }
 
-  /// Search products in current tab context
+  /// Search products in current tab context - محدث للعمل مع كل التبويبات
   Future<void> searchProducts(String query) async {
     _searchQuery.value = query;
 
     if (query.isEmpty) {
-      _searchResults.clear();
-      _updateCurrentProductsFromTab();
+      // إعادة تحميل البيانات الأصلية للتبويب الحالي
+      await refreshCurrentTab();
       return;
     }
 
-    try {
-      _isLoading.value = true;
-      _errorMessage.value = '';
-
-      Map<String, dynamic> result;
-
-      switch (_currentTab.value) {
-        case ProductTab.all:
-          result = await _productRepository.getProducts(
-            page: 1,
-            limit: 50, // More results for search
-            search: query,
-            categoryId: _currentCategoryId.value.isNotEmpty ? _currentCategoryId.value : null,
-            subCategoryId: _currentSubCategoryId.value.isNotEmpty ? _currentSubCategoryId.value : null,
-          );
-          break;
-        case ProductTab.featured:
-          result = await _productRepository.getFeaturedProducts(
-            page: 1,
-            limit: 50,
-            search: query,
-          );
-          break;
-        case ProductTab.onSale:
-          result = await _productRepository.getOnSaleProducts(
-            page: 1,
-            limit: 50,
-            search: query,
-          );
-          break;
-      }
-
-      _searchResults.value = result['products'] as List<Product>;
-      _updateCurrentProductsFromTab();
-
-    } catch (e) {
-      _errorMessage.value = e.toString();
-      print('خطأ في البحث: $e');
-    } finally {
-      _isLoading.value = false;
-    }
+    // إعادة تحميل البيانات مع البحث
+    await _loadTabData(_currentTab.value, refresh: true);
   }
 
   /// Filter by category (only for "All" tab)
-  Future<void> getProductsByCategory(String categoryId,{int page=1}) async {
+  Future<void> getProductsByCategory(String categoryId, {int page = 1}) async {
     if (_currentTab.value != ProductTab.all) {
       print('تصفية الفئات متاحة فقط في تبويبة "الكل"');
       return;
@@ -299,13 +372,13 @@ class ProductController extends GetxController {
 
       _currentCategoryId.value = categoryId;
       _currentSubCategoryId.value = '';
-      _searchQuery.value = '';
-      _searchResults.clear();
+      // لا نقوم بمسح البحث هنا للسماح بالبحث داخل الفئة
 
       final result = await _productRepository.getProductsByCategory(
         categoryId: categoryId,
         page: page,
         limit: 20,
+        search: _searchQuery.value.isNotEmpty ? _searchQuery.value : null,
       );
 
       final newProducts = result['products'] as List<Product>;
@@ -326,7 +399,7 @@ class ProductController extends GetxController {
   }
 
   /// Filter by subcategory (only for "All" tab)
-  Future<void> filterBySubCategory(String subCategoryId,{int page=1}) async {
+  Future<void> filterBySubCategory(String subCategoryId, {int page = 1}) async {
     if (_currentTab.value != ProductTab.all) {
       print('تصفية الفئات الفرعية متاحة فقط في تبويبة "الكل"');
       return;
@@ -337,13 +410,13 @@ class ProductController extends GetxController {
       _errorMessage.value = '';
 
       _currentSubCategoryId.value = subCategoryId;
-      _searchQuery.value = '';
-      _searchResults.clear();
+      // لا نقوم بمسح البحث هنا للسماح بالبحث داخل الفئة الفرعية
 
       final result = await _productRepository.getProductsBySubCategory(
         subCategoryId: subCategoryId,
         page: page,
         limit: 20,
+        search: _searchQuery.value.isNotEmpty ? _searchQuery.value : null,
       );
 
       final newProducts = result['products'] as List<Product>;
@@ -376,8 +449,7 @@ class ProductController extends GetxController {
   /// Clear search
   void clearSearch() {
     _searchQuery.value = '';
-    _searchResults.clear();
-    _updateCurrentProductsFromTab();
+    refreshCurrentTab();
   }
 
   /// Clear category filter
@@ -397,22 +469,19 @@ class ProductController extends GetxController {
     }
   }
 
-  /// Clear all filters
+  /// Clear all filters - محدث للتعامل مع البحث في كل التبويبات
   void clearAllFilters() {
     _currentCategoryId.value = '';
     _currentSubCategoryId.value = '';
     _searchQuery.value = '';
-    _searchResults.clear();
-
-    if (_currentTab.value == ProductTab.all) {
-      refreshCurrentTab();
-    } else {
-      _updateCurrentProductsFromTab();
-    }
+    refreshCurrentTab();
   }
 
-  /// Check if filters are available for current tab
-  bool get filtersAvailableForCurrentTab => _currentTab.value == ProductTab.all;
+  /// Check if search is available for current tab - البحث متاح لكل التبويبات الآن
+  bool get searchAvailableForCurrentTab => true;
+
+  /// Check if category/subcategory filters are available for current tab - الفلاتر متاحة فقط للتبويب "الكل"
+  bool get categoryFiltersAvailableForCurrentTab => _currentTab.value == ProductTab.all;
 
   /// Get tab statistics
   Map<String, dynamic> getTabStats(ProductTab tab) {
@@ -435,41 +504,17 @@ class ProductController extends GetxController {
       _resetTabState(tab);
     }
     _currentProducts.clear();
-    _searchResults.clear();
     _currentCategoryId.value = '';
     _currentSubCategoryId.value = '';
     _searchQuery.value = '';
     _errorMessage.value = '';
-    _currentTab.value = ProductTab.all;
+    // لا نقوم بإعادة تعيين التبويب الحالي، فقط البيانات
+    update();
   }
 
   /// Check if has active filters
-  bool get hasActiveFilters {
-    return _currentCategoryId.isNotEmpty ||
-        _currentSubCategoryId.isNotEmpty ||
-        _searchQuery.isNotEmpty;
-  }
-
-  /// Get active filters description
-  String get activeFiltersDescription {
-    List<String> filters = [];
-
-    if (_searchQuery.isNotEmpty) {
-      filters.add('البحث: ${_searchQuery.value}');
-    }
-    if (_currentCategoryId.isNotEmpty) {
-      filters.add('الفئة محددة');
-    }
-    if (_currentSubCategoryId.isNotEmpty) {
-      filters.add('الفئة الفرعية محددة');
-    }
-
-    return filters.isEmpty ? 'لا توجد فلاتر' : filters.join(' | ');
-  }
-
-  @override
-  void onClose() {
-    // Clean up resources
-    super.onClose();
-  }
+  bool get hasActiveFilters =>
+      _currentCategoryId.value.isNotEmpty ||
+          _currentSubCategoryId.value.isNotEmpty ||
+          _searchQuery.value.isNotEmpty;
 }

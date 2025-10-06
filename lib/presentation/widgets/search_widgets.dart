@@ -34,18 +34,10 @@ class AdvancedFilterChip extends StatelessWidget {
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: isSelected ? color.withOpacity(0.15) : AppColors.chipBackground,
               borderRadius: BorderRadius.circular(25),
               border: isSelected ? Border.all(color: color, width: 1.5) : null,
-              boxShadow: isSelected ? [
-                BoxShadow(
-                  color: color.withOpacity(0.2),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ] : null,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -562,7 +554,7 @@ class ActiveFiltersSummary extends StatelessWidget {
     }
 
     return Container(
-      margin: const EdgeInsets.all(10),
+      margin: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppColors.primary.withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
@@ -597,14 +589,14 @@ class ActiveFiltersSummary extends StatelessWidget {
                 ),
                 child: const Text(
                   'مسح الكل',
-                  style: TextStyle(fontSize: 12),
+                  style: TextStyle(fontSize: 14),
                 ),
               ),
             ],
           ),
           Wrap(
-            spacing: 5,
-            runSpacing: 5,
+            spacing: 1,
+            runSpacing: 2,
             children: activeFilters.map((filter) =>
                 AdvancedFilterChip(
                   label: filter,

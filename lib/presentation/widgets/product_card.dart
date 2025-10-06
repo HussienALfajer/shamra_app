@@ -14,9 +14,8 @@ class ProductCard extends StatelessWidget {
   final double? height;
   final bool isGridView;
 
-  // NEW: دعم شارة المطابقة
-  final int? matchPercent;      // نسبة التطابق، مثال: 72
-  final int matchThreshold;     // تُعرض الشارة إذا matchPercent >= هذا الرقم
+  final int? matchPercent;
+  final int matchThreshold;
 
   const ProductCard({
     Key? key,
@@ -26,7 +25,6 @@ class ProductCard extends StatelessWidget {
     this.width,
     this.height,
     this.isGridView = false,
-    // NEW: باراميترات اختيارية للمطابقة
     this.matchPercent,
     this.matchThreshold = 60,
   }) : super(key: key);
@@ -192,7 +190,6 @@ class ProductCard extends StatelessWidget {
                             ),
                           ),
 
-                        // NEW: شارة "مطابق XX%" أسفل-يسار (تظهر فقط إذا توفرت matchPercent وتجاوزت العتبة)
                         if (matchPercent != null && matchPercent! >= matchThreshold)
                           Positioned(
                             bottom: 8,
@@ -224,15 +221,13 @@ class ProductCard extends StatelessWidget {
                     ),
                   ),
 
-                  // 🔹 تفاصيل المنتج - ديناميكي
-                  Flexible( // استخدام Flexible بدلاً من Expanded
+                  Flexible(
                     child: Padding(
                       padding: const EdgeInsets.all(12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // الاسم - مع معالجة أفضل للنص الطويل
                           Text(
                             product.displayName,
                             style: const TextStyle(
@@ -245,27 +240,9 @@ class ProductCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
 
-                          const SizedBox(height: 4),
-
-                          // الماركة
-                          if (product.brand != null) ...[
-                            Text(
-                              product.brand!,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textSecondary,
-                                height: 1.2,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 6),
-                          ],
-
-                          // السعر مع العملة المناسبة
-                          Wrap( // استخدام Wrap لمعالجة السعر الطويل
+                          const SizedBox(height: 6),
+                          Wrap(
                             children: [
-                              // السعر الحالي (مع الخصم إن وجد)
                               Text(
                                 product.formattedPrice,
                                 style: const TextStyle(
@@ -275,7 +252,6 @@ class ProductCard extends StatelessWidget {
                                 ),
                               ),
 
-                              // السعر الأصلي (إذا كان هناك خصم)
                               if (product.hasDiscount) ...[
                                 const SizedBox(width: 6),
                                 Text(
@@ -288,40 +264,6 @@ class ProductCard extends StatelessWidget {
                                   ),
                                 ),
                               ],
-                            ],
-                          ),
-
-                          const SizedBox(height: 6),
-
-                          // حالة المخزون
-                          Row(
-                            children: [
-                              Icon(
-                                product.inStock
-                                    ? Icons.check_circle
-                                    : Icons.cancel,
-                                size: 12,
-                                color: product.inStock
-                                    ? AppColors.success
-                                    : AppColors.error,
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded( // للتعامل مع النص الطويل
-                                child: Text(
-                                  product.inStock
-                                      ? 'متوفر (${product.stockQuantity})'
-                                      : 'غير متوفر',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: product.inStock
-                                        ? AppColors.success
-                                        : AppColors.error,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
                             ],
                           ),
                         ],

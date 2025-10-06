@@ -15,6 +15,7 @@ class AuthService {
         ApiConstants.login,
         data: {'email': email, 'password': password},
       );
+      print(response.data['data']['user']);
 
       return AuthResponseApi.fromJson(response.data);
     } on DioException catch (e) {
@@ -28,6 +29,7 @@ class AuthService {
     required String lastName,
     required String email,
     required String password,
+     String? fcmToken,
     String? phoneNumber,
   }) async {
     try {
@@ -39,6 +41,7 @@ class AuthService {
           'email': email,
           'password': password,
           if (phoneNumber != null) 'phoneNumber': phoneNumber,
+          if (fcmToken != null) 'fcmToken': fcmToken,
         },
       );
 
@@ -64,9 +67,22 @@ class AuthService {
   }
 
   // Get Profile
+  // في auth_service.dart
   static Future<User> getProfile() async {
     try {
       final response = await DioService.get(ApiConstants.profile);
+
+      // 🎯 اطبع الـ response كامل
+      print("========== FULL API RESPONSE ==========");
+      print(response.data);
+      print("========== USER DATA ==========");
+      print(response.data['data']);
+      print("========== POINTS ==========");
+      print("points: ${response.data['data']['points']}");
+      print("totalPointsEarned: ${response.data['data']['totalPointsEarned']}");
+      print("totalPointsUsed: ${response.data['data']['totalPointsUsed']}");
+      print("=======================================");
+
       return User.fromJson(response.data['data']);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -118,6 +134,39 @@ class AuthService {
       throw _handleError(e);
     }
   }
+
+  static Future<Map<String, dynamic>> addMerchantRequest({
+    required String storeName,
+    required String address,
+    required String phoneNumber,
+  }) async {
+    try {
+      final response = await DioService.post(
+        "/merchants/request",
+        data: {
+          "storeName": storeName,
+          "address": address,
+          "phoneNumber": phoneNumber,
+        },
+      );
+      return response.data;
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getMyMerchantRequest() async {
+    try {
+      final response = await DioService.get("/merchants/my-request");
+      return response.data['data'];
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        return null; // No request found
+      }
+      throw _handleError(e);
+    }
+  }
+
 
   // Error handler
   static String _handleError(DioException error) {

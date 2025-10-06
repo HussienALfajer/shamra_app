@@ -63,8 +63,8 @@ class MainPage extends StatelessWidget {
             ),
             child: SafeArea(
               child: Container(
-                height: 80,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                height: 60,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
@@ -74,14 +74,16 @@ class MainPage extends StatelessWidget {
                       activeIcon: Icons.home_rounded,
                       label: 'الرئيسية',
                       currentIndex: mainController.currentIndex.value,
-                      onTap: () => mainController.onNavTap(0),                    ),
+                      onTap: () => mainController.onNavTap(0),
+                    ),
                     _buildNavItem(
                       index: 1,
                       icon: Icons.grid_view_outlined,
                       activeIcon: Icons.grid_view_rounded,
                       label: 'المنتجات',
                       currentIndex: mainController.currentIndex.value,
-                      onTap: () => mainController.onNavTap(1),                    ),
+                      onTap: () => mainController.onNavTap(1),
+                    ),
                     _buildNavItemWithBadge(
                       index: 2,
                       icon: Icons.shopping_cart_outlined,
@@ -89,21 +91,24 @@ class MainPage extends StatelessWidget {
                       label: 'السلة',
                       currentIndex: mainController.currentIndex.value,
                       badgeCount: cartController.itemCount,
-                      onTap: () => mainController.onNavTap(2),                    ),
+                      onTap: () => mainController.onNavTap(2),
+                    ),
                     _buildNavItem(
                       index: 3,
                       icon: Icons.receipt_long_outlined,
                       activeIcon: Icons.receipt_long_rounded,
                       label: 'الطلبات',
                       currentIndex: mainController.currentIndex.value,
-                      onTap: () => mainController.onNavTap(3),                    ),
+                      onTap: () => mainController.onNavTap(3),
+                    ),
                     _buildNavItem(
                       index: 4,
                       icon: Icons.person_outline_rounded,
                       activeIcon: Icons.person_rounded,
                       label: 'الحساب',
                       currentIndex: mainController.currentIndex.value,
-                      onTap: () => mainController.onNavTap(4),                    ),
+                      onTap: () => mainController.onNavTap(4),
+                    ),
                   ],
                 ),
               ),
@@ -140,7 +145,7 @@ class MainPage extends StatelessWidget {
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.easeInOut,
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
                   color: isActive
                       ? AppColors.primary.withOpacity(0.12)
@@ -203,7 +208,7 @@ class MainPage extends StatelessWidget {
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     curve: Curves.easeInOut,
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
                       color: isActive
                           ? AppColors.primary.withOpacity(0.12)
@@ -234,23 +239,17 @@ class MainPage extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: AppColors.error,
                             borderRadius: BorderRadius.circular(10),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.error.withOpacity(0.3),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+
                           ),
                           constraints: const BoxConstraints(
-                            minWidth: 18,
-                            minHeight: 18,
+                            minWidth: 10,
+                            minHeight: 10,
                           ),
                           child: Text(
                             badgeCount > 99 ? '99+' : badgeCount.toString(),
                             style: const TextStyle(
                               color: AppColors.white,
-                              fontSize: 10,
+                              fontSize: 9,
                               fontWeight: FontWeight.w700,
                               height: 1.0,
                             ),
@@ -473,7 +472,7 @@ class CustomerHomePage extends StatelessWidget {
       actions: [
         IconButton(
           icon: const Icon(Icons.search, color: AppColors.textPrimary),
-          onPressed: () =>  Get.to(SearchPage()),
+          onPressed: () => Get.to(SearchPage()),
         ),
         IconButton(
           icon: const Icon(Icons.favorite_border, color: AppColors.textPrimary),
@@ -554,32 +553,32 @@ class CustomerHomePage extends StatelessWidget {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(12),
                           child:
-                          category.image != null &&
-                              category.image!.isNotEmpty
+                              category.image != null &&
+                                  category.image!.isNotEmpty
                               ? CachedNetworkImage(
-                            imageUrl: HelperMethod.getImageUrl(
-                              category.image!,
-                            ),
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) => const Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  AppColors.primary,
-                                ),
-                              ),
-                            ),
-                            errorWidget: (context, url, error) =>
-                            const Icon(
-                              Icons.broken_image,
-                              color: AppColors.grey,
-                            ),
-                          )
+                                  imageUrl: HelperMethod.getImageUrl(
+                                    category.image!,
+                                  ),
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) => const Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
+                                  errorWidget: (context, url, error) =>
+                                      const Icon(
+                                        Icons.broken_image,
+                                        color: AppColors.grey,
+                                      ),
+                                )
                               : const Icon(
-                            Icons.category,
-                            color: AppColors.white,
-                            size: 28,
-                          ),
+                                  Icons.category,
+                                  color: AppColors.white,
+                                  size: 28,
+                                ),
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -662,8 +661,10 @@ class CustomerHomePage extends StatelessWidget {
                     product: product,
                     width: 170,
                     isGridView: false,
-                    onTap: () =>
-                        Get.toNamed(Routes.productDetails, arguments: product.id),
+                    onTap: () => Get.toNamed(
+                      Routes.productDetails,
+                      arguments: product.id,
+                    ),
                   ),
                 );
               },

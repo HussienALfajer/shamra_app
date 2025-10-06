@@ -7,6 +7,8 @@ class Routes {
   static const String forgotPassword = '/forgot-password';
   static const String branchSelection = '/branch-selection';
 
+  static const selectLocation = '/select-location';
+
   static const String home = '/home';
   static const String main = '/main';
   static const String dashboard = '/dashboard';
@@ -19,6 +21,8 @@ class Routes {
   static const String search = '/search';
 
   static const favorites = '/favorites';
+
+
 
 
   static const String categories = '/categories';

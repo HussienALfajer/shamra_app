@@ -5,12 +5,7 @@ import '../../controllers/auth_controller.dart';
 import '../../widgets/common_widgets.dart';
 import '../../../routes/app_routes.dart';
 
-/// صفحة إنشاء حساب جديد
-/// --------------------
-/// - واجهة لإنشاء حساب مستخدم جديد.
-/// - تحتوي على الحقول: الاسم الأول، اسم العائلة، البريد الإلكتروني، رقم الهاتف (اختياري)، كلمة المرور، تأكيد كلمة المرور.
-/// - تتأكد من قبول شروط الخدمة قبل الإرسال.
-/// - تستخدم [AuthController] للتعامل مع التسجيل.
+
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -210,7 +205,7 @@ class _RegisterPageState extends State<RegisterPage>
 
                                 /// رقم الهاتف (اختياري)
                                 ShamraTextField(
-                                  label: 'رقم الهاتف (اختياري)',
+                                  label: 'رقم الهاتف',
                                   hintText: 'أدخل رقم هاتفك',
                                   icon: Icons.phone_outlined,
                                   controller: _phoneController,

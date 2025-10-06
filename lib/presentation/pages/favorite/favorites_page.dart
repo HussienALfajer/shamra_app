@@ -69,7 +69,7 @@ class FavoritesPage extends StatelessWidget {
                 crossAxisCount: 2,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                childAspectRatio: 0.58,
+                childAspectRatio: 0.72,
               ),
               itemCount: products.length,
               itemBuilder: (context, index) {

@@ -17,21 +17,16 @@ class CartController extends GetxController {
   final Rx<Cart> _cart = Cart().obs;
   final RxBool _isLoading = false.obs;
   final RxString _errorMessage = ''.obs;
-  final RxDouble _taxRate = 0.1.obs; // نسبة الضريبة الافتراضية 10%
-  final RxDouble _shippingFee = 0.0.obs;
 
   // 🔹 Getters (الوصول إلى البيانات)
   Cart get cart => _cart.value;
   bool get isLoading => _isLoading.value;
   String get errorMessage => _errorMessage.value;
-  double get taxRate => _taxRate.value;
-  double get shippingFee => _shippingFee.value;
 
   List<CartItem> get items => _cart.value.items;
   int get itemCount => _cart.value.totalItems;
   double get subtotal => _cart.value.subtotal;
-  double get taxAmount => subtotal * taxRate;
-  double get total => subtotal + taxAmount + shippingFee;
+  double get total => subtotal;
   bool get isEmpty => _cart.value.isEmpty;
   bool get isNotEmpty => _cart.value.isNotEmpty;
 
@@ -174,11 +169,8 @@ class CartController extends GetxController {
   /// 🔹 الحصول على عنصر السلة عبر الـ ID
   CartItem? getCartItem(String productId) => _cart.value.getItem(productId);
 
-  /// 🔹 ضبط نسبة الضريبة
-  void setTaxRate(double rate) => _taxRate.value = rate;
 
   /// 🔹 ضبط أجور الشحن
-  void setShippingFee(double fee) => _shippingFee.value = fee;
 
   /// 🔹 تجهيز عناصر الطلب من السلة
   List<OrderItem> getOrderItems() => _cart.value.toOrderItems();
@@ -197,9 +189,6 @@ class CartController extends GetxController {
           children: [
             Text('العناصر: $itemCount'),
             Text('الإجمالي: ${subtotal.toStringAsFixed(2)}'),
-            Text('الضريبة: ${taxAmount.toStringAsFixed(2)}'),
-            if (shippingFee > 0)
-              Text('الشحن: ${shippingFee.toStringAsFixed(2)}'),
             const Divider(),
             Text(
               'المجموع: ${total.toStringAsFixed(2)}',

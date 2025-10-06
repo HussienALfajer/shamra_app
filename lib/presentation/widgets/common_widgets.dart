@@ -434,7 +434,7 @@ class ShamraButton extends StatelessWidget {
 class ShamraTextField extends StatelessWidget {
   final String label;
   final String hintText;
-  final IconData icon;
+  final IconData? icon;
   final TextEditingController? controller;
   final String? Function(String?)? validator;
   final TextInputType? keyboardType;
@@ -452,7 +452,7 @@ class ShamraTextField extends StatelessWidget {
   const ShamraTextField({
     super.key,
     required this.hintText,
-    required this.icon,
+    this.icon,
     this.label = '',
     this.controller,
     this.onChanged,

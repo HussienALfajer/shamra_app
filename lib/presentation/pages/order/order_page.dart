@@ -8,10 +8,6 @@ import '../../controllers/auth_controller.dart';
 import '../../widgets/common_widgets.dart';
 import '../../../data/models/order.dart';
 
-/// 📌 صفحة عرض جميع الطلبات (الكل، قيد التنفيذ، مكتملة، ملغية)
-/// - تعتمد على [OrderController] لعرض الطلبات.
-/// - تستخدم [AuthController] للتحقق من تسجيل الدخول.
-/// - منظمة باستخدام [TabBar] مع 4 تبويبات.
 class OrdersPage extends StatelessWidget {
   const OrdersPage({super.key});
 
@@ -21,105 +17,111 @@ class OrdersPage extends StatelessWidget {
     final orderController = Get.find<OrderController>();
     final authController = Get.find<AuthController>();
 
-
     return Directionality(
-        textDirection: TextDirection.rtl,
-        child: DefaultTabController(
-          length: 4,
-          child: WillPopScope(
-            onWillPop: () async {
-              // 1) لو داخل تبويب فرعي داخل OrdersPage → ارجع تبويب واحد
-              final controller = DefaultTabController.of(context);
-              if (controller != null && controller.index > 0) {
-                controller.animateTo(controller.index - 1);
-                return false;
-              }
-              // 2) وإلا ارجع إلى تبويب الـ BottomNav السابق
-              final handled = main.backToPreviousTab();
-              return !handled;
-            },
-            child: Scaffold(
-              backgroundColor: AppColors.background,
-              appBar: const CustomAppBar(title: "طلباتي"),
-              body: Obx(() {
-                if (!authController.isLoggedIn) {
-                  return _buildLoginRequired(context);
+      textDirection: TextDirection.rtl,
+      child: DefaultTabController(
+        length: 4,
+        child: Builder(
+          builder: (ctx) {
+            final tabController = DefaultTabController.of(ctx);
+            return WillPopScope(
+              onWillPop: () async {
+                if (tabController.index > 0) {
+                  tabController.animateTo(tabController.index - 1);
+                  return false;
                 }
-
-                return Column(
-                  children: [
-                    _buildTabBar(),
-                    Expanded(
-                      child: TabBarView(
-                        children: [
-                          _buildOrdersList(
-                            orders: orderController.orders,
-                            isLoading: orderController.isLoading,
-                            emptyMessage: "لا توجد طلبات",
-                          ),
-                          _buildOrdersList(
-                            orders: orderController.activeOrders,
-                            isLoading: orderController.isLoading,
-                            emptyMessage: "لا توجد طلبات قيد التنفيذ",
-                          ),
-                          _buildOrdersList(
-                            orders: orderController.completedOrders,
-                            isLoading: orderController.isLoading,
-                            emptyMessage: "لا توجد طلبات مكتملة",
-                          ),
-                          _buildOrdersList(
-                            orders: orderController.cancelledOrders,
-                            isLoading: orderController.isLoading,
-                            emptyMessage: "لا توجد طلبات ملغية",
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              }),
-            ),
-          ),
-        ));
-  }
-
-  /// ✅ تبويب الفئات (الكل - قيد التنفيذ - مكتملة - ملغية)
-  Widget _buildTabBar() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 8),
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: AppColors.lightGrey,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: const TabBar(
-        indicator: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.all(Radius.circular(12)),
+                return !main.backToPreviousTab();
+              },
+              child: Scaffold(
+                backgroundColor: AppColors.background,
+                appBar: _buildAppBar(),
+                body: Obx(() {
+                  if (!authController.isLoggedIn) return _buildLoginRequired();
+                  return _buildOrdersContent(orderController, main);
+                }),
+              ),
+            );
+          },
         ),
-        indicatorSize: TabBarIndicatorSize.tab,
-        dividerColor: Colors.transparent,
-        labelColor: AppColors.primary,
-        unselectedLabelColor: AppColors.textSecondary,
-        labelStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-        tabs: [
-          Tab(text: 'الكل'),
-          Tab(text: 'قيد التنفيذ'),
-          Tab(text: 'مكتملة'),
-          Tab(text: 'ملغية'),
-        ],
       ),
     );
   }
 
-  /// ✅ قائمة الطلبات
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      backgroundColor: AppColors.surface,
+      elevation: 0,
+      centerTitle: false,
+      automaticallyImplyLeading: false,
+      title: const Text(
+        "طلباتي",
+        style: TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 24,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      bottom: _buildTabBar(),
+    );
+  }
+
+  PreferredSizeWidget _buildTabBar() {
+    return const TabBar(
+      indicatorColor: AppColors.primary,
+      indicatorWeight: 2,
+      labelColor: AppColors.primary,
+      unselectedLabelColor: AppColors.textSecondary,
+      labelStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+      tabs: [
+        Tab(text: 'الكل'),
+        Tab(text: 'نشطة'),
+        Tab(text: 'مكتملة'),
+        Tab(text: 'ملغية'),
+      ],
+    );
+  }
+
+  Widget _buildOrdersContent(OrderController oc, MainController main) {
+    return TabBarView(
+      children: [
+        _buildOrdersList(
+          scrollController: main.ordersScrollController,
+          orders: oc.orders,
+          isLoading: oc.isLoading,
+          emptyMessage: "لا توجد طلبات",
+        ),
+        _buildOrdersList(
+          scrollController: main.ordersScrollController,
+          orders: oc.activeOrders,
+          isLoading: oc.isLoading,
+          emptyMessage: "لا توجد طلبات نشطة",
+        ),
+        _buildOrdersList(
+          scrollController: main.ordersScrollController,
+          orders: oc.completedOrders,
+          isLoading: oc.isLoading,
+          emptyMessage: "لا توجد طلبات مكتملة",
+        ),
+        _buildOrdersList(
+          scrollController: main.ordersScrollController,
+          orders: oc.cancelledOrders,
+          isLoading: oc.isLoading,
+          emptyMessage: "لا توجد طلبات ملغية",
+        ),
+      ],
+    );
+  }
+
   Widget _buildOrdersList({
+    required ScrollController scrollController,
     required List<Order> orders,
     required bool isLoading,
     required String emptyMessage,
   }) {
     if (isLoading && orders.isEmpty) {
-      return const LoadingWidget(message: "جاري تحميل الطلبات...");
+      return const Center(
+        child: LoadingWidget(message: "جاري تحميل الطلبات..."),
+      );
     }
 
     if (orders.isEmpty) {
@@ -127,192 +129,153 @@ class OrdersPage extends StatelessWidget {
         icon: Icons.receipt_long_outlined,
         title: emptyMessage,
         message: "ابدأ التسوق الآن",
-        action: ShamraButton(
-          text: "تسوق الآن",
-          icon: Icons.shopping_bag_outlined,
-          onPressed: () =>  Get.offAllNamed(Routes.main),
-        ),
       );
     }
+
+    // ترتيب الطلبات من الأحدث إلى الأقدم
+    final sortedOrders = List<Order>.from(orders);
+    sortedOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     return RefreshIndicator(
       onRefresh: Get.find<OrderController>().refreshOrders,
       color: AppColors.primary,
-      child: ListView.builder(
-        controller: Get.find<MainController>().ordersScrollController, // ✅
+      child: ListView.separated(
+        controller: scrollController,
         padding: const EdgeInsets.all(16),
-        itemCount: orders.length,
-        itemBuilder: (context, index) => _buildOrderCard(orders[index]),
+        itemCount: sortedOrders.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        itemBuilder: (context, index) => _buildMinimalOrderCard(sortedOrders[index]),
       ),
     );
   }
 
-  /// ✅ كرت عرض تفاصيل الطلب
-  Widget _buildOrderCard(Order order) {
-    return ShamraCard(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      onTap: () => Get.toNamed(Routes.orderDetails, arguments: order),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 🔹 العنوان والتاريخ + الحالة
-          Row(
-            children: [
-              const Icon(Icons.receipt_long, color: AppColors.primary),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("طلب #${order.orderNumber}",
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        )),
-                    Text(
-                      order.createdAt.toString(),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
+  Widget _buildMinimalOrderCard(Order order) {
+    return GestureDetector(
+      onTap: () => Get.toNamed(Routes.orderDetails, arguments: order.id),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.outline),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "#${order.orderNumber}",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
+                _buildStatusChip(order.status),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _formatDate(order.createdAt),
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
               ),
-              _buildStatusChip(order.status),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // 🔹 تفاصيل: عدد المنتجات + حالة الدفع + المجموع
-          Row(
-            children: [
-              Expanded(
-                child: _buildOrderDetail(
-                  Icons.shopping_cart,
-                  "${order.totalItems}",
-                  "منتج",
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "${order.totalItems} منتج",
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: _buildOrderDetail(
-                  order.isPaid ? Icons.check_circle : Icons.pending,
-                  order.isPaid ? "مدفوع" : "معلق",
-                  "الدفع",
-                  color: order.isPaid ? AppColors.success : AppColors.warning,
-                ),
-              ),
-              Expanded(
-                child: _buildOrderDetail(
-                  Icons.attach_money,
-                  "${order.totalAmount.toStringAsFixed(0)}",
-                  "\$",
-                  color: AppColors.primary,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // 🔹 الأزرار (عرض التفاصيل - إلغاء إذا كان Pending)
-          Row(
-            children: [
-              Expanded(
-                child: ShamraButton(
-                  text: "عرض التفاصيل",
-                  isOutlined: true,
-                  onPressed: () =>
-                      Get.toNamed(Routes.orderDetails, arguments: order),
-                ),
-              ),
-              if (order.status.toLowerCase() == "pending") ...[
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ShamraButton(
-                    text: "إلغاء الطلب",
-                    backgroundColor: AppColors.error,
-                    onPressed: () => ShamraSnackBar.show(
-                      context: Get.context!,
-                      message: "تم إلغاء الطلب بنجاح",
-                      type: SnackBarType.success,
-                    ),
+                Text(
+                  "${order.totalAmount.toStringAsFixed(2)}\$",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
                   ),
                 ),
               ],
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  /// ✅ عنصر تفاصيل داخل الكرت (أيقونة + قيمة + وسم)
-  Widget _buildOrderDetail(IconData icon, String value, String label,
-      {Color? color}) {
-    return Column(
-      children: [
-        Icon(icon, color: color ?? AppColors.textSecondary, size: 18),
-        const SizedBox(height: 4),
-        Text(value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: color ?? AppColors.textPrimary,
-            )),
-        Text(label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-            )),
-      ],
+  Widget _buildStatusChip(String status) {
+    final config = _getStatusConfig(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: config['background'],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        config['text'],
+        style: TextStyle(
+          color: config['color'],
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
     );
   }
 
-  /// ✅ Chip لحالة الطلب
-  Widget _buildStatusChip(String status) {
-    Color bg, txt;
-    String text;
-
+  Map<String, dynamic> _getStatusConfig(String status) {
     switch (status.toLowerCase()) {
       case "pending":
-        bg = AppColors.warning.withOpacity(0.15);
-        txt = AppColors.warning;
-        text = "قيد الانتظار";
-        break;
+        return {
+          'background': AppColors.warning.withOpacity(0.1),
+          'color': AppColors.warning,
+          'text': "قيد الانتظار",
+        };
+      case "confirmed":
+      case "processing":
+        return {
+          'background': AppColors.info.withOpacity(0.1),
+          'color': AppColors.info,
+          'text': "قيد التجهيز",
+        };
+      case "shipped":
+        return {
+          'background': AppColors.primary.withOpacity(0.1),
+          'color': AppColors.primary,
+          'text': "تم الشحن",
+        };
       case "delivered":
-        bg = AppColors.success.withOpacity(0.15);
-        txt = AppColors.success;
-        text = "تم التسليم";
-        break;
+        return {
+          'background': AppColors.success.withOpacity(0.1),
+          'color': AppColors.success,
+          'text': "تم التسليم",
+        };
       case "cancelled":
-        bg = AppColors.error.withOpacity(0.15);
-        txt = AppColors.error;
-        text = "ملغي";
-        break;
+        return {
+          'background': AppColors.error.withOpacity(0.1),
+          'color': AppColors.error,
+          'text': "ملغي",
+        };
       default:
-        bg = AppColors.grey.withOpacity(0.15);
-        txt = AppColors.grey;
-        text = status;
+        return {
+          'background': AppColors.grey.withOpacity(0.1),
+          'color': AppColors.grey,
+          'text': status,
+        };
     }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration:
-      BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
-      child: Text(text,
-          style: TextStyle(color: txt, fontSize: 12, fontWeight: FontWeight.w600)),
-    );
   }
 
-  /// ✅ واجهة تسجيل الدخول مطلوبة
-  Widget _buildLoginRequired(BuildContext context) {
+  Widget _buildLoginRequired() {
     return Center(
       child: EmptyStateWidget(
-        icon: Icons.login,
+        icon: Icons.login_outlined,
         title: "تسجيل دخول مطلوب",
         message: "يرجى تسجيل الدخول لعرض طلباتك",
         action: ShamraButton(
@@ -323,6 +286,16 @@ class OrdersPage extends StatelessWidget {
       ),
     );
   }
+
+  String _formatDate(DateTime date) {
+    final localDate = date.toLocal();
+
+    final day = localDate.day.toString().padLeft(2, '0');
+    final month = localDate.month.toString().padLeft(2, '0');
+    final year = localDate.year.toString();
+    final hour = localDate.hour.toString().padLeft(2, '0');
+    final minute = localDate.minute.toString().padLeft(2, '0');
+
+    return '$day/$month/$year - $hour:$minute';
+  }
 }
-
-

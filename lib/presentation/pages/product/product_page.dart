@@ -10,75 +10,14 @@ import '../../widgets/common_widgets.dart';
 import '../../widgets/product_card.dart';
 import '../../../data/models/product.dart';
 
-class ProductsPage extends StatefulWidget {
+class ProductsPage extends StatelessWidget {
   const ProductsPage({super.key});
 
   @override
-  State<ProductsPage> createState() => _ProductsPageState();
-}
-
-class _ProductsPageState extends State<ProductsPage> {
-  late ScrollController _scrollController;
-  late PageController _pageController;
-
-  @override
-  void initState() {
-    super.initState();
-    final main = Get.find<MainController>();
-    _scrollController = main.productsScrollController;
-    _scrollController.addListener(_onScroll);
-
-    _pageController = PageController(initialPage: 0);
-
-    _initializeControllers();
-  }
-
-  @override
-  void dispose() {
-    _scrollController.removeListener(_onScroll);
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  /// Listen for scroll events to trigger load more
-  void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      final controller = Get.find<ProductController>();
-      if (!controller.isLoadingMore && controller.hasMoreData) {
-        controller.loadMoreProducts();
-      }
-    }
-  }
-
-  Future<bool> _onWillPopProducts() async {
-    final ui = Get.find<ProductsUIController>();
-    if (ui.currentTabIndex > 0) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(0,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut);
-      }
-      // الانتقال للتبويب السابق بالسحب العكسي
-      _pageController.animateToPage(
-        ui.currentTabIndex - 1,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOutCubic,
-      );
-      return false;
-    }
-
-    final main = Get.find<MainController>();
-    if (main.currentIndex.value != 0) {
-      main.onNavTap(0);
-      return false;
-    }
-
-    return true;
-  }
-
-  @override
   Widget build(BuildContext context) {
+    // تهيئة الـ Controllers
+    _initializeControllers();
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: WillPopScope(
@@ -110,16 +49,15 @@ class _ProductsPageState extends State<ProductsPage> {
       Get.put(ProductsUIController());
     }
 
+    // تهيئة البيانات الأولية
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final uiController = Get.find<ProductsUIController>();
       final args = Get.arguments as Map<String, dynamic>?;
       final initialTab = (args != null && args.containsKey('initialTab'))
           ? (args['initialTab'] as int)
           : 0;
 
-      // اضبط صفحة PageView وفعّل تحميل البيانات للتبويب المختار
-      if (_pageController.hasClients) {
-        _pageController.jumpToPage(initialTab);
-      }
+      uiController.initializePageController(initialTab);
       _switchToTabByIndex(initialTab);
     });
   }
@@ -196,6 +134,33 @@ class _ProductsPageState extends State<ProductsPage> {
     await controller.switchToTab(ProductTab.onSale);
   }
 
+  Future<bool> _onWillPopProducts() async {
+    final ui = Get.find<ProductsUIController>();
+    if (ui.currentTabIndex > 0) {
+      final scrollController = Get.find<MainController>().productsScrollController;
+      if (scrollController.hasClients) {
+        scrollController.animateTo(0,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut);
+      }
+      // الانتقال للتبويب السابق بالسحب العكسي
+      ui.pageController.animateToPage(
+        ui.currentTabIndex - 1,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+      );
+      return false;
+    }
+
+    final main = Get.find<MainController>();
+    if (main.currentIndex.value != 0) {
+      main.onNavTap(0);
+      return false;
+    }
+
+    return true;
+  }
+
   /// شريط التطبيق المخصص
   Widget _buildCustomAppBar() {
     return Container(
@@ -217,7 +182,7 @@ class _ProductsPageState extends State<ProductsPage> {
           /// شريط التبويبات
           _buildTabBar(),
 
-          /// شريط البحث والفلاتر (للتبويبة "الكل" فقط)
+          /// شريط البحث والفلاتر
           _buildSearchAndFilters(),
         ],
       ),
@@ -246,8 +211,7 @@ class _ProductsPageState extends State<ProductsPage> {
               children: [
                 GetBuilder<ProductController>(
                   builder: (controller) {
-                    if (!controller.filtersAvailableForCurrentTab ||
-                        !controller.hasActiveFilters) {
+                    if (!controller.hasActiveFilters) {
                       return const SizedBox.shrink();
                     }
                     return Padding(
@@ -262,7 +226,8 @@ class _ProductsPageState extends State<ProductsPage> {
                 ),
                 GetBuilder<ProductController>(
                   builder: (controller) {
-                    if (!controller.filtersAvailableForCurrentTab) {
+                    // البحث متاح لكل التبويبات الآن
+                    if (!controller.searchAvailableForCurrentTab) {
                       return const SizedBox.shrink();
                     }
                     return Padding(
@@ -362,14 +327,15 @@ class _ProductsPageState extends State<ProductsPage> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          if (_scrollController.hasClients) {
-            _scrollController.animateTo(
+          final scrollController = Get.find<MainController>().productsScrollController;
+          if (scrollController.hasClients) {
+            scrollController.animateTo(
               0,
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeOut,
             );
           }
-          _pageController.animateToPage(
+          uiController.pageController.animateToPage(
             index,
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeOutCubic,
@@ -407,12 +373,13 @@ class _ProductsPageState extends State<ProductsPage> {
     );
   }
 
-  /// شريط البحث والفلاتر (للتبويب "الكل")
+  /// شريط البحث والفلاتر - محدث للبحث في كل التبويبات
   Widget _buildSearchAndFilters() {
     return GetBuilder<ProductsUIController>(
       builder: (uiController) => GetBuilder<ProductController>(
         builder: (controller) {
-          if (!controller.filtersAvailableForCurrentTab) {
+          // البحث متاح لكل التبويبات، الفلاتر متاحة فقط للتبويب "الكل"
+          if (!controller.searchAvailableForCurrentTab) {
             return const SizedBox.shrink();
           }
           return AnimatedContainer(
@@ -433,17 +400,22 @@ class _ProductsPageState extends State<ProductsPage> {
               ),
               child: Column(
                 children: [
+                  // حقل البحث متاح لكل التبويبات
                   _buildSearchField(uiController),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                          child: _buildCategoryFilter(uiController)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                          child: _buildSubCategoryFilter(uiController)),
-                    ],
-                  ),
+
+                  // الفلاتر (الفئات والفئات الفرعية) متاحة فقط للتبويب "الكل"
+                  if (controller.categoryFiltersAvailableForCurrentTab) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                            child: _buildCategoryFilter(uiController)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                            child: _buildSubCategoryFilter(uiController)),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             )
@@ -455,21 +427,44 @@ class _ProductsPageState extends State<ProductsPage> {
   }
 
   Widget _buildSearchField(ProductsUIController uiController) {
-    return ShamraTextField(
-      hintText: 'ابحث عن المنتجات...',
-      icon: Icons.search_rounded,
-      controller: uiController.searchController,
-      suffixIcon: uiController.searchController.text.isNotEmpty
-          ? IconButton(
-        onPressed: () => uiController.clearSearch(),
-        icon: Icon(
-          Icons.clear_rounded,
-          color: AppColors.textSecondary.withOpacity(0.6),
-          size: 20,
-        ),
-      )
-          : null,
-      onChanged: (value) => uiController.onSearchChanged(value),
+    return GetBuilder<ProductController>(
+      builder: (controller) {
+        String hintText = 'ابحث عن المنتجات...';
+
+        // تخصيص نص البحث حسب التبويب
+        switch (controller.currentTab) {
+          case ProductTab.featured:
+            hintText = 'ابحث في المنتجات المميزة...';
+            break;
+          case ProductTab.onSale:
+            hintText = 'ابحث في العروض...';
+            break;
+          case ProductTab.all:
+            if (controller.currentCategoryId.isNotEmpty) {
+              hintText = 'ابحث في هذه الفئة...';
+            } else {
+              hintText = 'ابحث عن المنتجات...';
+            }
+            break;
+        }
+
+        return ShamraTextField(
+          hintText: hintText,
+          icon: Icons.search_rounded,
+          controller: uiController.searchController,
+          suffixIcon: uiController.searchController.text.isNotEmpty
+              ? IconButton(
+            onPressed: () => uiController.clearSearch(),
+            icon: Icon(
+              Icons.clear_rounded,
+              color: AppColors.textSecondary.withOpacity(0.6),
+              size: 20,
+            ),
+          )
+              : null,
+          onChanged: (value) => uiController.onSearchChanged(value),
+        );
+      },
     );
   }
 
@@ -604,39 +599,47 @@ class _ProductsPageState extends State<ProductsPage> {
 
   /// محتوى التبويبات مع دعم السحب
   Widget _buildTabContent() {
-    return PageView(
-      controller: _pageController,
-      physics: const BouncingScrollPhysics(),
-      onPageChanged: (index) {
-        // تحديث التبويب وتحميل بياناته عند انتهاء السحب
-        _switchToTabByIndex(index);
-      },
-      children: [
-        _buildProductsBody(),
-        _buildProductsBody(),
-        _buildProductsBody(),
-      ],
+    return GetBuilder<ProductsUIController>(
+      builder: (uiController) => PageView(
+        controller: uiController.pageController,
+        physics: const BouncingScrollPhysics(),
+        onPageChanged: (index) {
+          // تحديث التبويب وتحميل بياناته عند انتهاء السحب
+          _switchToTabByIndex(index);
+        },
+        children: [
+          _buildProductsBody(),
+          _buildProductsBody(),
+          _buildProductsBody(),
+        ],
+      ),
     );
   }
 
   /// جسم صفحة المنتجات (يستخدم حالة التبويب الحالي داخل ProductController)
   Widget _buildProductsBody() {
     return GetBuilder<ProductController>(
-      builder: (controller) => Obx(() {
-        if (controller.isLoading && controller.currentProducts.isEmpty) {
-          return _buildProductsShimmer();
-        }
+      builder: (controller) {
+        // RefreshIndicator متاح في جميع الحالات
+        return RefreshIndicator(
+          onRefresh: () => controller.refreshCurrentTab(),
+          color: AppColors.primary,
+          backgroundColor: AppColors.white,
+          child: Builder(
+            builder: (context) {
+              if (controller.isLoading && controller.currentProducts.isEmpty) {
+                return _buildRefreshableShimmer();
+              }
 
-        if (controller.currentProducts.isEmpty) {
-          return EmptyStateWidget(
-            icon: _getEmptyStateIcon(controller.currentTab),
-            title: _getEmptyStateTitle(controller.currentTab),
-            message: _getEmptyStateMessage(controller.currentTab, controller),
-          );
-        }
+              if (controller.currentProducts.isEmpty) {
+                return _buildRefreshableEmptyState(controller);
+              }
 
-        return _buildProductGrid(controller.currentProducts, controller);
-      }),
+              return _buildProductGrid(controller.currentProducts, controller, showRefreshIndicator: false);
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -664,8 +667,23 @@ class _ProductsPageState extends State<ProductsPage> {
 
   String _getEmptyStateMessage(ProductTab tab, ProductController controller) {
     if (controller.searchQuery.isNotEmpty) {
-      return 'لا توجد نتائج للبحث عن "${controller.searchQuery}"';
+      String searchContext = '';
+      switch (tab) {
+        case ProductTab.featured:
+          searchContext = ' في المنتجات المميزة';
+          break;
+        case ProductTab.onSale:
+          searchContext = ' في العروض';
+          break;
+        case ProductTab.all:
+          if (controller.currentCategoryId.isNotEmpty) {
+            searchContext = ' في هذه الفئة';
+          }
+          break;
+      }
+      return 'لا توجد نتائج للبحث عن "${controller.searchQuery}"$searchContext';
     }
+
     switch (tab) {
       case ProductTab.featured:
         return 'لا توجد منتجات مميزة حالياً';
@@ -683,67 +701,126 @@ class _ProductsPageState extends State<ProductsPage> {
   }
 
   Widget _buildProductGrid(
-      List<Product> products, ProductController controller) {
-    return RefreshIndicator(
+      List<Product> products,
+      ProductController controller,
+      {bool showRefreshIndicator = true}) {
+    final scrollController = Get.find<MainController>().productsScrollController;
+
+    final gridView = GridView.builder(
+      controller: scrollController,
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.72,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 20,
+      ),
+      itemCount: products.length + (controller.hasMoreData && controller.isLoadingMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index == products.length && controller.hasMoreData) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: LoadingWidget(size: 20),
+            ),
+          );
+        }
+
+        final product = products[index];
+        return ProductCard(
+          product: product,
+          onTap: () => Get.toNamed(Routes.productDetails, arguments: product.id),
+        );
+      },
+    );
+
+    // إذا كان RefreshIndicator مطلوب، نضعه، وإلا نعرض GridView مباشرة
+    return showRefreshIndicator
+        ? RefreshIndicator(
       onRefresh: () => controller.refreshCurrentTab(),
       color: AppColors.primary,
       backgroundColor: AppColors.white,
-      child: GridView.builder(
-        controller: _scrollController,
-        padding: const EdgeInsets.all(16),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 0.56,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 20,
-        ),
-        itemCount:
-        products.length + (controller.hasMoreData && controller.isLoadingMore ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index == products.length && controller.hasMoreData) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: LoadingWidget(size: 20),
-              ),
-            );
-          }
+      child: gridView,
+    )
+        : gridView;
+  }
 
-          final product = products[index];
-          return ProductCard(
-            product: product,
-            onTap: () =>
-                Get.toNamed(Routes.productDetails, arguments: product.id),
-          );
-        },
+  /// Shimmer قابل للتحديث
+  Widget _buildRefreshableShimmer() {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: Column(
+        children: [
+          const SizedBox(height: 20),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 0.75,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 20,
+            ),
+            itemCount: 6,
+            itemBuilder: (context, index) => Container(
+              decoration: BoxDecoration(
+                color: AppColors.lightGrey.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Center(child: LoadingWidget(size: 30)),
+            ),
+          ),
+          const SizedBox(height: 100), // مساحة إضافية للتأكد من إمكانية السحب
+        ],
       ),
     );
   }
 
-  Widget _buildProductsShimmer() {
-    return GridView.builder(
-      padding: const EdgeInsets.all(20),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.75,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 20,
-      ),
-      itemCount: 6,
-      itemBuilder: (context, index) => Container(
-        decoration: BoxDecoration(
-          color: AppColors.lightGrey.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(20),
+  /// Empty state قابل للتحديث
+  Widget _buildRefreshableEmptyState(ProductController controller) {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: Container(
+        constraints: BoxConstraints(
+          minHeight: MediaQuery.of(Get.context!).size.height - 300, // تقليل الارتفاع المطلوب
         ),
-        child: const Center(child: LoadingWidget(size: 30)),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              EmptyStateWidget(
+                icon: _getEmptyStateIcon(controller.currentTab),
+                title: _getEmptyStateTitle(controller.currentTab),
+                message: _getEmptyStateMessage(controller.currentTab, controller),
+              ),
+              const SizedBox(height: 20),
+              // زر تحديث إضافي للوضوح
+              ElevatedButton.icon(
+                onPressed: () => controller.refreshCurrentTab(),
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('تحديث'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
-/// Controller لمحاذاة واجهة المستخدم
+/// Controller لمحاذاة واجهة المستخدم - محدث للبحث في كل التبويبات
 class ProductsUIController extends GetxController {
   final searchController = TextEditingController();
+  late PageController _pageController;
 
   final RxBool _showSearchField = false.obs;
   final RxString _selectedCategoryId = ''.obs;
@@ -754,11 +831,66 @@ class ProductsUIController extends GetxController {
   String get selectedCategoryId => _selectedCategoryId.value;
   String get selectedSubCategoryId => _selectedSubCategoryId.value;
   int get currentTabIndex => _currentTabIndex.value;
+  PageController get pageController => _pageController;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _pageController = PageController(initialPage: 0);
+    _setupScrollListener();
+  }
 
   @override
   void onClose() {
     searchController.dispose();
+    _pageController.dispose();
+    _removeScrollListener();
     super.onClose();
+  }
+
+  /// تهيئة PageController مع الصفحة الأولية
+  void initializePageController(int initialPage) {
+    if (_pageController.hasClients && initialPage != _currentTabIndex.value) {
+      _pageController.jumpToPage(initialPage);
+    }
+  }
+
+  /// إعداد مستمع التمرير
+  void _setupScrollListener() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        final scrollController = Get.find<MainController>().productsScrollController;
+        scrollController.addListener(_onScroll);
+      } catch (e) {
+        print('خطأ في إعداد مستمع التمرير: $e');
+      }
+    });
+  }
+
+  /// إزالة مستمع التمرير
+  void _removeScrollListener() {
+    try {
+      final scrollController = Get.find<MainController>().productsScrollController;
+      scrollController.removeListener(_onScroll);
+    } catch (e) {
+      print('خطأ في إزالة مستمع التمرير: $e');
+    }
+  }
+
+  /// معالج أحداث التمرير
+  void _onScroll() {
+    try {
+      final scrollController = Get.find<MainController>().productsScrollController;
+      if (scrollController.position.pixels >=
+          scrollController.position.maxScrollExtent - 200) {
+        final productController = Get.find<ProductController>();
+        if (!productController.isLoadingMore && productController.hasMoreData) {
+          productController.loadMoreProducts();
+        }
+      }
+    } catch (e) {
+      print('خطأ في معالجة التمرير: $e');
+    }
   }
 
   void changeTab(int index) {
@@ -770,7 +902,11 @@ class ProductsUIController extends GetxController {
         _showSearchField.value = false;
       }
 
-      clearAllFilters();
+      // مسح الفلاتر فقط إذا انتقلنا من/إلى التبويب "الكل"
+      if (index != 0 || _currentTabIndex.value == 0) {
+        clearFiltersOnly(); // مسح الفلاتر فقط وليس البحث
+      }
+
       update();
     }
   }
@@ -840,6 +976,14 @@ class ProductsUIController extends GetxController {
     update();
   }
 
+  /// مسح الفلاتر فقط (الفئات والفئات الفرعية) وليس البحث
+  void clearFiltersOnly() {
+    _selectedCategoryId.value = '';
+    _selectedSubCategoryId.value = '';
+    update();
+  }
+
+  /// مسح كل شيء (البحث والفلاتر)
   void clearAllFilters() {
     _selectedCategoryId.value = '';
     _selectedSubCategoryId.value = '';

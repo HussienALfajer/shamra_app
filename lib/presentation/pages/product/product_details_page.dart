@@ -766,6 +766,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
 
   Widget _buildProductInfo() {
     return Container(
+      width: double.infinity,
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -839,58 +840,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                     ),
                   ),
                 ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Rating and Reviews (temporary)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Row(
-                    children: List.generate(5, (index) {
-                      return Icon(
-                        index < 4
-                            ? Icons.star_rounded
-                            : Icons.star_border_rounded,
-                        color: AppColors.secondary,
-                        size: 20,
-                      );
-                    }),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    '4.2 (127 تقييم)',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              TextButton.icon(
-                onPressed: () {
-                  // TODO: Navigate to reviews
-                },
-                icon: const Icon(
-                  Icons.reviews_outlined,
-                  size: 16,
-                  color: AppColors.primary,
-                ),
-                label: const Text(
-                  'عرض التقييمات',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
             ],
           ),
         ],
@@ -1166,7 +1115,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
       return Icons.fitness_center_rounded;
     } else if (keyLower.contains('dimensions') || keyLower.contains('أبعاد')) {
       return Icons.straighten_rounded;
-    } else if (keyLower.contains('color') || keyLower.contains('لون')) {
+    } else if (keyLower.contains('color') || keyLower.contains('الالوان')) {
       return Icons.palette_rounded;
     } else if (keyLower.contains('warranty') || keyLower.contains('ضمان')) {
       return Icons.verified_rounded;
@@ -1437,7 +1386,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         const SizedBox(height: 16),
 
         SizedBox(
-          height: 290,
+          height: 240,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
@@ -1452,7 +1401,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                   product: similarProduct,
                   onTap: () => Get.offAndToNamed(
                     '/product-details',
-                    arguments: similarProduct,
+                    arguments: similarProduct.id,
                   ),
                   matchPercent: _calculateSimilarityScore(similarProduct),
                   matchThreshold: 60,
@@ -1461,25 +1410,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
             },
           ),
         ),
-
-        if (similarProducts.length >= 20)
-          Container(
-            margin: const EdgeInsets.only(top: 16),
-            child: ShamraButton(
-              text: 'عرض المزيد من المنتجات المشابهة',
-              onPressed: () {
-                Get.toNamed(
-                  '/category-details',
-                  arguments: {
-                    'categoryId': product!.categoryId,
-                    'categoryName': 'منتجات مشابهة',
-                  },
-                );
-              },
-              isOutlined: true,
-              icon: Icons.arrow_forward,
-            ),
-          ),
       ],
     );
   }

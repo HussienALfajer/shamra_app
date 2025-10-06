@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:shamra_app/presentation/controllers/banner_controller.dart';
 import 'package:shamra_app/presentation/pages/auth/login_page.dart';
 import 'package:shamra_app/presentation/pages/auth/register_page.dart';
+import 'package:shamra_app/presentation/pages/google_map/select_location_page.dart';
 import 'package:shamra_app/presentation/pages/main/main_page.dart';
 import 'package:shamra_app/presentation/pages/order/order_details.dart';
 import 'package:shamra_app/presentation/pages/order/order_page.dart';
@@ -13,6 +14,7 @@ import '../presentation/pages/category/category_details_page.dart';
 import '../presentation/pages/favorite/favorites_page.dart';
 import '../presentation/pages/product/product_page.dart';
 import '../presentation/pages/product/product_details_page.dart';
+import '../presentation/pages/profile/edit_profile_page.dart';
 import '../presentation/pages/splash/splash.dart';
 import 'app_routes.dart';
 import '../core/bindings/initial_binding.dart';
@@ -31,7 +33,16 @@ class AppPages {
   static const String initial = Routes.splash;
 
   static final routes = [
+    GetPage(
+      name: Routes.selectLocation,
+      page: () => const SelectLocationPage(),
+      transition: Transition.cupertino, // أبقِ نفس أسلوبك المعتاد
+    ),
 
+    GetPage(
+      name: Routes.editProfile,
+      page: () => const EditProfilePage(),
+    ),
     // Splash & Onboarding
     GetPage(
       name: Routes.splash,
@@ -142,8 +153,7 @@ class AppPages {
     ),
     GetPage(
       name: Routes.orderDetails,
-      page: () =>
-          OrderDetailsPage(),
+      page: () => OrderDetailsPage(),
       binding: OrderBinding(),
     ),
 
@@ -153,12 +163,7 @@ class AppPages {
       page: () => const Scaffold(body: Center(child: Text('Profile Page'))),
       binding: AuthBinding(),
     ),
-    GetPage(
-      name: Routes.editProfile,
-      page: () =>
-          const Scaffold(body: Center(child: Text('Edit Profile Page'))),
-      binding: AuthBinding(),
-    ),
+
     GetPage(
       name: Routes.changePassword,
       page: () =>
@@ -187,6 +192,7 @@ class AppPages {
       page: () => const ProductDetailsPage(),
       binding: ProductBinding(),
     ),
+
   ];
 }
 
@@ -218,7 +224,7 @@ class MainBinding extends Bindings {
   void dependencies() {
     Get.lazyPut<MainController>(() => MainController());
     Get.lazyPut<CartController>(() => CartController());
-    Get.lazyPut<AuthController>(() => AuthController());
+    Get.lazyPut<AuthController>(() => AuthController(), fenix: true);
     Get.lazyPut<BannerController>(() => BannerController(), fenix: true);
   }
 }
@@ -237,6 +243,7 @@ class HomeBinding extends Bindings {
 class ProductBinding extends Bindings {
   @override
   void dependencies() {
+    Get.lazyPut(()=>ProductsUIController());
     Get.lazyPut<ProductController>(() => ProductController());
     Get.lazyPut<CartController>(() => CartController());
     Get.lazyPut<CategoryController>(() => CategoryController());
@@ -298,5 +305,14 @@ class SearchBinding extends Bindings {
     // يمكن إضافة controllers أخرى إذا لزم الأمر
     Get.lazyPut<ProductController>(() => ProductController());
     Get.lazyPut<CategoryController>(() => CategoryController());
+  }
+}
+
+class LocationBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut<CartController>(() => CartController());
+    Get.lazyPut<OrderController>(() => OrderController());
+    Get.lazyPut<AuthController>(() => AuthController());
   }
 }

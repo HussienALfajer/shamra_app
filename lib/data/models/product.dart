@@ -208,29 +208,66 @@ class Product {
     return branchPricing.firstWhereOrNull((bp) => bp.branchId == branchId);
   }
 
-  double get price => currentBranchPrice?.price ?? 0;
+  /// التحقق من نوع المستخدم الحالي
+  bool get _isCurrentUserMerchant {
+    try {
+      final authController = Get.find<AuthController>();
+      return authController.currentUser?.role == 'merchant';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// الحصول على السعر المناسب حسب نوع المستخدم
+  double get price {
+    if (currentBranchPrice == null) return 0;
+    return _isCurrentUserMerchant
+        ? currentBranchPrice!.wholeSalePrice
+        : currentBranchPrice!.price;
+  }
+
+  /// سعر البيع (خصم) - يطبق على كلا النوعين من المستخدمين
   double? get salePrice => currentBranchPrice?.salePrice;
+
   int get stockQuantity => currentBranchPrice?.stockQuantity ?? 0;
 
+  /// السعر المعروض (مع مراعاة الخصم ونوع المستخدم)
   double get displayPrice {
     if (currentBranchPrice == null) return 0;
+
+    // إذا كان هناك خصم، اعرض سعر الخصم
     if (currentBranchPrice!.isOnSale && currentBranchPrice!.salePrice != null) {
       return currentBranchPrice!.salePrice!;
     }
-    return currentBranchPrice!.price;
+
+    // وإلا اعرض السعر المناسب لنوع المستخدم
+    return _isCurrentUserMerchant
+        ? currentBranchPrice!.wholeSalePrice
+        : currentBranchPrice!.price;
   }
 
-  bool get hasDiscount =>
-      currentBranchPrice != null &&
-          currentBranchPrice!.isOnSale &&
-          currentBranchPrice!.salePrice != null &&
-          currentBranchPrice!.salePrice! < currentBranchPrice!.price;
+  /// التحقق من وجود خصم
+  bool get hasDiscount {
+    if (currentBranchPrice == null) return false;
 
+    final basePrice = _isCurrentUserMerchant
+        ? currentBranchPrice!.wholeSalePrice
+        : currentBranchPrice!.price;
+
+    return currentBranchPrice!.isOnSale &&
+        currentBranchPrice!.salePrice != null &&
+        currentBranchPrice!.salePrice! < basePrice;
+  }
+
+  /// نسبة الخصم
   double? get discountPercentage {
     if (!hasDiscount) return null;
-    return ((currentBranchPrice!.price - currentBranchPrice!.salePrice!) /
-        currentBranchPrice!.price) *
-        100;
+
+    final basePrice = _isCurrentUserMerchant
+        ? currentBranchPrice!.wholeSalePrice
+        : currentBranchPrice!.price;
+
+    return ((basePrice - currentBranchPrice!.salePrice!) / basePrice) * 100;
   }
 
   /// الحصول على رمز العملة
@@ -239,12 +276,23 @@ class Product {
   /// الحصول على اسم العملة
   String get currencyName => currentBranchPrice?.currencyName ?? 'دولار';
 
-  /// تنسيق السعر مع العملة
+  /// تنسيق الرقم لإزالة الكسور العشرية غير الضرورية
+  String _formatNumber(double number) {
+    if (number == number.roundToDouble()) {
+      // إذا كان الرقم صحيح (مثل 50.0)، اعرضه بدون كسور عشرية
+      return number.toStringAsFixed(0);
+    } else {
+      // إذا كان هناك كسور عشرية، اعرض حتى منزلتين عشريتين مع حذف الأصفار غير الضرورية
+      return number.toStringAsFixed(2).replaceAll(RegExp(r'0*$'), '').replaceAll(RegExp(r'\.$'), '');
+    }
+  }
+
+  /// تنسيق السعر المعروض مع العملة
   String get formattedPrice {
     if (currentBranchPrice == null) return '0';
 
     final currency = currentBranchPrice!.currency?.toUpperCase() ?? 'USD';
-    final priceValue = displayPrice.toStringAsFixed(0);
+    final priceValue = _formatNumber(displayPrice);
 
     switch (currency) {
       case 'USD':
@@ -258,12 +306,16 @@ class Product {
     }
   }
 
-  /// تنسيق السعر الأصلي مع العملة (قبل الخصم)
+  /// تنسيق السعر الأصلي (قبل الخصم) مع العملة
   String get formattedOriginalPrice {
     if (currentBranchPrice == null) return '0';
 
     final currency = currentBranchPrice!.currency?.toUpperCase() ?? 'USD';
-    final priceValue = price.toStringAsFixed(0);
+    // استخدام السعر الأساسي حسب نوع المستخدم
+    final basePrice = _isCurrentUserMerchant
+        ? currentBranchPrice!.wholeSalePrice
+        : currentBranchPrice!.price;
+    final priceValue = _formatNumber(basePrice);
 
     switch (currency) {
       case 'USD':

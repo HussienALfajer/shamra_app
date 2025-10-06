@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
+import 'package:flutter/cupertino.dart';
 import '../../core/services/dio_service.dart';
 import '../../core/constants/app_constants.dart';
 import '../models/order.dart';
@@ -9,24 +12,63 @@ class OrderService {
     required String customerId,
     required String branchId,
     required List<OrderItem> items,
-    required double taxAmount,
     required double discountAmount,
     String? notes,
+    int? pointsToRedeem, // 🎯 إضافة
+    String? currency, // 🎯 إضافة
+
   }) async {
     try {
+      // ✅ جهّز الجسم الذي سيُرسل
+      final payload = {
+        'branchId': branchId,
+        'items': items.map((item) => item.toJson()).toList(),
+        'discountAmount': discountAmount,
+        if (notes != null) 'notes': notes,
+        if (pointsToRedeem != null) 'pointsToRedeem': pointsToRedeem, // 🎯 إضافة
+        if (currency != null) 'currency': currency, // 🎯 إضافة
+
+      };
+
+      // ✅ اطبع الـ payload كـ JSON منسق
+      try {
+        final pretty = const JsonEncoder.withIndent('  ').convert(payload);
+        debugPrint('🚀 Sending order payload to ${ApiConstants.orders}:\n$pretty');
+      } catch (_) {
+        debugPrint('🚀 Sending order payload (raw): $payload');
+      }
+
       final response = await DioService.post(
         ApiConstants.orders,
-        data: {
-          'customerId': customerId,
-          'branchId': branchId,
-          'items': items.map((item) => item.toJson()).toList(),
-          'taxAmount': taxAmount,
-          'discountAmount': discountAmount,
-          if (notes != null) 'notes': notes,
-        },
+        data: payload,
       );
-      print(response.data['data']);
-      return Order.fromJson(response.data['data']);
+
+      // ✅ اطبع ملخّص الاستجابة
+      final data = response.data['data'];
+      try {
+        final prettyRes = const JsonEncoder.withIndent('  ').convert(data);
+        debugPrint('✅ Order created. Server response:\n$prettyRes');
+      } catch (_) {
+        debugPrint('✅ Order created. Server response (raw): $data');
+      }
+
+      return Order.fromJson(data);
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+
+  static Future<Order> cancelOrder({
+    required String orderId,
+    String? reason,
+  }) async {
+    try {
+      final res = await DioService.patch(
+        '${ApiConstants.orders}/$orderId/status',
+        data: {'status': 'CANCELLED'.toLowerCase()},
+      );
+      return Order.fromJson(res.data['data']);
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -48,7 +90,9 @@ class OrderService {
   // Get order by ID
   static Future<Order> getOrderById(String orderId) async {
     try {
-      final response = await DioService.get('${ApiConstants.orders}/$orderId');
+      final response = await DioService.get(
+        '${ApiConstants.orders}/by-id/$orderId',
+      );
       return Order.fromJson(response.data['data']);
     } on DioException catch (e) {
       throw _handleError(e);

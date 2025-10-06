@@ -3,79 +3,76 @@ import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/services/storage_service.dart';
 import '../../../data/utils/helpers.dart';
 import '../../../data/models/cart.dart';
 import '../../../routes/app_routes.dart';
+import '../../controllers/branch_controller.dart';
 import '../../controllers/cart_controller.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/main_controller.dart';
 import '../../controllers/order_controller.dart';
 import '../../widgets/common_widgets.dart';
 
-/// 🛒 صفحة السلة Cart Page
-/// - تعرض المنتجات المضافة إلى السلة
-/// - تسمح بتغيير الكميات أو حذف منتج
-/// - تعرض المجموع النهائي مع زر "إتمام الطلب"
 class CartPage extends StatelessWidget {
   const CartPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     final cartController = Get.find<CartController>();
-    final main = Get.find<MainController>(); // ✅
+    final main = Get.find<MainController>();
 
-    // التأكد من وجود OrderController
+    // Ensure OrderController is available
     Get.put(OrderController());
 
     return Directionality(
-        textDirection: TextDirection.rtl,
-        child: WillPopScope(
-          onWillPop: () async {
-            final handled = main.backToPreviousTab();
-            return !handled;
-          },
-          child: Scaffold(
-        appBar: CustomAppBar(
-          title: "السلة",
-        ),
-        backgroundColor: AppColors.background,
-        body: GetBuilder<CartController>(
-          init: CartController(),
-          builder: (cartController) => Obx(() {
-            if (cartController.isLoading) {
-              return const LoadingWidget(message: "جاري تحميل السلة...");
-            }
+      textDirection: TextDirection.rtl,
+      child: WillPopScope(
+        onWillPop: () async {
+          final handled = main.backToPreviousTab();
+          return !handled;
+        },
+        child: Scaffold(
+          appBar: CustomAppBar(title: "السلة"),
+          backgroundColor: AppColors.background,
+          body: GetBuilder<CartController>(
+            init: CartController(),
+            builder: (cartController) => Obx(() {
+              if (cartController.isLoading) {
+                return const LoadingWidget(message: "جاري تحميل السلة...");
+              }
 
-            if (cartController.isEmpty) {
-              return _buildEmptyCart();
-            }
-            final main = Get.find<MainController>();
-            return Column(
-              children: [
-                /// 🔹 قائمة المنتجات
-                Expanded(
-                  child: ListView.builder(
-                    controller: main.cartScrollController, // ✅
-                    padding: const EdgeInsets.all(16),
-                    itemCount: cartController.items.length,
-                    itemBuilder: (context, index) {
-                      final cartItem = cartController.items[index];
-                      return _buildCartItemCard(cartItem, cartController);
-                    },
+              if (cartController.isEmpty) {
+                return _buildEmptyCart();
+              }
+
+              final main = Get.find<MainController>();
+              return Column(
+                children: [
+                  // Cart items list
+                  Expanded(
+                    child: ListView.builder(
+                      controller: main.cartScrollController,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: cartController.items.length,
+                      itemBuilder: (context, index) {
+                        final cartItem = cartController.items[index];
+                        return _buildCartItemCard(cartItem, cartController);
+                      },
+                    ),
                   ),
-                ),
-
-                /// 🔹 قسم المجموع وزر إتمام الطلب
-                _buildBottomSection(cartController, context),
-              ],
-            );
-          }),
+                  // Totals section + Checkout button
+                  _buildBottomSection(cartController, context),
+                ],
+              );
+            }),
+          ),
         ),
       ),
-    ));
+    );
   }
 
-  /// 🔹 عنصر منتج داخل السلة
+  // Single cart item card
   Widget _buildCartItemCard(CartItem cartItem, CartController cartController) {
     return ShamraCard(
       onTap: () =>
@@ -84,7 +81,7 @@ class CartPage extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
-          /// صورة المنتج
+          // Product image
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: CachedNetworkImage(
@@ -93,7 +90,7 @@ class CartPage extends StatelessWidget {
               height: 90,
               fit: BoxFit.cover,
               placeholder: (context, url) =>
-              const Center(child: CircularProgressIndicator()),
+                  const Center(child: CircularProgressIndicator()),
               errorWidget: (context, url, error) => const Icon(
                 Icons.image_outlined,
                 size: 40,
@@ -103,7 +100,7 @@ class CartPage extends StatelessWidget {
           ),
           const SizedBox(width: 12),
 
-          /// تفاصيل المنتج
+          // Product details
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,20 +116,17 @@ class CartPage extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
-
-                /// السعر
                 Text(
-                  "${cartItem.price.toStringAsFixed(0)} ${AppConstants.currency}",
+                  "${cartItem.price.toStringAsFixed(1)} ${AppConstants.currency}",
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: AppColors.primary,
                   ),
                 ),
-
                 const SizedBox(height: 8),
 
-                /// أدوات التحكم في الكمية
+                // Quantity controls
                 Row(
                   children: [
                     IconButton(
@@ -164,21 +158,54 @@ class CartPage extends StatelessWidget {
             ),
           ),
 
-          /// زر الحذف
+          // Delete with confirmation
           IconButton(
-            onPressed: () => cartController.removeFromCart(cartItem.product.id),
             icon: const Icon(Icons.delete_outline, color: AppColors.error),
+            onPressed: () {
+              Get.dialog(
+                AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  title: const Text('تأكيد الحذف'),
+                  content: const Text(
+                    'هل أنت متأكد أنك تريد إزالة هذا المنتج من السلة؟',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Get.back(),
+                      child: const Text('إلغاء'),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.error,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onPressed: () {
+                        cartController.removeFromCart(cartItem.product.id);
+                        Get.back();
+                      },
+                      child: const Text('حذف'),
+                    ),
+                  ],
+                ),
+                barrierDismissible: false,
+              );
+            },
           ),
         ],
       ),
     );
   }
 
-  /// 🔹 قسم المجموع وزر إتمام الطلب
+  // Bottom totals + checkout
   Widget _buildBottomSection(
-      CartController cartController,
-      BuildContext context,
-      ) {
+    CartController cartController,
+    BuildContext context,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -193,25 +220,49 @@ class CartPage extends StatelessWidget {
       ),
       child: Column(
         children: [
-          /// تفاصيل الحساب
+          // Total summary box
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppColors.primary.withOpacity(0.05),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.primary.withOpacity(0.1),
-              ),
+              border: Border.all(color: AppColors.primary.withOpacity(0.1)),
             ),
             child: Column(
               children: [
-                _buildPriceRow('المجموع الفرعي', cartController.subtotal),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.amber,
+                        size: 20,
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'المجموع النهائي لا يتضمن مصاريف الشحن',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.redAccent,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 8),
-                _buildPriceRow('الضريبة', cartController.taxAmount),
-                if (cartController.shippingFee > 0) ...[
-                  const SizedBox(height: 8),
-                  _buildPriceRow('الشحن', cartController.shippingFee),
-                ],
                 const Divider(thickness: 1),
                 _buildPriceRow(
                   'المجموع النهائي',
@@ -221,10 +272,9 @@ class CartPage extends StatelessWidget {
               ],
             ),
           ),
-
           const SizedBox(height: 16),
 
-          /// زر إتمام الطلب
+          // Checkout button
           ShamraButton(
             text: "إتمام الطلب (${cartController.itemCount} منتج)",
             onPressed: () => _handleCheckout(cartController, context),
@@ -236,7 +286,7 @@ class CartPage extends StatelessWidget {
     );
   }
 
-  /// 🔹 صف السعر
+  // Price line
   Widget _buildPriceRow(String label, double amount, {bool isTotal = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -261,24 +311,23 @@ class CartPage extends StatelessWidget {
     );
   }
 
-  /// 🔹 حالة السلة الفارغة
+  // Empty cart state
   Widget _buildEmptyCart() {
-    return EmptyStateWidget(
-      action: ShamraButton(
-        text: 'ابدأ التسوق الان',
-        onPressed: () => Get.offAllNamed(Routes.main),
-      ),
+    return const EmptyStateWidget(
       icon: Icons.shopping_cart_outlined,
       title: "سلة التسوق فارغة",
       message: "ابدأ بإضافة منتجات رائعة إلى السلة الآن",
     );
   }
 
-  /// 🔹 معالجة الضغط على زر "إتمام الطلب" - محدثة
-  void _handleCheckout(CartController cartController, BuildContext context) async {
+  // Checkout flow with map selection and notes
+  // في cart_page.dart - تحديث _handleCheckout
+  void _handleCheckout(
+    CartController cartController,
+    BuildContext context,
+  ) async {
     final authController = Get.find<AuthController>();
 
-    // التحقق من تسجيل الدخول
     if (!authController.isLoggedIn) {
       ShamraSnackBar.show(
         context: context,
@@ -289,8 +338,6 @@ class CartPage extends StatelessWidget {
       );
       return;
     }
-
-    // التحقق من وجود منتجات في السلة
     if (cartController.isEmpty) {
       ShamraSnackBar.show(
         context: context,
@@ -300,177 +347,310 @@ class CartPage extends StatelessWidget {
       return;
     }
 
-    // التحقق من اختيار الفرع
-    final branchId = authController.currentUser?.selectedBranch ??
-        authController.savedBranchId;
+    // 🎯 عرض dialog لاختيار النقاط
+    final pointsData = await _showPointsDialog(
+      context,
+      authController,
+      cartController,
+    );
+    if (pointsData == null) return; // المستخدم ألغى
 
-    if (branchId == null || branchId.isEmpty) {
+    final result = await Get.toNamed(Routes.selectLocation);
+    if (result is! Map) return;
+
+    final lat = (result['lat'] as num?)?.toDouble();
+    final lng = (result['lng'] as num?)?.toDouble();
+    final address = result['address'] as String?;
+
+    if (lat == null || lng == null) {
       ShamraSnackBar.show(
-        context: context,
-        message: "يرجى اختيار الفرع أولاً",
-        type: SnackBarType.warning,
-        actionLabel: "اختيار فرع",
-        onAction: () => Get.toNamed(Routes.branchSelection),
+        context: Get.context!,
+        message: 'تعذّر قراءة موقع الاستلام، حاول مجددًا',
+        type: SnackBarType.error,
       );
       return;
     }
 
-    try {
-      // عرض dialog تأكيد الطلب
-      final confirmed = await _showOrderConfirmationDialog(context, cartController);
-      if (!confirmed) return;
-
-      // إنشاء الطلب
-      final orderController = Get.find<OrderController>();
-
-      final success = await orderController.createOrderFromCart(
-        branchId: branchId,
-        notes: null,
-        customTaxAmount: cartController.taxAmount,
-        discountAmount: 0.0,
-      );
-
-
-    } catch (e) {
+    final branchId = await _resolveBranchId();
+    if (branchId.isEmpty) {
       ShamraSnackBar.show(
-        context: context,
-        message: "حدث خطأ أثناء إنشاء الطلب: $e",
-        type: SnackBarType.error,
+        context: Get.context!,
+        message: 'لم يتم تحديد الفرع. الرجاء اختيار الفرع أولاً.',
+        type: SnackBarType.warning,
       );
+      return;
     }
+
+    final confirmed = await _showOrderConfirmationDialog(
+      context,
+      cartController,
+      pointsData['points'] as int?,
+      pointsData['discount'] as double?,
+    );
+    if (!confirmed) return;
+
+    final orderController = Get.find<OrderController>();
+    await orderController.placeOrderWithLocation(
+      branchId: branchId,
+      lat: lat,
+      lng: lng,
+      address: address,
+      pointsToRedeem: pointsData['points'] as int?,
+      // 🎯 إضافة
+      currency: 'USD', // 🎯 يمكن جعلها dynamic
+    );
   }
 
-  /// 🔹 عرض dialog تأكيد الطلب
-  Future<bool> _showOrderConfirmationDialog(
-      BuildContext context,
-      CartController cartController
-      ) async {
-    return await Get.dialog<bool>(
+  // 🎯 Dialog جديد لاختيار النقاط
+  Future<Map<String, dynamic>?> _showPointsDialog(
+    BuildContext context,
+    AuthController authController,
+    CartController cartController,
+  ) async {
+    final user = authController.currentUser;
+    if (user == null || user.points <= 0) {
+      // لا توجد نقاط - متابعة مباشرة
+      return {'points': null, 'discount': 0.0};
+    }
+
+    final pointsController = TextEditingController();
+    final RxInt selectedPoints = 0.obs;
+    final RxDouble discount = 0.0.obs;
+
+    return await Get.dialog<Map<String, dynamic>?>(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.shopping_cart_checkout, color: AppColors.primary),
-            SizedBox(width: 8),
-            Text(
-              'تأكيد الطلب',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ],
+        title: const Text(
+          'استخدام نقاط المكافآت',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'هل أنت متأكد من إتمام هذا الطلب؟',
-              style: TextStyle(
-                fontSize: 16,
-                color: AppColors.textPrimary,
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('نقاطك المتاحة:'),
+                    Text(
+                      '${user.points} نقطة',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            SizedBox(height: 16),
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+              const SizedBox(height: 16),
+              TextField(
+                controller: pointsController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'عدد النقاط للاستخدام',
+                  hintText: 'أدخل عدد النقاط',
+                  prefixIcon: Icon(Icons.stars_rounded),
+                ),
+                onChanged: (value) {
+                  final points = int.tryParse(value) ?? 0;
+                  if (points > user.points) {
+                    selectedPoints.value = user.points;
+                    pointsController.text = user.points.toString();
+                  } else {
+                    selectedPoints.value = points;
+                  }
+                  // حساب الخصم (مثال: 1 نقطة = 0.1$)
+                  discount.value = selectedPoints.value * 0.1;
+                },
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('عدد المنتجات:'),
-                      Text(
-                        '${cartController.itemCount} منتج',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('المجموع الفرعي:'),
-                      Text(
-                        '${cartController.subtotal.toStringAsFixed(0)} ر.س',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('الضريبة:'),
-                      Text(
-                        '${cartController.taxAmount.toStringAsFixed(0)} ر.س',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                  Divider(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'المجموع النهائي:',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
+              const SizedBox(height: 12),
+              Obx(
+                () => discount.value > 0
+                    ? Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      ),
-                      Text(
-                        '${cartController.total.toStringAsFixed(0)} \$',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('الخصم المتوقع:'),
+                            Text(
+                              '${discount.value.toStringAsFixed(2)} \$',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.success,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      )
+                    : const SizedBox(),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(result: false),
-            child: Text(
-              'إلغاء',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            onPressed: () =>
+                Get.back(result: {'points': null, 'discount': 0.0}),
+            child: const Text('تخطي'),
           ),
-          SizedBox(width: 8),
           ElevatedButton(
-            onPressed: () => Get.back(result: true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+            onPressed: () => Get.back(
+              result: {
+                'points': selectedPoints.value > 0
+                    ? selectedPoints.value
+                    : null,
+                'discount': discount.value,
+              },
             ),
-            child: Text(
-              'تأكيد الطلب',
-              style: TextStyle(
-                color: AppColors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child: const Text('تأكيد'),
           ),
         ],
       ),
-    ) ?? false;
+    );
+  }
+
+  // 🎯 تحديث confirmation dialog
+  Future<bool> _showOrderConfirmationDialog(
+    BuildContext context,
+    CartController cartController,
+    int? pointsUsed,
+    double? discount,
+  ) async {
+    return await Get.dialog<bool>(
+          AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Row(
+              children: [
+                Icon(Icons.shopping_cart_checkout, color: AppColors.primary),
+                const SizedBox(width: 8),
+                const Text('تأكيد الطلب'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('هل أنت متأكد من إتمام هذا الطلب؟'),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('عدد المنتجات:'),
+                          Text('${cartController.itemCount} منتج'),
+                        ],
+                      ),
+                      if (pointsUsed != null && pointsUsed > 0) ...[
+                        const Divider(),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('النقاط المستخدمة:'),
+                            Text('$pointsUsed نقطة'),
+                          ],
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('الخصم:'),
+                            Text(
+                              '-${discount?.toStringAsFixed(2) ?? 0} \$',
+                              style: const TextStyle(color: AppColors.success),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const Divider(),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('المجموع النهائي:'),
+                          Text(
+                            '${(cartController.total - (discount ?? 0)).toStringAsFixed(0)} \$',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(result: false),
+                child: const Text('إلغاء'),
+              ),
+              ElevatedButton(
+                onPressed: () => Get.back(result: true),
+                child: const Text('تأكيد الطلب'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  // Determine branchId from Auth, storage, controller, or by asking user
+  Future<String> _resolveBranchId() async {
+    try {
+      final auth = Get.find<AuthController>();
+      final fromAuth = auth.currentUser?.selectedBranch ?? auth.savedBranchId;
+      if (fromAuth != null && fromAuth.isNotEmpty) return fromAuth;
+    } catch (_) {}
+
+    try {
+      final fromStorage = StorageService.getBranchId();
+      if (fromStorage != null && fromStorage.isNotEmpty) return fromStorage;
+    } catch (_) {}
+
+    try {
+      final bc = Get.find<BranchController>();
+      final fromCtrl = bc.selectedBranch?.id;
+      if (fromCtrl != null && fromCtrl.isNotEmpty) return fromCtrl;
+    } catch (_) {}
+
+    final picked = await Get.toNamed(
+      Routes.branchSelection,
+      arguments: {'returnId': true},
+    );
+    if (picked is String && picked.isNotEmpty) {
+      try {
+        await StorageService.saveBranchId(picked);
+      } catch (_) {}
+      return picked;
+    }
+    if (picked is Map &&
+        picked['branchId'] is String &&
+        (picked['branchId'] as String).isNotEmpty) {
+      final id = picked['branchId'] as String;
+      try {
+        await StorageService.saveBranchId(id);
+      } catch (_) {}
+      return id;
+    }
+
+    return '';
   }
 }

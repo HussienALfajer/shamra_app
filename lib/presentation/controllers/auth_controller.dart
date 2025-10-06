@@ -7,30 +7,22 @@ import '../../data/repositories/auth_repository.dart';
 import '../widgets/common_widgets.dart';
 import 'app_controller.dart';
 
-/// 🔐 AuthController
-/// -----------------
-/// مسؤول عن:
-/// - تسجيل الدخول / التسجيل.
-/// - إدارة حالة المستخدم (currentUser).
-/// - تحديث الملف الشخصي وتغيير كلمة المرور.
-/// - اختيار الفرع (branch).
-/// - التحكم في حالة التحميل (isLoading) ورسائل الخطأ.
-/// - التحكم في رؤية كلمة المرور.
 class AuthController extends GetxController {
   final AuthRepository _authRepository = AuthRepository();
 
-  /// ✅ Observables (قيم متغيرة تراقب من خلال GetX)
   final Rx<User?> _currentUser = Rx<User?>(null);
+  Rx<User?> get currentUserRx => _currentUser;
   final RxBool _isLoading = false.obs;
   final RxBool _isLoggedIn = false.obs;
   final RxString _errorMessage = ''.obs;
   final RxBool isPasswordVisible = false.obs;
+  final Rx<Map<String, dynamic>?> _merchantRequest = Rx<Map<String, dynamic>?>(null);
 
-  /// ✅ حقول الإدخال (مربوطة بـ TextField)
+  Map<String, dynamic>? get merchantRequest => _merchantRequest.value;
+
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
-  /// ✅ Getters
   User? get currentUser => _currentUser.value;
   bool get isLoading => _isLoading.value;
   bool get isLoggedIn => _isLoggedIn.value;
@@ -40,6 +32,7 @@ class AuthController extends GetxController {
   void onInit() {
     super.onInit();
     checkLoginStatus();
+    getMerchantRequest();
   }
 
   @override
@@ -49,15 +42,11 @@ class AuthController extends GetxController {
     super.onClose();
   }
 
-  /// ✅ التحقق من حالة تسجيل الدخول الحالية
   void checkLoginStatus() {
     _isLoggedIn.value = _authRepository.isLoggedIn();
-    if (_isLoggedIn.value) {
-      _currentUser.value = _authRepository.getCurrentUser();
-    }
+    _currentUser.value = _authRepository.getCurrentUser();
   }
 
-  /// ✅ تسجيل الدخول (محدث)
   Future<bool> login(String email, String password) async {
     try {
       _isLoading.value = true;
@@ -72,13 +61,10 @@ class AuthController extends GetxController {
         _currentUser.value = User.fromJson(response.data.user.toJson());
         _isLoggedIn.value = true;
 
-        // إشعار AppController بتحديث الحالة
         try {
           final appController = Get.find<AppController>();
           appController.recheckAuthStatus();
         } catch (e) {
-          print('AppController not found: $e');
-          // إذا لم يكن AppController موجود، اذهب لاختيار الفرع مباشرة
           Get.offAllNamed(Routes.branchSelection);
         }
 
@@ -88,7 +74,6 @@ class AuthController extends GetxController {
           type: SnackBarType.success,
         );
 
-        // مسح حقول الإدخال
         emailController.clear();
         passwordController.clear();
 
@@ -98,20 +83,17 @@ class AuthController extends GetxController {
       return false;
     } catch (e) {
       _errorMessage.value = e.toString();
-
       ShamraSnackBar.show(
         context: Get.context!,
         message: 'خطأ أثناء تسجيل الدخول: ${e.toString()}',
         type: SnackBarType.error,
       );
-
       return false;
     } finally {
       _isLoading.value = false;
     }
   }
 
-  /// ✅ تسجيل حساب جديد (محدث)
   Future<bool> register({
     required String firstName,
     required String lastName,
@@ -135,13 +117,10 @@ class AuthController extends GetxController {
         _currentUser.value = User.fromJson(response.data.user.toJson());
         _isLoggedIn.value = true;
 
-        // إشعار AppController بتحديث الحالة
         try {
           final appController = Get.find<AppController>();
           appController.recheckAuthStatus();
         } catch (e) {
-          print('AppController not found: $e');
-          // إذا لم يكن AppController موجود، اذهب لاختيار الفرع مباشرة
           Get.offAllNamed(Routes.branchSelection);
         }
 
@@ -150,32 +129,30 @@ class AuthController extends GetxController {
           message: 'تم إنشاء الحساب بنجاح 🎉',
           type: SnackBarType.success,
         );
-
         return true;
       }
 
       return false;
     } catch (e) {
       _errorMessage.value = e.toString();
-
       ShamraSnackBar.show(
         context: Get.context!,
         message: 'فشل إنشاء الحساب: ${e.toString()}',
         type: SnackBarType.error,
       );
-
       return false;
     } finally {
       _isLoading.value = false;
     }
   }
 
-  /// ✅ جلب الملف الشخصي من السيرفر
   Future<void> getProfile() async {
     try {
       _isLoading.value = true;
       final user = await _authRepository.getProfile();
       _currentUser.value = user;
+      update(); // لتحديث GetBuilder widgets
+
     } catch (e) {
       _errorMessage.value = e.toString();
     } finally {
@@ -183,7 +160,6 @@ class AuthController extends GetxController {
     }
   }
 
-  /// ✅ تحديث الملف الشخصي
   Future<bool> updateProfile({
     String? firstName,
     String? lastName,
@@ -210,20 +186,17 @@ class AuthController extends GetxController {
       return true;
     } catch (e) {
       _errorMessage.value = e.toString();
-
       ShamraSnackBar.show(
         context: Get.context!,
         message: 'فشل تحديث الملف الشخصي: ${e.toString()}',
         type: SnackBarType.error,
       );
-
       return false;
     } finally {
       _isLoading.value = false;
     }
   }
 
-  /// ✅ تغيير كلمة المرور
   Future<bool> changePassword({
     required String oldPassword,
     required String newPassword,
@@ -246,20 +219,17 @@ class AuthController extends GetxController {
       return true;
     } catch (e) {
       _errorMessage.value = e.toString();
-
       ShamraSnackBar.show(
         context: Get.context!,
         message: 'فشل تغيير كلمة المرور: ${e.toString()}',
         type: SnackBarType.error,
       );
-
       return false;
     } finally {
       _isLoading.value = false;
     }
   }
 
-  /// ✅ تسجيل الخروج (محدث)
   Future<void> logout() async {
     try {
       _isLoading.value = true;
@@ -269,13 +239,11 @@ class AuthController extends GetxController {
       _isLoggedIn.value = false;
       _errorMessage.value = '';
 
-      // استخدام AppController للخروج
       try {
         final appController = Get.find<AppController>();
         await appController.logout();
       } catch (e) {
-        print('AppController not found during logout: $e');
-        // إذا لم يكن AppController موجود، اذهب للترحيب مباشرة
+        await StorageService.clearAll();
         Get.offAllNamed(Routes.welcome);
       }
 
@@ -286,8 +254,6 @@ class AuthController extends GetxController {
       );
     } catch (e) {
       _errorMessage.value = e.toString();
-
-      // حتى لو فشل في السيرفر، امسح البيانات المحلية
       try {
         final appController = Get.find<AppController>();
         await appController.logout();
@@ -300,73 +266,119 @@ class AuthController extends GetxController {
     }
   }
 
-  /// ✅ تبديل إظهار/إخفاء كلمة المرور
   void togglePasswordVisibility() {
     isPasswordVisible.value = !isPasswordVisible.value;
   }
 
-  /// ✅ مسح رسالة الخطأ الحالية
   void clearErrorMessage() {
     _errorMessage.value = '';
   }
 
-  /// ✅ اختيار الفرع (محدث)
   Future<bool> selectBranch(String branchId) async {
     try {
       _isLoading.value = true;
       final response = await _authRepository.selectBranch(branchId: branchId);
 
       if (response.data.user != null) {
-        _currentUser.value = User.fromJson(response.data.user.toJson());
-        await StorageService.saveUserData(_currentUser.value!.toJson());
+        final updatedUser = User.fromJson(response.data.user.toJson());
+        _currentUser.value = updatedUser;
+
+        await StorageService.saveUserData(updatedUser.toJson());
         await StorageService.saveBranchId(branchId);
 
-        print("✅ Branch selected: ${_currentUser.value!.selectedBranch}");
+        // إعلام الواجهات
+        update();
+
+        try {
+          final appController = Get.find<AppController>();
+          appController.recheckAuthStatus();
+        } catch (e) {
+          Get.offAllNamed(Routes.main);
+        }
 
         ShamraSnackBar.show(
           context: Get.context!,
           message: 'تم اختيار الفرع بنجاح 🏬',
           type: SnackBarType.success,
         );
-
-        // الذهاب للصفحة الرئيسية
-        Get.offAllNamed(Routes.main);
-
         return true;
       }
 
       return false;
     } catch (e) {
       _errorMessage.value = e.toString();
-
       ShamraSnackBar.show(
         context: Get.context!,
         message: 'فشل اختيار الفرع: ${e.toString()}',
         type: SnackBarType.error,
       );
-
       return false;
     } finally {
       _isLoading.value = false;
     }
   }
 
-  /// ✅ تحديث بيانات المستخدم محلياً
+  Future<void> getMerchantRequest() async {
+    try {
+      _isLoading.value = true;
+      final request = await _authRepository.getMyMerchantRequest();
+      _merchantRequest.value = request;
+    } catch (e) {
+      _errorMessage.value = e.toString();
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  Future<bool> submitMerchantRequest({
+    required String storeName,
+    required String address,
+    required String phoneNumber,
+  }) async {
+    try {
+      _isLoading.value = true;
+      _errorMessage.value = '';
+
+      await _authRepository.addMerchantRequest(
+        storeName: storeName,
+        address: address,
+        phoneNumber: phoneNumber,
+      );
+
+      await getMerchantRequest();
+
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'تم إرسال طلب التاجر بنجاح',
+        type: SnackBarType.success,
+      );
+
+      return true;
+    } catch (e) {
+      _errorMessage.value = e.toString();
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'فشل إرسال طلب التاجر: ${e.toString()}',
+        type: SnackBarType.error,
+      );
+      return false;
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
   void updateCurrentUser(User user) {
     _currentUser.value = user;
   }
 
-  /// ✅ التحقق من صحة البريد الإلكتروني
   bool isValidEmail(String email) {
     return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
   }
 
-  /// ✅ التحقق من قوة كلمة المرور
   bool isValidPassword(String password) {
     return password.length >= 6;
   }
 
-  /// ✅ إعادة تعيين النموذج
   void resetForm() {
     emailController.clear();
     passwordController.clear();
@@ -374,20 +386,23 @@ class AuthController extends GetxController {
     _errorMessage.value = '';
   }
 
-  /// ✅ التحقق من حالة المصادقة الحالية
   bool get hasValidSession {
     final token = StorageService.getToken();
     final userData = StorageService.getUserData();
     return token != null && userData != null;
   }
 
-  /// ✅ الحصول على معرف الفرع المحفوظ
-  String? get savedBranchId {
-    return StorageService.getBranchId();
+  String? get savedBranchId => StorageService.getBranchId();
+
+  bool get hasBranchSelected => savedBranchId != null;
+
+
+  Future<void> reloadFromStorage() async {
+    final data = StorageService.getUserData();
+    if (data != null) {
+      _currentUser.value = User.fromJson(data);
+      update();
+    }
   }
 
-  /// ✅ فحص ما إذا كان المستخدم قد اختار فرع
-  bool get hasBranchSelected {
-    return savedBranchId != null;
-  }
 }
