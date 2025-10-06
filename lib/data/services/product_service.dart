@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import '../../core/services/dio_service.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/services/storage_service.dart';
 import '../models/product.dart';
 
 class ProductService {
@@ -9,20 +10,27 @@ class ProductService {
     int page = 1,
     int limit = 20,
     String? categoryId,
-    String? branchId,
+    String? subCategoryId,
     String? search,
     String sort = '-createdAt',
+    bool? isFeatured,
+    bool? isOnSale,
   }) async {
     try {
+      final branchId = StorageService.getBranchId();
       final response = await DioService.get(
         ApiConstants.products,
         queryParameters: {
           'page': page,
           'limit': limit,
           if (categoryId != null) 'categoryId': categoryId,
-          if (branchId != null) 'branchId': branchId,
+          if (subCategoryId != null) 'subCategoryId': subCategoryId,
           if (search != null) 'search': search,
+          if(isFeatured!=null) 'isFeatured':isFeatured.toString(),
+          if(isOnSale!=null) 'isOnSale':isOnSale.toString(),
           'sort': sort,
+          if (branchId != null && branchId.isNotEmpty)
+            'selectedBranchId': branchId,
         },
       );
 
@@ -41,33 +49,69 @@ class ProductService {
     }
   }
 
-  // Get featured products
-  static Future<List<Product>> getFeaturedProducts({int limit = 10}) async {
+  // Get products by category
+  static Future<Map<String, dynamic>> getProductsByCategory({
+    required String categoryId,
+    int page = 1,
+    int limit = 20,
+    String? search
+  }) async {
     try {
-      final response = await DioService.get(
-        ApiConstants.featuredProducts,
-        queryParameters: {'limit': limit},
+      return await getProducts(
+        page: page,
+        limit: limit,
+        categoryId: categoryId,
+        search: search
       );
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
 
-      return (response.data['data'] as List)
-          .map((item) => Product.fromJson(item))
-          .toList();
+  //  Get products by subcategory
+  static Future<Map<String, dynamic>> getProductsBySubCategory({
+    required String subCategoryId,
+    int page = 1,
+    int limit = 20,
+    String? search,
+  }) async {
+    try {
+      return await getProducts(
+        page: page,
+        limit: limit,
+        subCategoryId: subCategoryId,
+        search: search
+      );
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // Get featured products
+  static Future<Map<String, dynamic>> getFeaturedProducts({int limit = 10,int page=1,    String? search,
+  }) async {
+    try {
+      return await getProducts(
+        page: page,
+        limit: limit,
+        isFeatured: true,
+        search: search
+      ) ;
     } on DioException catch (e) {
       throw _handleError(e);
     }
   }
 
   // Get products on sale
-  static Future<List<Product>> getOnSaleProducts({int limit = 20}) async {
+  static Future<Map<String, dynamic>> getOnSaleProducts({int limit = 20,int page=1,    String? search,
+  }) async {
     try {
-      final response = await DioService.get(
-        ApiConstants.onSaleProducts,
-        queryParameters: {'limit': limit},
-      );
-
-      return (response.data['data'] as List)
-          .map((item) => Product.fromJson(item))
-          .toList();
+      return await getProducts(
+          page: page,
+          limit: limit,
+          isOnSale: true,
+        search: search
+      ) ;
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -85,29 +129,7 @@ class ProductService {
     }
   }
 
-  // Get product by SKU
-  static Future<Product> getProductBySku(String sku) async {
-    try {
-      final response = await DioService.get(
-        '${ApiConstants.products}/sku/$sku',
-      );
-      return Product.fromJson(response.data['data']);
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
-  }
 
-  // Get product by slug
-  static Future<Product> getProductBySlug(String slug) async {
-    try {
-      final response = await DioService.get(
-        '${ApiConstants.products}/slug/$slug',
-      );
-      return Product.fromJson(response.data['data']);
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
-  }
 
   // Search products
   static Future<List<Product>> searchProducts({
@@ -117,43 +139,14 @@ class ProductService {
     String? categoryId,
   }) async {
     try {
-      final response = await DioService.get(
-        ApiConstants.products,
-        queryParameters: {
-          'search': query,
-          'page': page,
-          'limit': limit,
-          if (categoryId != null) 'categoryId': categoryId,
-        },
+      final result = await getProducts(
+        page: page,
+        limit: limit,
+        categoryId: categoryId,
+        search: query,
       );
 
-      return (response.data['data'] as List)
-          .map((item) => Product.fromJson(item))
-          .toList();
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
-  }
-
-  // Get products by category
-  static Future<List<Product>> getProductsByCategory({
-    required String categoryId,
-    int page = 1,
-    int limit = 20,
-  }) async {
-    try {
-      final response = await DioService.get(
-        ApiConstants.products,
-        queryParameters: {
-          'categoryId': categoryId,
-          'page': page,
-          'limit': limit,
-        },
-      );
-
-      return (response.data['data'] as List)
-          .map((item) => Product.fromJson(item))
-          .toList();
+      return result['products'] as List<Product>;
     } on DioException catch (e) {
       throw _handleError(e);
     }

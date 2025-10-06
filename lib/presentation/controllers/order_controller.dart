@@ -1,21 +1,29 @@
+import 'dart:async';
+import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
-import 'package:flutter/material.dart';
 import '../../data/models/order.dart';
 import '../../data/repositories/order_repository.dart';
+import '../../routes/app_routes.dart';
 import 'auth_controller.dart';
 import 'cart_controller.dart';
+import '../widgets/common_widgets.dart';
 
 class OrderController extends GetxController {
   final OrderRepository _orderRepository = OrderRepository();
 
-  // Observables
+  // state
   final RxList<Order> _orders = <Order>[].obs;
   final RxBool _isLoading = false.obs;
   final RxBool _isPlacingOrder = false.obs;
   final RxString _errorMessage = ''.obs;
   final Rx<Order?> _currentOrder = Rx<Order?>(null);
 
-  // Getters
+  // polling
+  Timer? _ordersPoller;
+  Timer? _detailsPoller;
+  String? _watchingOrderId;
+
+  // getters
   List<Order> get orders => _orders;
   bool get isLoading => _isLoading.value;
   bool get isPlacingOrder => _isPlacingOrder.value;
@@ -26,66 +34,158 @@ class OrderController extends GetxController {
   void onInit() {
     super.onInit();
     loadOrders();
+    // _startOrdersPolling(); // تحديث فوري مُستمر لقائمة الطلبات
   }
 
-  // Load customer orders
+  @override
+  void onClose() {
+    _stopOrdersPolling();
+    _stopDetailsPolling();
+    super.onClose();
+  }
+
+  // ---------- Real-time (Polling) ----------
+  // void _startOrdersPolling({Duration interval = const Duration(seconds: 3)}) {
+  //   _ordersPoller?.cancel();
+  //   _ordersPoller = Timer.periodic(interval, (_) async {
+  //     try {
+  //       await _silentRefreshOrders();
+  //     } catch (_) {}
+  //   });
+  // }
+
+  void _stopOrdersPolling() {
+    _ordersPoller?.cancel();
+    _ordersPoller = null;
+  }
+
+  // void _startDetailsPolling(String orderId, {Duration interval = const Duration(seconds: 3)}) {
+  //   _watchingOrderId = orderId;
+  //   _detailsPoller?.cancel();
+  //   _detailsPoller = Timer.periodic(interval, (_) async {
+  //     try {
+  //       final latest = await _orderRepository.getOrderById(orderId);
+  //       // إذا تغيرت الحالة أو أي حقل، حدّث الكائن
+  //       if (_currentOrder.value == null || latest.updatedAt.isAfter(_currentOrder.value!.updatedAt)) {
+  //         _currentOrder.value = latest;
+  //         // انعكاس الحالة داخل القائمة أيضاً
+  //         final idx = _orders.indexWhere((o) => o.id == latest.id);
+  //         if (idx != -1) _orders[idx] = latest;
+  //       }
+  //     } catch (_) {}
+  //   });
+  // }
+
+  void _stopDetailsPolling() {
+    _detailsPoller?.cancel();
+    _detailsPoller = null;
+    _watchingOrderId = null;
+  }
+
+  // ---------- API ops ----------
   Future<void> loadOrders() async {
     try {
-      final authController = Get.find<AuthController>();
-      if (!authController.isLoggedIn || authController.currentUser == null) {
-        return;
-      }
+      final auth = Get.find<AuthController>();
+      if (!auth.isLoggedIn || auth.currentUser == null) return;
 
       _isLoading.value = true;
       _errorMessage.value = '';
-
       final orders = await _orderRepository.getCustomerOrders();
-
       _orders.value = orders;
     } catch (e) {
       _errorMessage.value = e.toString();
-      Get.snackbar(
-        'Error',
-        'Failed to load orders: ${e.toString()}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-      );
+      ShamraSnackBar.show(context: Get.context!, message: 'فشل في تحميل الطلبات: $e', type: SnackBarType.error);
     } finally {
       _isLoading.value = false;
     }
   }
 
-  // Create order from cart
+  Future<void> _silentRefreshOrders() async {
+    try {
+      final auth = Get.find<AuthController>();
+      if (!auth.isLoggedIn || auth.currentUser == null) return;
+      final orders = await _orderRepository.getCustomerOrders();
+      if (orders.length != _orders.length) {
+        _orders.value = orders;
+      } else {
+        for (final o in orders) {
+          final idx = _orders.indexWhere((x) => x.id == o.id);
+          if (idx != -1 && o.updatedAt.isAfter(_orders[idx].updatedAt)) {
+            _orders[idx] = o;
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<bool> cancelOrder(String orderId, {String? reason}) async {
+    try {
+      _errorMessage.value = '';
+
+      final existing = _orders.firstWhere(
+            (o) => o.id == orderId,
+        orElse: () => _currentOrder.value ?? null as Order,
+
+      );
+      if (existing != null) {
+        final st = existing.status.toLowerCase();
+        if (st == 'shipped' || st == 'delivered' || st == 'cancelled') {
+          ShamraSnackBar.show(
+            context: Get.context!,
+            message: 'لا يمكن إلغاء هذا الطلب في حالته الحالية.',
+            type: SnackBarType.warning,
+          );
+          return false;
+        }
+      }
+
+      final updated = await _orderRepository.cancelOrder(orderId, reason: reason);
+
+      // تحديث العنصر بالقائمة
+      final idx = _orders.indexWhere((o) => o.id == updated.id);
+      if (idx != -1) _orders[idx] = updated;
+
+      // تحديث الطلب الحالي
+      if (_currentOrder.value?.id == updated.id) {
+        _currentOrder.value = updated;
+      }
+
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'تم إلغاء الطلب بنجاح',
+        type: SnackBarType.success,
+      );
+      return true;
+    } catch (e) {
+      _errorMessage.value = e.toString();
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'فشل إلغاء الطلب: $e',
+        type: SnackBarType.error,
+      );
+      return false;
+    }
+  }
+
   Future<bool> createOrderFromCart({
     required String branchId,
     String? notes,
     double? customTaxAmount,
     double? discountAmount,
+    int? pointsToRedeem, // 🎯 إضافة
+    String? currency, // 🎯 إضافة
+
   }) async {
     try {
-      final authController = Get.find<AuthController>();
-      final cartController = Get.find<CartController>();
+      final auth = Get.find<AuthController>();
+      final cart = Get.find<CartController>();
 
-      if (!authController.isLoggedIn || authController.currentUser == null) {
-        Get.snackbar(
-          'Error',
-          'Please login to place an order',
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-          snackPosition: SnackPosition.TOP,
-        );
+      if (!auth.isLoggedIn || auth.currentUser == null) {
+        ShamraSnackBar.show(context: Get.context!, message: 'الرجاء تسجيل الدخول أولاً', type: SnackBarType.warning);
         return false;
       }
-
-      if (cartController.isEmpty) {
-        Get.snackbar(
-          'Error',
-          'Your cart is empty',
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-          snackPosition: SnackPosition.TOP,
-        );
+      if (cart.isEmpty) {
+        ShamraSnackBar.show(context: Get.context!, message: 'سلة التسوق فارغة', type: SnackBarType.warning);
         return false;
       }
 
@@ -93,177 +193,150 @@ class OrderController extends GetxController {
       _errorMessage.value = '';
 
       final order = await _orderRepository.createOrder(
-        customerId: authController.currentUser!.id,
+        customerId: auth.currentUser!.id,
         branchId: branchId,
-        items: cartController.getOrderItems(),
-        taxAmount: customTaxAmount ?? cartController.taxAmount,
+        items: cart.getOrderItems(),
         discountAmount: discountAmount ?? 0.0,
         notes: notes,
+        pointsToRedeem: pointsToRedeem, // 🎯 إضافة
+        currency: currency ?? 'USD', // 🎯 إضافة
+
       );
 
-      // Add order to local list
       _orders.insert(0, order);
-      _currentOrder.value = order;
+      setCurrentOrder(order);
 
-      // Clear cart after successful order
-      await cartController.clearCart();
+      await cart.clearCart();
 
-      Get.snackbar(
-        'Success',
-        'Order placed successfully! Order #${order.orderNumber}',
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 3),
+      // 🎯 تحديث بيانات المستخدم لتحديث النقاط
+      await auth.getProfile();
+
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'تم إنشاء الطلب بنجاح! رقم الطلب: #${order.orderNumber}',
+        type: SnackBarType.success,
       );
-
       return true;
     } catch (e) {
       _errorMessage.value = e.toString();
-      Get.snackbar(
-        'Error',
-        'Failed to place order: ${e.toString()}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-      );
+      ShamraSnackBar.show(context: Get.context!, message: 'فشل في إنشاء الطلب: $e', type: SnackBarType.error);
       return false;
     } finally {
       _isPlacingOrder.value = false;
     }
   }
 
-  // Get order by ID
   Future<Order?> getOrderById(String orderId) async {
     try {
       _isLoading.value = true;
+      _errorMessage.value = '';
       final order = await _orderRepository.getOrderById(orderId);
-      _currentOrder.value = order;
+      setCurrentOrder(order);
       return order;
     } catch (e) {
       _errorMessage.value = e.toString();
-      Get.snackbar(
-        'Error',
-        'Failed to load order: ${e.toString()}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-      );
+      ShamraSnackBar.show(context: Get.context!, message: 'فشل في تحميل الطلب', type: SnackBarType.error);
       return null;
     } finally {
       _isLoading.value = false;
     }
   }
 
-  // Get order by number
   Future<Order?> getOrderByNumber(String orderNumber) async {
     try {
       _isLoading.value = true;
+      _errorMessage.value = '';
       final order = await _orderRepository.getOrderByNumber(orderNumber);
-      _currentOrder.value = order;
+      setCurrentOrder(order);
       return order;
     } catch (e) {
       _errorMessage.value = e.toString();
-      Get.snackbar(
-        'Error',
-        'Failed to load order: ${e.toString()}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-      );
+      ShamraSnackBar.show(context: Get.context!, message: 'فشل في تحميل الطلب', type: SnackBarType.error);
       return null;
     } finally {
       _isLoading.value = false;
     }
   }
 
-  // Get orders by status
-  List<Order> getOrdersByStatus(String status) {
-    return _orders
-        .where((order) => order.status.toLowerCase() == status.toLowerCase())
-        .toList();
-  }
+  // filters
+  List<Order> getOrdersByStatus(String status) =>
+      _orders.where((o) => o.status.toLowerCase() == status.toLowerCase()).toList();
 
-  // Get pending orders
   List<Order> get pendingOrders => getOrdersByStatus('pending');
-
-  // Get confirmed orders
   List<Order> get confirmedOrders => getOrdersByStatus('confirmed');
-
-  // Get shipped orders
   List<Order> get shippedOrders => getOrdersByStatus('shipped');
-
-  // Get delivered orders
   List<Order> get deliveredOrders => getOrdersByStatus('delivered');
-
-  // Get cancelled orders
   List<Order> get cancelledOrders => getOrdersByStatus('cancelled');
 
-  // Calculate order summary
-  Map<String, dynamic> get orderSummary {
-    final totalOrders = _orders.length;
-    final totalAmount = _orders.fold(
-      0.0,
-      (sum, order) => sum + order.totalAmount,
-    );
-    final pendingCount = pendingOrders.length;
-    final deliveredCount = deliveredOrders.length;
+  List<Order> get activeOrders => pendingOrders + confirmedOrders + shippedOrders;
+  List<Order> get completedOrders => deliveredOrders;
 
-    return {
-      'totalOrders': totalOrders,
-      'totalAmount': totalAmount,
-      'pendingCount': pendingCount,
-      'deliveredCount': deliveredCount,
-    };
-  }
+  Map<String, dynamic> get orderSummary => {
+    'totalOrders': _orders.length,
+    'totalAmount': _orders.fold(0.0, (sum, o) => sum + o.totalAmount),
+    'pendingCount': pendingOrders.length,
+    'deliveredCount': deliveredOrders.length,
+  };
 
-  // Set current order
+  // current
   void setCurrentOrder(Order order) {
     _currentOrder.value = order;
+    // _startDetailsPolling(order.id);
   }
 
-  // Clear current order
   void clearCurrentOrder() {
     _currentOrder.value = null;
+    _stopDetailsPolling();
   }
 
-  // Refresh orders
-  Future<void> refreshOrders() async {
-    await loadOrders();
+  // دالة جديدة للتحقق من تغيير الطلب
+  bool isCurrentOrder(String orderId) {
+    return _currentOrder.value?.id == orderId;
   }
 
-  // Clear error message
-  void clearErrorMessage() {
-    _errorMessage.value = '';
-  }
+  Future<void> refreshOrders() async => await loadOrders();
+  void clearErrorMessage() => _errorMessage.value = '';
 
-  // Show order confirmation dialog
-  void showOrderConfirmation(Order order) {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Order Confirmed'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Order Number: ${order.orderNumber}'),
-            Text('Total Amount: \$${order.totalAmount.toStringAsFixed(2)}'),
-            Text('Status: ${order.statusDisplay}'),
-            const SizedBox(height: 8),
-            const Text('Thank you for your order!'),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Close')),
-          ElevatedButton(
-            onPressed: () {
-              Get.back();
-              Get.toNamed('/order-details', arguments: order);
-            },
-            child: const Text('View Order'),
-          ),
-        ],
-      ),
+
+  Future<void> placeOrderWithLocation({
+    required String branchId,
+    required double lat,
+    required double lng,
+    String? address,
+    String? extraNotes,
+    int? pointsToRedeem, // 🎯 إضافة
+    String? currency, // 🎯 إضافة
+
+  }) async {
+    final locJson =
+        '{"lat":${lat.toStringAsFixed(6)},"lng":${lng.toStringAsFixed(6)}'
+        '${address != null ? ',"address":"${_sanitizeForNotes(address)}"' : ''}}';
+    final locationBlock = '[LOC] $locJson [/LOC]';
+
+    String mergedNotes;
+    if (extraNotes != null && extraNotes.trim().isNotEmpty) {
+      mergedNotes = '${extraNotes.trim()} | $locationBlock';
+    } else {
+      mergedNotes = locationBlock;
+    }
+    if (mergedNotes.length > 480) mergedNotes = mergedNotes.substring(0, 480);
+
+    // ✅ اطبع ملخص ما سيتم تمريره (بما فيه notes)
+    debugPrint('🗺️ Checkout location: lat=$lat, lng=$lng, address=${address ?? '-'}');
+    debugPrint('🏪 Using branchId: $branchId');
+    debugPrint('📝 Notes (merged) [len=${mergedNotes.length}]: $mergedNotes');
+
+    await createOrderFromCart(
+      branchId: branchId,
+      notes: mergedNotes,
+      pointsToRedeem: pointsToRedeem, // 🎯 إضافة
+      currency: currency, // 🎯 إضافة
     );
   }
+
+  String _sanitizeForNotes(String v) => v.replaceAll('"', "'");
+
+
+
+
 }

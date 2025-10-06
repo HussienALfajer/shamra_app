@@ -2,6 +2,7 @@ class Category {
   final String id;
   final String name;
   final String? description;
+  final String? image; // ✅ أضفنا حقل الصورة
   final bool isActive;
   final int sortOrder;
   final DateTime createdAt;
@@ -11,6 +12,7 @@ class Category {
     required this.id,
     required this.name,
     this.description,
+    this.image, // ✅
     required this.isActive,
     required this.sortOrder,
     required this.createdAt,
@@ -23,6 +25,7 @@ class Category {
         id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
         name: json['name']?.toString() ?? '',
         description: json['description']?.toString(),
+        image: json['image']?.toString(), // ✅
         isActive: _parseBool(json['isActive'], defaultValue: true),
         sortOrder: _parseInt(json['sortOrder']),
         createdAt: _parseDateTime(json['createdAt']),
@@ -71,6 +74,7 @@ class Category {
       'id': id,
       'name': name,
       'description': description,
+      'image': image, // ✅
       'isActive': isActive,
       'sortOrder': sortOrder,
       'createdAt': createdAt.toIso8601String(),
@@ -81,4 +85,6 @@ class Category {
   String get displayName => name;
 
   String get displayDescription => (description ?? '');
+
+  String get displayImage => image ?? ''; // ✅ Getter مفيد لو بدك تستخدمه
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
+  static const Color red = Color(0xFFDC2626);
+
   // Primary brand colors - Enhanced from your logo
   static const Color primary = Color(
     0xFF2B4CB8,
@@ -8,6 +10,9 @@ class AppColors {
   static const Color primaryLight = Color(0xFFE3EAFF); // Light blue tint
   static const Color primaryDark = Color(
     0xFF1A3491,
+  ); // Darker blue for dark theme
+  static const Color blue = Color(
+    0xFF6DB1ED,
   ); // Darker blue for dark theme
 
   static const Color secondary = Color(0xFFFFB627); // Refined gold from logo
@@ -87,9 +92,9 @@ class AppColors {
   ];
 
   static const List<Color> shimmerGradient = [
-    Color(0xFFE2E8F0),
-    Color(0xFFF1F5F9),
-    Color(0xFFE2E8F0),
+    Color(0xFFFDFDFD),
+    Color(0xFFFDFDFD),
+    Color(0xFFFDFDFD),
   ];
 
   // Brand-specific combinations

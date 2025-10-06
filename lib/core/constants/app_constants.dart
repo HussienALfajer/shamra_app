@@ -1,12 +1,12 @@
 // API Constants
 class ApiConstants {
-  static const String baseUrl = 'http://192.168.74.21:3000/api/v1';
-  static const String storageUrl = 'http://192.168.74.21:3000';
+  static const String baseUrl = 'http://62.171.153.198:3399/api/v1';
+  static const String storageUrl = 'http://62.171.153.198:3399';
 
   // Endpoints
   static const String login = '/auth/login';
   static const String register = '/auth/register';
-  static const String profile = '/auth/profile';
+  static const String profile = '/users/profile/me';
   static const String logout = '/auth/logout';
   static const String selectBranch = '/auth/select-branch';
   static const String products = '/products';

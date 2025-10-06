@@ -1,10 +1,13 @@
 class Routes {
   static const String splash = '/splash';
+  static const String welcome = '/welcome';
   static const String onboarding = '/onboarding';
   static const String login = '/login';
   static const String register = '/register';
   static const String forgotPassword = '/forgot-password';
   static const String branchSelection = '/branch-selection';
+
+  static const selectLocation = '/select-location';
 
   static const String home = '/home';
   static const String main = '/main';
@@ -13,7 +16,14 @@ class Routes {
   static const String products = '/products';
   static const String productDetails = '/product-details';
   static const String productsByCategory = '/products-by-category';
+  static const String featuredProducts = '/products/featured';
+  static const String saleProducts = '/products/sale';
   static const String search = '/search';
+
+  static const favorites = '/favorites';
+
+
+
 
   static const String categories = '/categories';
   static const String categoryDetails = '/category-details';

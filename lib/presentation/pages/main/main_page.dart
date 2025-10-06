@@ -1,182 +1,176 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shamra_app/presentation/pages/cart/cart_page.dart';
-import 'package:shamra_app/presentation/pages/order/order_page.dart';
-import 'package:shamra_app/presentation/pages/product/product_page.dart';
-import 'package:shamra_app/presentation/pages/profile/profile_page.dart';
+import 'package:shamra_app/presentation/pages/search/search_page.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../controllers/cart_controller.dart';
-import '../../controllers/main_controller.dart';
-import '../../controllers/category_controller.dart';
-import '../../controllers/sub_category_controller.dart';
-import '../../widgets/common_widgets.dart';
-import '../../widgets/product_card.dart';
+import '../../../routes/app_routes.dart';
+import '../../../data/utils/helpers.dart';
 import '../../../data/models/product.dart';
 import '../../../data/models/category.dart';
-import '../../../data/models/sub_category.dart';
+import '../../controllers/main_controller.dart';
+import '../../controllers/cart_controller.dart';
+import '../../controllers/category_controller.dart';
+import '../../controllers/product_controller.dart';
+import '../../controllers/banner_controller.dart';
+import '../../widgets/banner_widget.dart';
+import '../../widgets/product_card.dart';
+import '../../widgets/common_widgets.dart';
+import '../cart/cart_page.dart';
+import '../order/order_page.dart';
+import '../product/product_page.dart';
+import '../profile/profile_page.dart';
 
-class MainPage extends StatefulWidget {
+class MainPage extends StatelessWidget {
   const MainPage({super.key});
 
   @override
-  State<MainPage> createState() => _MainPageState();
-}
-
-class _MainPageState extends State<MainPage> {
-  int _currentIndex = 0;
-
-  @override
   Widget build(BuildContext context) {
+    final mainController = Get.find<MainController>();
+    final cartController = Get.find<CartController>();
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        body: IndexedStack(
-          index: _currentIndex,
-          children: const [
-            CustomerHomePage(),
-            ProductsPage(),
-            CartPage(),
-            OrdersPage(),
-            ProfilePage(),
-          ],
-        ),
-        bottomNavigationBar: Obx(() {
-          final cartController = Get.find<CartController>();
-
-          return BottomNavigationBar(
-            currentIndex: _currentIndex,
-            onTap: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: AppColors.white,
-            selectedItemColor: AppColors.primary,
-            unselectedItemColor: AppColors.grey,
-            elevation: 8,
-            selectedLabelStyle: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-            unselectedLabelStyle: const TextStyle(fontSize: 11),
-            items: [
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.home_outlined),
-                activeIcon: Icon(Icons.home),
-                label: 'الرئيسية',
-              ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.grid_view_outlined),
-                activeIcon: Icon(Icons.grid_view),
-                label: 'المنتجات',
-              ),
-              BottomNavigationBarItem(
-                icon: _buildCartIcon(cartController),
-                activeIcon: _buildCartIcon(cartController, isActive: true),
-                label: 'السلة',
-              ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.receipt_long_outlined),
-                activeIcon: Icon(Icons.receipt_long),
-                label: 'الطلبات',
-              ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline),
-                activeIcon: Icon(Icons.person),
-                label: 'الحساب',
-              ),
+        /// محتوى الصفحات بناءً على التبويب المحدد
+        body: Obx(() {
+          return IndexedStack(
+            index: mainController.currentIndex.value,
+            children: const [
+              CustomerHomePage(),
+              ProductsPage(),
+              CartPage(),
+              OrdersPage(),
+              ProfilePage(),
             ],
+          );
+        }),
+
+        /// شريط التنقل السفلي المحسّن مع أنيميشن
+        bottomNavigationBar: Obx(() {
+          return Container(
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.shadowColor.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, -5),
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: SafeArea(
+              child: Container(
+                height: 60,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildNavItem(
+                      index: 0,
+                      icon: Icons.home_outlined,
+                      activeIcon: Icons.home_rounded,
+                      label: 'الرئيسية',
+                      currentIndex: mainController.currentIndex.value,
+                      onTap: () => mainController.onNavTap(0),
+                    ),
+                    _buildNavItem(
+                      index: 1,
+                      icon: Icons.grid_view_outlined,
+                      activeIcon: Icons.grid_view_rounded,
+                      label: 'المنتجات',
+                      currentIndex: mainController.currentIndex.value,
+                      onTap: () => mainController.onNavTap(1),
+                    ),
+                    _buildNavItemWithBadge(
+                      index: 2,
+                      icon: Icons.shopping_cart_outlined,
+                      activeIcon: Icons.shopping_cart_rounded,
+                      label: 'السلة',
+                      currentIndex: mainController.currentIndex.value,
+                      badgeCount: cartController.itemCount,
+                      onTap: () => mainController.onNavTap(2),
+                    ),
+                    _buildNavItem(
+                      index: 3,
+                      icon: Icons.receipt_long_outlined,
+                      activeIcon: Icons.receipt_long_rounded,
+                      label: 'الطلبات',
+                      currentIndex: mainController.currentIndex.value,
+                      onTap: () => mainController.onNavTap(3),
+                    ),
+                    _buildNavItem(
+                      index: 4,
+                      icon: Icons.person_outline_rounded,
+                      activeIcon: Icons.person_rounded,
+                      label: 'الحساب',
+                      currentIndex: mainController.currentIndex.value,
+                      onTap: () => mainController.onNavTap(4),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
         }),
       ),
     );
   }
 
-  Widget _buildCartIcon(
-    CartController cartController, {
-    bool isActive = false,
+  /// بناء عنصر التنقل العادي مع أنيميشن سلس
+  Widget _buildNavItem({
+    required int index,
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+    required int currentIndex,
+    required VoidCallback onTap,
   }) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Icon(isActive ? Icons.shopping_cart : Icons.shopping_cart_outlined),
-        if (cartController.itemCount > 0)
-          Positioned(
-            right: -8,
-            top: -8,
-            child: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: AppColors.error,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-              child: Text(
-                cartController.itemCount > 99
-                    ? '99+'
-                    : cartController.itemCount.toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
+    final isActive = currentIndex == index;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              /// حاوي الأيقونة مع أنيميشن
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? AppColors.primary.withOpacity(0.12)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                textAlign: TextAlign.center,
+                child: Icon(
+                  isActive ? activeIcon : icon,
+                  color: isActive ? AppColors.primary : AppColors.grey,
+                  size: 24,
+                ),
               ),
-            ),
-          ),
-      ],
-    );
-  }
-}
+              const SizedBox(height: 4),
 
-// Enhanced Customer Home Page
-class CustomerHomePage extends StatelessWidget {
-  const CustomerHomePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return GetBuilder<MainController>(
-      init: MainController(),
-      builder: (controller) => Scaffold(
-        backgroundColor: AppColors.background,
-        body: RefreshIndicator(
-          onRefresh: controller.refreshData,
-          child: CustomScrollView(
-            slivers: [
-              // Enhanced App Bar
-              _buildShamraAppBar(),
-
-              // Welcome Section
-              _buildWelcomeSection(),
-
-              // Search Bar
-              _buildSearchSection(controller),
-
-              // Main Content
-              if (controller.isLoading)
-                SliverToBoxAdapter(child: _buildLoadingShimmer())
-              else ...[
-                // Categories Section
-                _buildCategoriesSection(),
-
-                // Featured Products
-                _buildFeaturedProductsSection(controller),
-
-                // Sub-Categories Showcase
-                _buildSubCategoriesSection(),
-
-                // On Sale Products
-                _buildOnSaleProductsSection(controller),
-
-                // Recent Products
-                _buildRecentProductsSection(controller),
-
-                // Bottom Spacing
-                const SliverToBoxAdapter(child: SizedBox(height: 100)),
-              ],
+              /// النص مع أنيميشن
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 200),
+                style: TextStyle(
+                  fontSize: isActive ? 11 : 10,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                  color: isActive ? AppColors.primary : AppColors.grey,
+                  height: 1.2,
+                ),
+                child: Text(label),
+              ),
             ],
           ),
         ),
@@ -184,30 +178,292 @@ class CustomerHomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildShamraAppBar() {
-    return SliverAppBar(
-      expandedHeight: 0,
-      floating: true,
-      backgroundColor: AppColors.primary,
-      elevation: 0,
-      flexibleSpace: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: AppColors.primaryGradient,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+  /// بناء عنصر التنقل مع Badge (للسلة) مع أنيميشن متقدم
+  Widget _buildNavItemWithBadge({
+    required int index,
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+    required int currentIndex,
+    required int badgeCount,
+    required VoidCallback onTap,
+  }) {
+    final isActive = currentIndex == index;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              /// حاوي الأيقونة مع Badge
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeInOut,
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? AppColors.primary.withOpacity(0.12)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      isActive ? activeIcon : icon,
+                      color: isActive ? AppColors.primary : AppColors.grey,
+                      size: 24,
+                    ),
+                  ),
+
+                  /// Badge مع أنيميشن متطور
+                  if (badgeCount > 0)
+                    Positioned(
+                      right: 2,
+                      top: 2,
+                      child: AnimatedScale(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.elasticOut,
+                        scale: 1.0,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.error,
+                            borderRadius: BorderRadius.circular(10),
+
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 10,
+                            minHeight: 10,
+                          ),
+                          child: Text(
+                            badgeCount > 99 ? '99+' : badgeCount.toString(),
+                            style: const TextStyle(
+                              color: AppColors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              height: 1.0,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 4),
+
+              /// النص مع أنيميشن
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 200),
+                style: TextStyle(
+                  fontSize: isActive ? 11 : 10,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                  color: isActive ? AppColors.primary : AppColors.grey,
+                  height: 1.2,
+                ),
+                child: Text(label),
+              ),
+            ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// الصفحة الرئيسية للمستخدم (Home داخل MainPage)
+/// تعرض البانرات، الفئات، والمنتجات المختلفة
+class CustomerHomePage extends StatelessWidget {
+  const CustomerHomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<MainController>();
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: RefreshIndicator(
+        onRefresh: controller.refreshData,
+        color: AppColors.primary,
+        child: CustomScrollView(
+          controller: controller.homeScrollController,
+          slivers: [
+            /// شريط التطبيق العلوي مع الشعار والإجراءات
+            _buildSliverAppBar(),
+
+            /// البانرات الإعلانية
+            SliverToBoxAdapter(
+              child: GetBuilder<BannerController>(
+                init: BannerController(),
+                builder: (bannerController) => Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    BannerCarousel(
+                      height: 200,
+                      autoPlay: true,
+                      autoPlayInterval: const Duration(seconds: 4),
+                      showDots: true,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+
+            /// الفئات الرئيسية
+            SliverToBoxAdapter(
+              child: GetBuilder<CategoryController>(
+                init: CategoryController(),
+                builder: (categoryController) => Obx(() {
+                  if (categoryController.isLoading) {
+                    return _buildCategoriesShimmer();
+                  }
+
+                  if (categoryController.categories.isEmpty) {
+                    return const EmptyStateWidget(
+                      icon: Icons.category_outlined,
+                      title: 'لا توجد فئات',
+                      message: 'لم يتم العثور على أي فئات',
+                    );
+                  }
+
+                  return _buildCategoriesSection(categoryController.categories);
+                }),
+              ),
+            ),
+
+            /// المنتجات المميزة
+            SliverToBoxAdapter(
+              child: Obx(() {
+                if (controller.isLoading) {
+                  return _buildProductsShimmer();
+                }
+                return _buildProductSection(
+                  title: 'المنتجات المميزة',
+                  icon: Icons.star_rounded,
+                  products: controller.featuredProducts,
+                  onSeeAll: () => _navigateToProducts(1), // تبويبة المميزة
+                );
+              }),
+            ),
+
+            /// العروض الخاصة
+            SliverToBoxAdapter(
+              child: Obx(() {
+                if (controller.isLoading) {
+                  return _buildProductsShimmer();
+                }
+                return _buildProductSection(
+                  title: 'عروض خاصة',
+                  icon: Icons.local_offer_rounded,
+                  products: controller.onSaleProducts,
+                  onSeeAll: () => _navigateToProducts(2), // تبويبة العروض
+                );
+              }),
+            ),
+
+            /// أحدث المنتجات
+            SliverToBoxAdapter(
+              child: Obx(() {
+                if (controller.isLoading) {
+                  return _buildProductsShimmer();
+                }
+                return _buildProductSection(
+                  title: 'أحدث المنتجات',
+                  icon: Icons.new_releases_rounded,
+                  products: controller.recentProducts,
+                  onSeeAll: () => _navigateToProducts(0), // تبويبة الكل
+                );
+              }),
+            ),
+
+            /// مساحة سفلية للتنقل
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _navigateToProducts(int initialTab) {
+    final mainController = Get.find<MainController>();
+    mainController.onNavTap(1);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        final productController = Get.find<ProductController>();
+        final uiController = Get.find<ProductsUIController>();
+
+        ProductTab targetTab;
+        switch (initialTab) {
+          case 1:
+            targetTab = ProductTab.featured;
+            break;
+          case 2:
+            targetTab = ProductTab.onSale;
+            break;
+          default:
+            targetTab = ProductTab.all;
+        }
+
+        uiController.changeTab(initialTab);
+        productController.switchToTab(targetTab);
+      } catch (e) {
+        print('خطأ في التنقل إلى صفحة المنتجات: $e');
+
+        if (!Get.isRegistered<ProductController>()) {
+          Get.put(ProductController());
+        }
+        if (!Get.isRegistered<ProductsUIController>()) {
+          Get.put(ProductsUIController());
+        }
+
+        final productController = Get.find<ProductController>();
+        final uiController = Get.find<ProductsUIController>();
+
+        ProductTab targetTab;
+        switch (initialTab) {
+          case 1:
+            targetTab = ProductTab.featured;
+            break;
+          case 2:
+            targetTab = ProductTab.onSale;
+            break;
+          default:
+            targetTab = ProductTab.all;
+        }
+
+        uiController.changeTab(initialTab);
+        productController.switchToTab(targetTab);
+      }
+    });
+  }
+
+  /// بناء شريط التطبيق العلوي
+  Widget _buildSliverAppBar() {
+    return SliverAppBar(
+      floating: true,
+      backgroundColor: AppColors.white,
+      elevation: 1,
       title: Row(
         children: [
-          const ShamraLogo(size: 36, showShadow: false),
-          const SizedBox(width: 12),
+          Image.asset(AppConstants.logoPath, width: 40, height: 40),
+          const SizedBox(width: 8),
           const Text(
-            'شمرا',
+            'Shamra',
             style: TextStyle(
-              color: AppColors.white,
-              fontSize: 22,
+              color: AppColors.textPrimary,
+              fontSize: 20,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -215,376 +471,151 @@ class CustomerHomePage extends StatelessWidget {
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.search, color: AppColors.white),
-          onPressed: () => Get.toNamed('/search'),
+          icon: const Icon(Icons.search, color: AppColors.textPrimary),
+          onPressed: () => Get.to(SearchPage()),
+        ),
+        IconButton(
+          icon: const Icon(Icons.favorite_border, color: AppColors.textPrimary),
+          onPressed: () => Get.toNamed(Routes.favorites),
         ),
         IconButton(
           icon: const Icon(
             Icons.notifications_outlined,
-            color: AppColors.white,
+            color: AppColors.textPrimary,
           ),
-          onPressed: () => Get.toNamed('/notifications'),
+          onPressed: () => Get.toNamed(Routes.notifications),
         ),
-        const SizedBox(width: 8),
       ],
     );
   }
 
-  Widget _buildWelcomeSection() {
-    return SliverToBoxAdapter(
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: AppColors.primaryGradient,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(30),
-            bottomRight: Radius.circular(30),
-          ),
-        ),
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 30),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'مرحباً بك في شمرا',
-              style: const TextStyle(
-                color: AppColors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'اكتشف أفضل الأجهزة الإلكترونية بأسعار مميزة',
-              style: const TextStyle(
-                color: AppColors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchSection(MainController controller) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: ShamraCard(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: TextField(
-            controller: controller.searchController,
-            textDirection: TextDirection.rtl,
-            decoration: const InputDecoration(
-              hintText: 'ابحث عن المنتجات...',
-              hintStyle: TextStyle(color: AppColors.textLight),
-              prefixIcon: Icon(Icons.search, color: AppColors.primary),
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(vertical: 12),
-            ),
-            onSubmitted: controller.searchProducts,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoriesSection() {
-    return SliverToBoxAdapter(
-      child: GetBuilder<CategoryController>(
-        init: CategoryController(),
-        builder: (categoryController) => Container(
-          margin: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  /// بناء قسم الفئات الرئيسية
+  Widget _buildCategoriesSection(List<Category> categories) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'الفئات الرئيسية',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => Get.toNamed('/categories'),
-                      child: const Text('عرض الكل'),
-                    ),
-                  ],
+              const Text(
+                'الفئات الرئيسية',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
                 ),
               ),
-              const SizedBox(height: 16),
-              Obx(() {
-                if (categoryController.isLoading) {
-                  return _buildCategoriesShimmer();
-                }
-
-                if (categoryController.categories.isEmpty) {
-                  return const SizedBox(
-                    height: 120,
-                    child: Center(
-                      child: Text(
-                        'لا توجد فئات متاحة',
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
-                    ),
-                  );
-                }
-
-                return SizedBox(
-                  height: 120,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: categoryController.categories.take(8).length,
-                    itemBuilder: (context, index) {
-                      final category = categoryController.categories[index];
-                      return _buildCategoryCard(category);
-                    },
-                  ),
-                );
-              }),
+              TextButton(
+                onPressed: () => Get.toNamed(Routes.categories),
+                child: const Text('عرض الكل'),
+              ),
             ],
           ),
         ),
-      ),
-    );
-  }
+        const SizedBox(height: 16),
 
-  Widget _buildCategoryCard(Category category) {
-    return Container(
-      width: 100,
-      margin: const EdgeInsets.only(left: 12),
-      child: ShamraCard(
-        onTap: () => Get.toNamed('/category-products', arguments: category),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: AppColors.primaryGradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+        /// قائمة الفئات (أفقية)
+        SizedBox(
+          height: 120,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: categories.length,
+            itemBuilder: (context, index) {
+              final category = categories[index];
+              return GestureDetector(
+                onTap: () => Get.toNamed(
+                  Routes.categoryDetails,
+                  arguments: {
+                    'categoryId': category.id,
+                    'categoryName': category.displayName,
+                  },
                 ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.category_rounded,
-                color: AppColors.white,
-                size: 24,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              category.displayName,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSubCategoriesSection() {
-    return SliverToBoxAdapter(
-      child: GetBuilder<SubCategoryController>(
-        init: SubCategoryController(),
-        builder: (subCategoryController) => Container(
-          margin: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'الفئات الفرعية',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                child: Container(
+                  width: 80,
+                  margin: const EdgeInsets.only(left: 12),
+                  child: Column(
+                    children: [
+                      /// صورة الفئة
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          gradient: LinearGradient(
+                            colors: AppColors.primaryGradient,
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child:
+                              category.image != null &&
+                                  category.image!.isNotEmpty
+                              ? CachedNetworkImage(
+                                  imageUrl: HelperMethod.getImageUrl(
+                                    category.image!,
+                                  ),
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) => const Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
+                                  errorWidget: (context, url, error) =>
+                                      const Icon(
+                                        Icons.broken_image,
+                                        color: AppColors.grey,
+                                      ),
+                                )
+                              : const Icon(
+                                  Icons.category,
+                                  color: AppColors.white,
+                                  size: 28,
+                                ),
+                        ),
                       ),
-                    ),
-                    TextButton(
-                      onPressed: () => Get.toNamed('/sub-categories'),
-                      child: const Text('عرض الكل'),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Obx(() {
-                if (subCategoryController.isLoading) {
-                  return _buildSubCategoriesShimmer();
-                }
+                      const SizedBox(height: 6),
 
-                if (subCategoryController.subCategories.isEmpty) {
-                  return const SizedBox(
-                    height: 100,
-                    child: Center(
-                      child: Text(
-                        'لا توجد فئات فرعية متاحة',
-                        style: TextStyle(color: AppColors.textSecondary),
+                      /// اسم الفئة
+                      Text(
+                        category.displayName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
-                    ),
-                  );
-                }
-
-                return SizedBox(
-                  height: 100,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: subCategoryController.subCategories
-                        .take(6)
-                        .length,
-                    itemBuilder: (context, index) {
-                      final subCategory =
-                          subCategoryController.subCategories[index];
-                      return _buildSubCategoryCard(subCategory);
-                    },
+                    ],
                   ),
-                );
-              }),
-            ],
+                ),
+              );
+            },
           ),
         ),
-      ),
+      ],
     );
   }
 
-  Widget _buildSubCategoryCard(SubCategory subCategory) {
-    return Container(
-      width: 140,
-      margin: const EdgeInsets.only(left: 12),
-      child: ShamraCard(
-        onTap: () =>
-            Get.toNamed('/subcategory-products', arguments: subCategory),
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: AppColors.secondaryGradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                subCategory.type == SubCategoryType.customAttr
-                    ? Icons.tune_rounded
-                    : Icons.label_rounded,
-                color: AppColors.white,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    subCategory.displayName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subCategory.typeDisplayName,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFeaturedProductsSection(MainController controller) {
-    return SliverToBoxAdapter(
-      child: Obx(
-        () => _buildProductSection(
-          title: 'المنتجات المميزة',
-          icon: Icons.star_rounded,
-          products: controller.featuredProducts,
-          onSeeAll: () =>
-              Get.toNamed('/products', arguments: {'featured': true}),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOnSaleProductsSection(MainController controller) {
-    return SliverToBoxAdapter(
-      child: Obx(
-        () => _buildProductSection(
-          title: 'عروض خاصة',
-          icon: Icons.local_offer_rounded,
-          products: controller.onSaleProducts,
-          onSeeAll: () => Get.toNamed('/products', arguments: {'onSale': true}),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecentProductsSection(MainController controller) {
-    return SliverToBoxAdapter(
-      child: Obx(
-        () => _buildProductSection(
-          title: 'أحدث المنتجات',
-          icon: Icons.new_releases_rounded,
-          products: controller.recentProducts,
-          onSeeAll: () => Get.toNamed('/products'),
-        ),
-      ),
-    );
-  }
-
+  /// بناء قسم المنتجات مع زر عرض الكل
   Widget _buildProductSection({
     required String title,
     required IconData icon,
     required List<Product> products,
     required VoidCallback onSeeAll,
   }) {
-    if (products.isEmpty) return const SizedBox.shrink();
+    if (products.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 16),
@@ -598,12 +629,12 @@ class CustomerHomePage extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Icon(icon, color: AppColors.primary, size: 24),
+                    Icon(icon, color: AppColors.primary, size: 22),
                     const SizedBox(width: 8),
                     Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textPrimary,
                       ),
@@ -614,22 +645,26 @@ class CustomerHomePage extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           SizedBox(
-            height: 280,
+            height: 300,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemExtent: 182,
               itemCount: products.length,
               itemBuilder: (context, index) {
                 final product = products[index];
-                return Container(
-                  width: 180,
-                  margin: const EdgeInsets.only(left: 12),
+                return Align(
+                  alignment: Alignment.centerLeft,
                   child: ProductCard(
                     product: product,
-                    onTap: () =>
-                        Get.toNamed('/product-details', arguments: product),
+                    width: 170,
+                    isGridView: false,
+                    onTap: () => Get.toNamed(
+                      Routes.productDetails,
+                      arguments: product.id,
+                    ),
                   ),
                 );
               },
@@ -640,26 +675,7 @@ class CustomerHomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildLoadingShimmer() {
-    return Shimmer.fromColors(
-      baseColor: AppColors.lightGrey,
-      highlightColor: AppColors.white,
-      child: Column(
-        children: List.generate(
-          4,
-          (index) => Container(
-            margin: const EdgeInsets.all(20),
-            height: 200,
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
+  /// مؤثر التحميل للفئات (Shimmer)
   Widget _buildCategoriesShimmer() {
     return Shimmer.fromColors(
       baseColor: AppColors.lightGrey,
@@ -671,11 +687,11 @@ class CustomerHomePage extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: 6,
           itemBuilder: (context, index) => Container(
-            width: 100,
+            width: 80,
             margin: const EdgeInsets.only(left: 12),
             decoration: BoxDecoration(
               color: AppColors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
         ),
@@ -683,18 +699,19 @@ class CustomerHomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildSubCategoriesShimmer() {
+  /// مؤثر التحميل للمنتجات (Shimmer)
+  Widget _buildProductsShimmer() {
     return Shimmer.fromColors(
       baseColor: AppColors.lightGrey,
       highlightColor: AppColors.white,
       child: SizedBox(
-        height: 100,
+        height: 250,
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: 4,
           itemBuilder: (context, index) => Container(
-            width: 140,
+            width: 170,
             margin: const EdgeInsets.only(left: 12),
             decoration: BoxDecoration(
               color: AppColors.white,

@@ -38,11 +38,14 @@ class LoadingWidget extends StatelessWidget {
   }
 }
 
+
+
 class EmptyStateWidget extends StatelessWidget {
   final IconData icon;
   final String title;
   final String message;
   final Widget? action;
+  final AnimationController? animationController;
 
   const EmptyStateWidget({
     super.key,
@@ -50,38 +53,83 @@ class EmptyStateWidget extends StatelessWidget {
     required this.title,
     required this.message,
     this.action,
+    this.animationController,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 80, color: AppColors.grey),
-            const SizedBox(height: 24),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-              textAlign: TextAlign.center,
+    final slideAnimation = animationController != null
+        ? Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: animationController!,
+      curve: Curves.easeOutCubic,
+    ))
+        : const AlwaysStoppedAnimation(Offset.zero);
+
+    return SlideTransition(
+      position: slideAnimation,
+      child: FadeTransition(
+        opacity: animationController ?? const AlwaysStoppedAnimation(1.0),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // 🔹 دائرة بخلفية متدرجة
+                Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primary.withOpacity(0.1),
+                        AppColors.primary.withOpacity(0.2),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(60),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 60,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // 🔹 العنوان
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+
+                // 🔹 الرسالة
+                Text(
+                  message,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: AppColors.textSecondary,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                // 🔹 زر أو أكشن إضافي
+                if (action != null) ...[
+                  const SizedBox(height: 40),
+                  action!,
+                ],
+              ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            if (action != null) ...[const SizedBox(height: 24), action!],
-          ],
+          ),
         ),
       ),
     );
@@ -155,18 +203,25 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      title: Text(title),
+      backgroundColor: backgroundColor ?? Colors.white,
+      elevation: 1,
+      centerTitle: false,
+      automaticallyImplyLeading: false,
+      titleSpacing: 25,
+      title: Text(
+        title,
+        style: const TextStyle(
+          color: AppColors.black,
+          fontSize: 25,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
       actions: actions,
-      leading: leading,
-      automaticallyImplyLeading: showBackButton,
-      backgroundColor: backgroundColor ?? AppColors.primary,
-      foregroundColor: AppColors.white,
-      elevation: 0,
     );
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => const Size.fromHeight(50);
 }
 
 // NEW SHAMRA WIDGETS BELOW
@@ -186,10 +241,10 @@ class ShamraLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gradientColors = isGoldVersion
-        ? AppColors.secondaryGradient
+        ? AppColors.primaryGradient
         : AppColors.primaryGradient;
 
-    final shadowColor = isGoldVersion ? AppColors.secondary : AppColors.primary;
+    final shadowColor = isGoldVersion ? AppColors.primaryDark : AppColors.primary;
 
     return Container(
       width: size,
@@ -238,6 +293,8 @@ class ShamraButton extends StatelessWidget {
   final double? width;
   final double height;
   final IconData? icon;
+  final Color? backgroundColor;
+  final dynamic textColor;
 
   const ShamraButton({
     super.key,
@@ -249,6 +306,8 @@ class ShamraButton extends StatelessWidget {
     this.width,
     this.height = 56,
     this.icon,
+    this.backgroundColor,
+    this.textColor
   });
 
   @override
@@ -261,10 +320,10 @@ class ShamraButton extends StatelessWidget {
 
   Widget _buildGradientButton() {
     final gradientColors = isSecondary
-        ? AppColors.secondaryGradient
+        ? AppColors.primaryGradient
         : AppColors.primaryGradient;
 
-    final shadowColor = isSecondary ? AppColors.secondary : AppColors.primary;
+    final shadowColor = isSecondary ? AppColors.primaryDark : AppColors.primary;
 
     return Container(
       width: width ?? double.infinity,
@@ -370,27 +429,34 @@ class ShamraButton extends StatelessWidget {
   }
 }
 
+
+
 class ShamraTextField extends StatelessWidget {
   final String label;
   final String hintText;
-  final IconData icon;
+  final IconData? icon;
   final TextEditingController? controller;
   final String? Function(String?)? validator;
   final TextInputType? keyboardType;
   final Function(String value)? onChanged;
+  final Function(String value)? onSubmitted;
   final bool obscureText;
   final Widget? suffixIcon;
   final bool isRequired;
   final TextCapitalization textCapitalization;
   final bool isSecondary;
+  final Color? hintColor;
+  final TextStyle? hintStyle;
+  final Color? customIconColor;
 
   const ShamraTextField({
     super.key,
-    required this.label,
     required this.hintText,
-    required this.icon,
+    this.icon,
+    this.label = '',
     this.controller,
     this.onChanged,
+    this.onSubmitted,
     this.validator,
     this.keyboardType,
     this.obscureText = false,
@@ -398,33 +464,39 @@ class ShamraTextField extends StatelessWidget {
     this.isRequired = false,
     this.textCapitalization = TextCapitalization.none,
     this.isSecondary = false,
+    this.hintColor,
+    this.hintStyle,
+    this.customIconColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = isSecondary ? AppColors.secondary : AppColors.primary;
+    final effectiveIconColor = customIconColor ??
+        (isSecondary ? AppColors.primaryDark : AppColors.primary);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        RichText(
-          text: TextSpan(
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+        if (label.isNotEmpty) ...[
+          RichText(
+            text: TextSpan(
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+              children: [
+                TextSpan(text: label),
+                if (isRequired)
+                  const TextSpan(
+                    text: ' *',
+                    style: TextStyle(color: AppColors.error),
+                  ),
+              ],
             ),
-            children: [
-              TextSpan(text: label),
-              if (isRequired)
-                const TextSpan(
-                  text: ' *',
-                  style: TextStyle(color: AppColors.error),
-                ),
-            ],
           ),
-        ),
-        const SizedBox(height: 8),
+          const SizedBox(height: 8),
+        ],
         TextFormField(
           controller: controller,
           validator: validator,
@@ -432,34 +504,40 @@ class ShamraTextField extends StatelessWidget {
           obscureText: obscureText,
           textCapitalization: textCapitalization,
           onChanged: onChanged,
+          onFieldSubmitted: onSubmitted, // ✅ استخدام onSubmitted
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           decoration: InputDecoration(
             hintText: hintText,
+            hintStyle: hintStyle ??
+                TextStyle(
+                  color: hintColor ?? AppColors.textSecondary,
+                  fontSize: 14,
+                ),
             prefixIcon: Container(
               margin: const EdgeInsets.all(12),
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: effectiveIconColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: iconColor, size: 20),
+              child: Icon(icon, color: effectiveIconColor, size: 20),
             ),
             suffixIcon: suffixIcon,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: AppColors.outline),
+              borderSide: const BorderSide(color: AppColors.outline),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: AppColors.outline),
+              borderSide: const BorderSide(color: AppColors.outline),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: iconColor, width: 2),
+              borderSide: BorderSide(color: effectiveIconColor, width: 2),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: AppColors.error, width: 2),
+              borderSide: const BorderSide(color: AppColors.error, width: 2),
             ),
             filled: true,
             fillColor: AppColors.surface,

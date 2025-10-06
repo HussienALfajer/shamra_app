@@ -1,3 +1,5 @@
+import 'package:shamra_app/data/models/branch.dart';
+
 class User {
   final String id;
   final String firstName;
@@ -10,6 +12,10 @@ class User {
   final DateTime updatedAt;
   final String branchId;
   final String selectedBranch;
+  final Branch? selectedBranchObject;
+  final int points;
+  final int totalPointsEarned;
+  final int totalPointsUsed;
 
   User({
     required this.id,
@@ -23,9 +29,15 @@ class User {
     required this.updatedAt,
     required this.branchId,
     required this.selectedBranch,
+    this.selectedBranchObject,
+    this.points = 0, // 🎯
+    this.totalPointsEarned = 0, // 🎯
+    this.totalPointsUsed = 0, // 🎯
+
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    print("ٍِHHHHHHHHHHHHHHHHHHHHHHHHHHHHH${json['selectedBranchObject']}");
     return User(
       id: json['_id'] ?? json['id'] ?? '',
       firstName: json['firstName'] ?? '',
@@ -34,14 +46,17 @@ class User {
       phoneNumber: json['phoneNumber'],
       role: json['role'] ?? 'customer',
       isActive: json['isActive'] ?? true,
-      createdAt: DateTime.parse(
-        json['createdAt'] ?? DateTime.now().toIso8601String(),
-      ),
-      updatedAt: DateTime.parse(
-        json['updatedAt'] ?? DateTime.now().toIso8601String(),
-      ),
+      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updatedAt'] ?? '') ?? DateTime.now(),
       branchId: json['branchId'] ?? '',
-      selectedBranch: json['selectedBranch'] ?? '',
+      selectedBranch: json['selectedBranchId'] ?? '',
+      selectedBranchObject: json['selectedBranchObject'] != null
+          ? Branch.fromJson(json['selectedBranchObject'])
+          : null,
+      points: json['points'] ?? 0,
+      totalPointsEarned: json['totalPointsEarned'] ?? 0,
+      totalPointsUsed: json['totalPointsUsed'] ?? 0,
+
     );
   }
 
@@ -57,7 +72,12 @@ class User {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'branchId': branchId,
-      'selectedBranch': selectedBranch,
+      'selectedBranchId': selectedBranch,
+      "selectedBranchObject": selectedBranchObject?.toJson(),
+      'points': points,
+      'totalPointsEarned': totalPointsEarned,
+      'totalPointsUsed': totalPointsUsed,
+
     };
   }
 
@@ -73,6 +93,12 @@ class User {
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? branchId,
+    String? selectedBranch,
+    int? points, // 🎯
+    int? totalPointsEarned, // 🎯
+    int? totalPointsUsed, // 🎯
+
   }) {
     return User(
       id: id ?? this.id,
@@ -86,6 +112,11 @@ class User {
       updatedAt: updatedAt ?? this.updatedAt,
       branchId: branchId ?? this.branchId,
       selectedBranch: selectedBranch ?? this.selectedBranch,
+      selectedBranchObject: selectedBranchObject ?? this.selectedBranchObject,
+      points: points ?? this.points,
+      totalPointsEarned: totalPointsEarned ?? this.totalPointsEarned,
+      totalPointsUsed: totalPointsUsed ?? this.totalPointsUsed,
+
     );
   }
 }

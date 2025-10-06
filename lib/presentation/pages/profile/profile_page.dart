@@ -1,27 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/constants/colors.dart';
+import '../../../routes/app_routes.dart';
 import '../../controllers/auth_controller.dart';
-import '../../controllers/order_controller.dart';
+import '../../controllers/main_controller.dart';
 import '../../widgets/common_widgets.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
   @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  @override
   Widget build(BuildContext context) {
+    final main = Get.find<MainController>();
+
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        body: GetBuilder<AuthController>(
-          builder: (authController) {
-            if (!authController.isLoggedIn) {
-              return _buildLoginRequired();
-            }
-
-            return _buildProfileContent(authController);
-          },
+      child: WillPopScope(
+        onWillPop: () async {
+          final handled = main.backToPreviousTab();
+          return !handled;
+        },
+        child: Scaffold(
+          backgroundColor: AppColors.background,
+          body: GetBuilder<AuthController>(
+            builder: (authController) {
+              if (!authController.isLoggedIn) {
+                return _buildLoginRequired();
+              }
+              return _buildProfileContent(authController);
+            },
+          ),
         ),
       ),
     );
@@ -38,56 +51,48 @@ class ProfilePage extends StatelessWidget {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: AppColors.lightGrey,
+                color: AppColors.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(60),
+                border: Border.all(
+                  color: AppColors.primary.withOpacity(0.2),
+                  width: 2,
+                ),
               ),
               child: const Icon(
-                Icons.person_outline,
+                Icons.person_outline_rounded,
                 size: 60,
-                color: AppColors.grey,
+                color: AppColors.primary,
               ),
             ),
-
-            const SizedBox(height: 24),
-
+            const SizedBox(height: 32),
             const Text(
-              'تسجيل دخول مطلوب',
+              'مرحباً بك في شمرا',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
               ),
             ),
-
             const SizedBox(height: 8),
-
             const Text(
-              'يرجى تسجيل الدخول لإدارة حسابك',
+              'يرجى تسجيل الدخول للوصول إلى حسابك',
               style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
-
             const SizedBox(height: 32),
-
-            Row(
-              children: [
-                Expanded(
-                  child: ShamraButton(
-                    text: 'تسجيل دخول',
-                    onPressed: () => Get.toNamed('/login'),
-                    icon: Icons.login_rounded,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ShamraButton(
-                    text: 'إنشاء حساب',
-                    onPressed: () => Get.toNamed('/register'),
-                    icon: Icons.person_add_rounded,
-                    isSecondary: true,
-                  ),
-                ),
-              ],
+            ShamraButton(
+              text: 'تسجيل دخول',
+              onPressed: () => Get.toNamed('/login'),
+              icon: Icons.login_rounded,
+              width: double.infinity,
+            ),
+            const SizedBox(height: 16),
+            ShamraButton(
+              text: 'إنشاء حساب جديد',
+              onPressed: () => Get.toNamed('/register'),
+              icon: Icons.person_add_rounded,
+              isOutlined: true,
+              width: double.infinity,
             ),
           ],
         ),
@@ -96,458 +101,618 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _buildProfileContent(AuthController authController) {
-    final user = authController.currentUser!;
+    // 🎯 احذف المتغير المحلي
+    // final user = authController.currentUser; ❌
 
-    return CustomScrollView(
-      slivers: [
-        // Profile Header
-        SliverAppBar(
-          expandedHeight: 280,
-          backgroundColor: AppColors.primary,
-          pinned: true,
-          flexibleSpace: FlexibleSpaceBar(
-            background: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: AppColors.primaryGradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+    if (authController.currentUser == null) {
+      return _buildLoginRequired();
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        await authController.getProfile();
+        await authController.getMerchantRequest();
+      },
+      color: AppColors.primary,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        child: Obx(() {
+          // 🎯 استخدم authController.currentUser مباشرة
+          final user = authController.currentUser;
+          if (user == null) return const SizedBox();
+
+          return Column(
+            children: [
+              const SizedBox(height: 40),
+              _buildUserInfo(user, authController),
+              const SizedBox(height: 24),
+              _buildPointsCard(user), // 🎯 الآن سيتحدث
+              const SizedBox(height: 24),
+              _buildBranchInfo(authController),
+              const SizedBox(height: 24),
+              _buildMerchantRequest(authController),
+              const SizedBox(height: 24),
+              _buildActions(authController),
+              const SizedBox(height: 40),
+            ],
+          );
+        }),
+      ),
+    );
+  }
+  Widget _buildPointsCard(dynamic user) {
+    return ShamraCard(
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: AppColors.primaryGradient,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.stars_rounded,
+                  color: AppColors.white,
+                  size: 20,
                 ),
               ),
-              child: _buildProfileHeader(user),
-            ),
+              const SizedBox(width: 12),
+              const Text(
+                'نقاط المكافآت',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
           ),
-          title: const Text(
-            'حسابي',
-            style: TextStyle(
-              color: AppColors.white,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
+          const SizedBox(height: 20),
 
-        // Profile Content
-        SliverToBoxAdapter(
-          child: Padding(
+          // النقاط المتاحة
+          Container(
+            width: double.infinity,
             padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: AppColors.primaryGradient,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Column(
               children: [
-                // Account Statistics
-                _buildAccountStats(),
-
-                const SizedBox(height: 24),
-
-                // Account Settings
-                _buildAccountSettings(authController),
-
-                const SizedBox(height: 24),
-
-                // App Settings
-                _buildAppSettings(),
-
-                const SizedBox(height: 24),
-
-                // About Section
-                _buildAboutSection(),
-
-                const SizedBox(height: 24),
-
-                // Logout Button
-                _buildLogoutButton(authController),
-
-                const SizedBox(height: 100),
+                const Text(
+                  'النقاط المتاحة',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${user.points}',
+                  style: const TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'نقطة',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.white,
+                  ),
+                ),
               ],
             ),
           ),
-        ),
-      ],
+
+          const SizedBox(height: 16),
+
+          // إحصائيات النقاط
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.success.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.trending_up_rounded,
+                        color: AppColors.success,
+                        size: 24,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${user.totalPointsEarned}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'مكتسبة',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.warning.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.redeem_rounded,
+                        color: AppColors.warning,
+                        size: 24,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${user.totalPointsUsed}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'مستخدمة',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildProfileHeader(dynamic user) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
+  Widget _buildUserInfo(dynamic user, AuthController authController) {
+    return ShamraCard(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
         children: [
           // Profile Avatar
           Container(
-            width: 100,
-            height: 100,
+            width: 80,
+            height: 80,
             decoration: BoxDecoration(
-              color: AppColors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(50),
-              border: Border.all(color: AppColors.white, width: 3),
+              gradient: LinearGradient(
+                colors: AppColors.primaryGradient,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(40),
             ),
             child: Center(
               child: Text(
-                user.firstName.substring(0, 1).toUpperCase(),
+                user.firstName.substring(0,1).toUpperCase(),
                 style: const TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
                   color: AppColors.white,
                 ),
               ),
             ),
           ),
-
           const SizedBox(height: 16),
 
-          // User Name
+          // User Details
           Text(
             user.fullName,
             style: const TextStyle(
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: AppColors.white,
+              color: AppColors.textPrimary,
             ),
-            textAlign: TextAlign.center,
           ),
-
           const SizedBox(height: 4),
-
-          // User Email
           Text(
             user.email,
-            style: const TextStyle(fontSize: 16, color: AppColors.white),
-            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+            ),
           ),
-
-          const SizedBox(height: 16),
+          if (user.phoneNumber != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              user.phoneNumber!,
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+          const SizedBox(height: 20),
 
           // Edit Profile Button
           ShamraButton(
             text: 'تعديل الملف الشخصي',
             onPressed: () => Get.toNamed('/edit-profile'),
+            icon: Icons.edit_outlined,
             isOutlined: true,
-            height: 40,
-            width: 200,
+            width: double.infinity,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAccountStats() {
-    return GetBuilder<OrderController>(
-      builder: (orderController) {
-        final summary = orderController.orderSummary;
+  Widget _buildBranchInfo(AuthController authController) {
+    final user = authController.currentUser!;
 
-        return ShamraCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return ShamraCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
+              const Icon(
+                Icons.location_on_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
               const Text(
-                'إحصائيات الحساب',
+                'الفرع المحدد',
                 style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
                 ),
               ),
-
-              const SizedBox(height: 16),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatItem(
-                      'إجمالي الطلبات',
-                      summary['totalOrders'].toString(),
-                      Icons.receipt_long_rounded,
-                      AppColors.primary,
-                    ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user.selectedBranchObject?.name ?? 'لم يتم اختيار فرع',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      if (user.selectedBranchObject?.address != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          user.selectedBranchObject!.address!.street,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                  Expanded(
-                    child: _buildStatItem(
-                      'إجمالي المبلغ',
-                      '${summary['totalAmount'].toStringAsFixed(0)} ر.س',
-                      Icons.payments_rounded,
-                      AppColors.secondary,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                IconButton(
+                  onPressed: () async {
+                    await Get.toNamed(Routes.branchSelection);
+                    // ✅ بعد الرجوع من اختيار الفرع: حدّث المستخدم محلياً لتنعكس التغييرات فوراً
+                    final auth = Get.find<AuthController>();
+                    await auth.reloadFromStorage();
 
-              const SizedBox(height: 12),
+                    // (اختياري) إن رغبت بتطبيق توكن الفرع من المحلي مباشرة:
+                    // final bid = StorageService.getBranchId();
+                    // if (bid != null) await auth.applyBranchAuthFromLocal(bid);
+                  },
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatItem(
-                      'طلبات مكتملة',
-                      summary['deliveredCount'].toString(),
-                      Icons.check_circle_rounded,
-                      AppColors.success,
-                    ),
-                  ),
-                  Expanded(
-                    child: _buildStatItem(
-                      'قيد التنفيذ',
-                      summary['pendingCount'].toString(),
-                      Icons.pending_rounded,
-                      AppColors.warning,
-                    ),
-                  ),
-                ],
+  Widget _buildMerchantRequest(AuthController authController) {
+    final merchantRequest = authController.merchantRequest;
+
+    return ShamraCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.store_rounded, color: AppColors.secondary, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'طلب التاجر',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ],
           ),
-        );
-      },
+          const SizedBox(height: 16),
+
+          if (merchantRequest != null)
+            _buildMerchantStatus(merchantRequest, authController)
+          else
+            _buildMerchantRequestButton(authController),
+        ],
+      ),
     );
   }
 
-  Widget _buildStatItem(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
+  Widget _buildMerchantStatus(
+      Map<String, dynamic> request,
+      AuthController authController,
+      ) {
+    Color _getStatusColor(String status) {
+      switch (status) {
+        case 'pending':
+          return AppColors.warning;
+        case 'approved':
+          return AppColors.success;
+        case 'rejected':
+          return AppColors.error;
+        default:
+          return AppColors.grey;
+      }
+    }
+
+    IconData _getStatusIcon(String status) {
+      switch (status) {
+        case 'pending':
+          return Icons.pending_rounded;
+        case 'approved':
+          return Icons.check_circle_rounded;
+        case 'rejected':
+          return Icons.cancel_rounded;
+        default:
+          return Icons.help_rounded;
+      }
+    }
+
+    String _getStatusText(String status) {
+      switch (status) {
+        case 'pending':
+          return 'قيد المراجعة';
+        case 'approved':
+          return 'تم القبول';
+        case 'rejected':
+          return 'تم الرفض';
+        default:
+          return 'حالة غير معروفة';
+      }
+    }
+
     return Container(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.symmetric(horizontal: 4),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: _getStatusColor(request['status']).withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAccountSettings(AuthController authController) {
-    return ShamraCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'إعدادات الحساب',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          _buildSettingItem(
-            'تعديل الملف الشخصي',
-            'تعديل المعلومات الشخصية',
-            Icons.person_outline,
-            () => Get.toNamed('/edit-profile'),
-          ),
-
-          _buildSettingItem(
-            'تغيير كلمة المرور',
-            'تحديث كلمة المرور الخاصة بك',
-            Icons.lock_outline,
-            () => Get.toNamed('/change-password'),
-          ),
-
-          _buildSettingItem(
-            'العناوين',
-            'إدارة عناوين التوصيل',
-            Icons.location_on_outlined,
-            () => Get.toNamed('/addresses'),
-          ),
-
-          _buildSettingItem(
-            'طرق الدفع',
-            'إدارة طرق الدفع المحفوظة',
-            Icons.payment_outlined,
-            () => Get.toNamed('/payment-methods'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAppSettings() {
-    return ShamraCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'إعدادات التطبيق',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          _buildSettingItem(
-            'الإشعارات',
-            'إدارة إشعارات التطبيق',
-            Icons.notifications_outlined,
-            () => Get.toNamed('/notification-settings'),
-          ),
-
-          _buildSettingItem(
-            'اللغة',
-            'تغيير لغة التطبيق',
-            Icons.language_outlined,
-            () => _showLanguageDialog(),
-          ),
-
-          _buildSettingItem(
-            'المظهر',
-            'المظهر الفاتح أو الداكن',
-            Icons.palette_outlined,
-            () => _showThemeDialog(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAboutSection() {
-    return ShamraCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'حول التطبيق',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          _buildSettingItem(
-            'مركز المساعدة',
-            'الأسئلة الشائعة والدعم',
-            Icons.help_outline,
-            () => Get.toNamed('/help'),
-          ),
-
-          _buildSettingItem(
-            'اتصل بنا',
-            'تواصل مع فريق الدعم',
-            Icons.contact_support_outlined,
-            () => Get.toNamed('/contact'),
-          ),
-
-          _buildSettingItem(
-            'سياسة الخصوصية',
-            'اطلع على سياسة الخصوصية',
-            Icons.privacy_tip_outlined,
-            () => Get.toNamed('/privacy-policy'),
-          ),
-
-          _buildSettingItem(
-            'شروط الاستخدام',
-            'اطلع على شروط الاستخدام',
-            Icons.description_outlined,
-            () => Get.toNamed('/terms'),
-          ),
-
-          _buildSettingItem(
-            'إصدار التطبيق',
-            'الإصدار 1.0.0',
-            Icons.info_outline,
-            null,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSettingItem(
-    String title,
-    String subtitle,
-    IconData icon,
-    VoidCallback? onTap,
-  ) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: AppColors.primary, size: 20),
-            ),
-
-            const SizedBox(width: 16),
-
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            if (onTap != null)
-              const Icon(
-                Icons.arrow_back_ios,
-                color: AppColors.textSecondary,
-                size: 16,
-              ),
-          ],
+        border: Border.all(
+          color: _getStatusColor(request['status']).withOpacity(0.3),
         ),
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                _getStatusIcon(request['status']),
+                color: _getStatusColor(request['status']),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _getStatusText(request['status']),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: _getStatusColor(request['status']),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'اسم المتجر: ${request['storeName']}',
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          Text(
+            'العنوان: ${request['address']}',
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          if (request['status'] == 'rejected' &&
+              request['rejectionReason'] != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'سبب الرفض: ${request['rejectionReason']}',
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.error,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ShamraButton(
+              text: 'إعادة التقديم',
+              onPressed: () => _showMerchantRequestDialog(authController),
+              icon: Icons.refresh_rounded,
+              isOutlined: true,
+              width: double.infinity,
+            ),
+          ],
+        ],
+      ),
     );
   }
 
-  Widget _buildLogoutButton(AuthController authController) {
+  Widget _buildMerchantRequestButton(AuthController authController) {
     return ShamraButton(
-      text: 'تسجيل خروج',
-      onPressed: () => _showLogoutDialog(authController),
-      icon: Icons.logout_rounded,
+      text: 'طلب أن تصبح تاجراً',
+      onPressed: () => _showMerchantRequestDialog(authController),
+      icon: Icons.store_rounded,
       width: double.infinity,
+    );
+  }
+
+  Widget _buildActions(AuthController authController) {
+    return Column(
+      children: [
+        ShamraButton(
+          text: 'تغيير كلمة المرور',
+          onPressed: () => Get.toNamed('/change-password'),
+          icon: Icons.lock_outlined,
+          isOutlined: true,
+          width: double.infinity,
+        ),
+        const SizedBox(height: 16),
+        ShamraButton(
+          text: 'تسجيل الخروج',
+          onPressed: () => _showLogoutDialog(authController),
+          icon: Icons.logout_rounded,
+          backgroundColor: AppColors.error,
+          width: double.infinity,
+        ),
+      ],
+    );
+  }
+
+  void _showMerchantRequestDialog(AuthController authController) {
+    final storeNameController = TextEditingController();
+    final addressController = TextEditingController();
+    final phoneNumberController = TextEditingController();
+
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'طلب أن تصبح تاجراً',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: storeNameController,
+                decoration: const InputDecoration(
+                  labelText: 'اسم المتجر',
+                  hintText: 'أدخل اسم متجرك',
+                  prefixIcon: Icon(Icons.store_outlined),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: addressController,
+                decoration: const InputDecoration(
+                  labelText: 'العنوان',
+                  hintText: 'أدخل عنوان متجرك',
+                  prefixIcon: Icon(Icons.location_on_outlined),
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: phoneNumberController,
+                decoration: const InputDecoration(
+                  labelText: 'رقم الهاتف',
+                  hintText: 'أدخل رقم هاتفك',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                ),
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 24),
+              ShamraButton(
+                text: 'إرسال الطلب',
+                onPressed: () async {
+                  if (storeNameController.text.isEmpty ||
+                      addressController.text.isEmpty ||
+                      phoneNumberController.text.isEmpty) {
+                    ShamraSnackBar.show(
+                      context: Get.context!,
+                      message: 'يرجى ملء جميع الحقول المطلوبة',
+                      type: SnackBarType.error,
+                    );
+                    return;
+                  }
+                  await authController.submitMerchantRequest(
+                    storeName: storeNameController.text,
+                    address: addressController.text,
+                    phoneNumber: phoneNumberController.text,
+                  );
+                  Get.back();
+                },
+                width: double.infinity,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -563,129 +728,26 @@ class ProfilePage extends StatelessWidget {
           ),
         ),
         content: const Text(
-          'هل أنت متأكد من تسجيل الخروج من حسابك؟',
+          'هل أنت متأكد أنك تريد تسجيل الخروج؟',
           style: TextStyle(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: Text(
+            child: const Text(
               'إلغاء',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(color: AppColors.textSecondary),
             ),
           ),
           ShamraButton(
             text: 'تسجيل الخروج',
-            onPressed: () {
+            onPressed: () async {
               Get.back();
-              authController.logout();
+              await authController.logout();
             },
-            width: 120,
-            height: 40,
+            backgroundColor: AppColors.error,
           ),
         ],
-      ),
-    );
-  }
-
-  void _showLanguageDialog() {
-    Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'اختر اللغة',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildLanguageOption('العربية', true),
-            _buildLanguageOption('English', false),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLanguageOption(String language, bool isSelected) {
-    return InkWell(
-      onTap: () => Get.back(),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        child: Row(
-          children: [
-            Icon(
-              isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: isSelected ? AppColors.primary : AppColors.grey,
-            ),
-            const SizedBox(width: 16),
-            Text(
-              language,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected ? AppColors.primary : AppColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showThemeDialog() {
-    Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'اختر المظهر',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildThemeOption('المظهر الفاتح', Icons.light_mode, true),
-            _buildThemeOption('المظهر الداكن', Icons.dark_mode, false),
-            _buildThemeOption('تلقائي', Icons.auto_mode, false),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildThemeOption(String theme, IconData icon, bool isSelected) {
-    return InkWell(
-      onTap: () => Get.back(),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        child: Row(
-          children: [
-            Icon(
-              isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: isSelected ? AppColors.primary : AppColors.grey,
-            ),
-            const SizedBox(width: 16),
-            Icon(icon, color: AppColors.textSecondary),
-            const SizedBox(width: 12),
-            Text(
-              theme,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected ? AppColors.primary : AppColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

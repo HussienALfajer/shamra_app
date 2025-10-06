@@ -39,30 +39,33 @@ class DioService {
           maxWidth: 90,
           enabled: kDebugMode,
           filter: (options, args) {
-            // You can filter which requests to log
-            // For example, exclude certain endpoints
             return !options.path.contains('/auth/refresh');
           },
         ),
       );
     }
 
-    // Add authentication interceptor
+    // Add authentication + branchId interceptor
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          // Add token to headers if available
+          // Add token if available
           final token = StorageService.getToken();
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
+
+          // Add branchId if available
+          final branchId = StorageService.getBranchId();
+          if (branchId != null && branchId.isNotEmpty) {
+            options.headers['x-branch-id'] = branchId;
+          }
+
           handler.next(options);
         },
         onError: (error, handler) {
-          // Handle token expiration
           if (error.response?.statusCode == 401) {
             StorageService.removeToken();
-            // You can add navigation to login page here
           }
           handler.next(error);
         },
@@ -72,10 +75,10 @@ class DioService {
 
   // GET request
   static Future<Response> get(
-    String path, {
-    Map<String, dynamic>? queryParameters,
-    Options? options,
-  }) async {
+      String path, {
+        Map<String, dynamic>? queryParameters,
+        Options? options,
+      }) async {
     try {
       final response = await _dio.get(
         path,
@@ -90,11 +93,11 @@ class DioService {
 
   // POST request
   static Future<Response> post(
-    String path, {
-    dynamic data,
-    Map<String, dynamic>? queryParameters,
-    Options? options,
-  }) async {
+      String path, {
+        dynamic data,
+        Map<String, dynamic>? queryParameters,
+        Options? options,
+      }) async {
     try {
       final response = await _dio.post(
         path,
@@ -110,11 +113,11 @@ class DioService {
 
   // PATCH request
   static Future<Response> patch(
-    String path, {
-    dynamic data,
-    Map<String, dynamic>? queryParameters,
-    Options? options,
-  }) async {
+      String path, {
+        dynamic data,
+        Map<String, dynamic>? queryParameters,
+        Options? options,
+      }) async {
     try {
       final response = await _dio.patch(
         path,
@@ -130,11 +133,11 @@ class DioService {
 
   // DELETE request
   static Future<Response> delete(
-    String path, {
-    dynamic data,
-    Map<String, dynamic>? queryParameters,
-    Options? options,
-  }) async {
+      String path, {
+        dynamic data,
+        Map<String, dynamic>? queryParameters,
+        Options? options,
+      }) async {
     try {
       final response = await _dio.delete(
         path,

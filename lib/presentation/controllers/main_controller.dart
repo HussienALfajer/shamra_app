@@ -1,31 +1,91 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import 'package:shamra_app/presentation/controllers/banner_controller.dart';
 import '../../data/models/product.dart';
 import '../../data/models/category.dart';
 import '../../data/repositories/product_repository.dart';
 import '../../data/repositories/category_repository.dart';
+import '../widgets/common_widgets.dart'; // ✅ لإستخدام ShamraSnackBar
 
+/// 🔹 MainController
+/// - مسؤول عن إدارة البيانات المعروضة في الصفحة الرئيسية (MainPage / CustomerHomePage)
+/// - تحميل المنتجات (مميزة، تخفيضات، حديثة) + الفئات
+/// - البحث عن المنتجات
+/// - إدارة التنقل بين التبويبات في MainPage + سلوك الرجوع
 class MainController extends GetxController {
   final ProductRepository _productRepository = ProductRepository();
   final CategoryRepository _categoryRepository = CategoryRepository();
 
-  // Observables
+  // --- 🔹 التنقل بين التبويبات ---
+  final RxInt currentIndex = 0.obs; // التبويب الحالي
+
+  // سجل التاريخ للعودة إلى التبويب السابق عبر زر الرجوع
+  final List<int> _tabHistory = [];
+
+  /// استدعِ هذي من الـ BottomNav (أو أي مكان) عند الضغط على تبويب
+  void onNavTap(int index) {
+    if (currentIndex.value == index) {
+      // نفس التبويب: مرّر للأعلى
+      scrollToTop(index);
+      return;
+    }
+    _pushHistoryIfNeeded(currentIndex.value);
+    currentIndex.value = index;
+
+    // بعد التبديل، ارجع السكروول لبداية الصفحة (jump سريع)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      scrollToTop(index, animate: false);
+    });
+  }
+
+  /// استخدمها للتبديل البرمجي بين التبويبات (من صفحات ثانية)
+  void changeTab(int index) {
+    if (currentIndex.value == index) return;
+    _pushHistoryIfNeeded(currentIndex.value);
+    currentIndex.value = index;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      scrollToTop(index, animate: false);
+    });
+  }
+
+  /// رجوع إلى التبويب السابق إن وُجد. تُرجع true إذا تم التعامل مع الرجوع.
+  bool backToPreviousTab() {
+    if (_tabHistory.isNotEmpty) {
+      final prev = _tabHistory.removeLast();
+      currentIndex.value = prev;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        scrollToTop(prev, animate: false);
+      });
+      return true;
+    }
+    return false;
+  }
+
+  void _pushHistoryIfNeeded(int index) {
+    if (_tabHistory.isEmpty || _tabHistory.last != index) {
+      _tabHistory.add(index);
+    }
+  }
+
+  // --- 🔹 بيانات المنتجات والفئات ---
   final RxList<Product> _featuredProducts = <Product>[].obs;
   final RxList<Product> _onSaleProducts = <Product>[].obs;
   final RxList<Product> _recentProducts = <Product>[].obs;
   final RxList<Category> _categories = <Category>[].obs;
   final RxList<Product> _searchResults = <Product>[].obs;
 
+  // --- 🔹 الحالة ---
   final RxBool _isLoading = false.obs;
   final RxBool _isLoadingCategories = false.obs;
   final RxBool _isSearching = false.obs;
   final RxString _searchQuery = ''.obs;
   final RxString _errorMessage = ''.obs;
 
-  // Search controller
+  // --- 🔹 أدوات البحث ---
   final TextEditingController searchController = TextEditingController();
 
-  // Getters
+  // --- 🔹 Getters ---
   List<Product> get featuredProducts => _featuredProducts;
   List<Product> get onSaleProducts => _onSaleProducts;
   List<Product> get recentProducts => _recentProducts;
@@ -38,6 +98,34 @@ class MainController extends GetxController {
   String get searchQuery => _searchQuery.value;
   String get errorMessage => _errorMessage.value;
 
+  // ---------------- Scroll-to-top support ----------------
+  final homeScrollController = ScrollController();
+  final productsScrollController = ScrollController();
+  final cartScrollController = ScrollController();
+  final ordersScrollController = ScrollController();
+  final profileScrollController = ScrollController();
+
+  /// مرّر لأعلى الصفحة للتبويب المحدد
+  void scrollToTop(int index, {bool animate = true}) {
+    ScrollController? c;
+    switch (index) {
+      case 0: c = homeScrollController; break;
+      case 1: c = productsScrollController; break;
+      case 2: c = cartScrollController; break;
+      case 3: c = ordersScrollController; break;
+      case 4: c = profileScrollController; break;
+    }
+    if (c != null && c.hasClients) {
+      if (animate) {
+        c.animateTo(0,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOut);
+      } else {
+        c.jumpTo(0);
+      }
+    }
+  }
+
   @override
   void onInit() {
     super.onInit();
@@ -46,14 +134,19 @@ class MainController extends GetxController {
 
   @override
   void onClose() {
+    homeScrollController.dispose();
+    productsScrollController.dispose();
+    cartScrollController.dispose();
+    ordersScrollController.dispose();
+    profileScrollController.dispose();
     searchController.dispose();
     super.onClose();
   }
 
-  // Load initial data for main page
+  // --- 🔹 تحميل البيانات الأولية ---
   Future<void> loadInitialData() async {
-    // _isLoading.value = true;
     _errorMessage.value = '';
+    _isLoading.value = true;
 
     try {
       await Future.wait([
@@ -61,61 +154,56 @@ class MainController extends GetxController {
         loadOnSaleProducts(),
         loadRecentProducts(),
         loadCategories(),
+        loadBanners(),
       ]);
-      _isLoading.value = false;
     } catch (e) {
       _errorMessage.value = e.toString();
-      Get.snackbar(
-        'خطأ',
-        'فشل في تحميل البيانات: ${e.toString()}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'فشل في تحميل البيانات: $e',
+        type: SnackBarType.error,
       );
     } finally {
       _isLoading.value = false;
     }
   }
 
-  // Load featured products
+  // --- 🔹 تحميل المنتجات المميزة ---
   Future<void> loadFeaturedProducts() async {
     try {
       final products = await _productRepository.getFeaturedProducts(limit: 10);
-      _featuredProducts.value = products;
+      _featuredProducts.value = products['products'];
     } catch (e) {
       print('Error loading featured products: $e');
     }
   }
 
-  // Load products on sale
+  // --- 🔹 تحميل المنتجات المخفّضة ---
   Future<void> loadOnSaleProducts() async {
     try {
-      final products = await _productRepository.getOnSaleProducts(limit: 15);
-      _onSaleProducts.value = products;
+      final products = await _productRepository.getOnSaleProducts(limit: 10);
+      _onSaleProducts.value = products['products'];
     } catch (e) {
       print('Error loading on sale products: $e');
     }
   }
 
-  // Load recent products
+  // --- 🔹 تحميل أحدث المنتجات ---
   Future<void> loadRecentProducts() async {
     try {
-      final result = await _productRepository.getProducts(page: 1, limit: 12);
-      print("NO ERROR IN MAIN CONTROLLER");
+      final result = await _productRepository.getProducts(page: 1, limit: 20);
       _recentProducts.value = result['products'] as List<Product>;
     } catch (e) {
       print('Error loading recent products: $e');
     }
   }
 
-  // Load categories
+  // --- 🔹 تحميل الفئات ---
   Future<void> loadCategories() async {
     try {
       _isLoadingCategories.value = true;
       final categories = await _categoryRepository.getCategories();
-      _categories.value = categories
-          .take(8)
-          .toList(); // Show only first 8 categories
+      _categories.value = categories.take(8).toList(); // فقط أول 8
     } catch (e) {
       print('Error loading categories: $e');
     } finally {
@@ -123,7 +211,16 @@ class MainController extends GetxController {
     }
   }
 
-  // Search products
+  Future<void> loadBanners() async {
+    try {
+      BannerController bannerController = Get.find<BannerController>();
+      await bannerController.loadBanners(refresh: true);
+    } catch (e) {
+      print('Error loading Banners: $e');
+    }
+  }
+
+  // --- 🔹 البحث ---
   Future<void> searchProducts(String query) async {
     if (query.isEmpty) {
       _searchResults.clear();
@@ -142,56 +239,49 @@ class MainController extends GetxController {
 
       _searchResults.value = products;
     } catch (e) {
-      Get.snackbar(
-        'خطأ في البحث',
-        'فشل في البحث: ${e.toString()}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'فشل في البحث: $e',
+        type: SnackBarType.error,
       );
     } finally {
       _isSearching.value = false;
     }
   }
 
-  // Clear search
+  // --- 🔹 مسح البحث ---
   void clearSearch() {
     searchController.clear();
     _searchResults.clear();
     _searchQuery.value = '';
   }
 
-  // Refresh all data
+  // --- 🔹 تحديث البيانات ---
   Future<void> refreshData() async {
     await loadInitialData();
   }
 
-  // Navigate to product details
+  // --- 🔹 التنقل ---
   void goToProductDetails(Product product) {
     Get.toNamed('/product-details', arguments: product);
   }
 
-  // Navigate to category products
   void goToCategoryProducts(Category category) {
     Get.toNamed('/products-by-category', arguments: category);
   }
 
-  // Navigate to all categories
   void goToAllCategories() {
     Get.toNamed('/categories');
   }
 
-  // Navigate to all featured products
   void goToAllFeaturedProducts() {
     Get.toNamed('/products', arguments: {'featured': true});
   }
 
-  // Navigate to all sale products
   void goToAllSaleProducts() {
     Get.toNamed('/products', arguments: {'onSale': true});
   }
 
-  // Navigate to search page
   void goToSearchPage() {
     Get.toNamed('/search');
   }

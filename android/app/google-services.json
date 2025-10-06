@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "650381202431",
+    "project_id": "shamra-c6e4a",
+    "storage_bucket": "shamra-c6e4a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:650381202431:android:df3b8eec36117b8c514dca",
+        "android_client_info": {
+          "package_name": "com.shamra.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAYcwfd2KhllQhs3tOkiIzjsbo-GrF09FQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

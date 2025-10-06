@@ -1,31 +1,34 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide ErrorWidget;
 import 'package:get/get.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../core/constants/colors.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../controllers/branch_controller.dart';
 import '../../../data/models/branch.dart';
 import '../../widgets/common_widgets.dart';
 
+/// 🌐 صفحة اختيار الفرع (Branch Selection Page)
+/// ---------------------------------------------------------
+/// - تعرض قائمة الفروع المتاحة للمستخدم.
+/// - تسمح بتحديد فرع ليتم استخدامه في بقية التطبيق.
+/// - تعتمد على [BranchController] لإدارة الحالة.
+/// - تستخدم Widgets مشتركة من [common_widgets] لواجهة موحدة.
 class BranchSelectionPage extends StatelessWidget {
   const BranchSelectionPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: TextDirection.rtl, // ✅ دعم العربية
       child: GetBuilder<BranchController>(
         init: BranchController(),
         builder: (controller) => Scaffold(
           backgroundColor: AppColors.background,
           body: SafeArea(
-            child: Column(
+            child: Stack(
               children: [
-                // Simplified Header
-                _buildHeader(controller),
-
-                // Content
-                Expanded(
+                /// 🔹 قائمة الفروع (أسفل الهيدر)
+                Positioned.fill(
+                  top: 223,
                   child: RefreshIndicator(
                     onRefresh: controller.refreshBranches,
                     color: AppColors.primary,
@@ -35,17 +38,32 @@ class BranchSelectionPage extends StatelessWidget {
                       }
 
                       if (controller.errorMessage.isNotEmpty) {
-                        return _buildErrorState(controller);
+                        // 🟦 استخدام ErrorWidget الجاهز
+                        return ErrorWidget(
+                          message: controller.errorMessage,
+                          onRetry: controller.refreshBranches,
+                        );
                       }
 
                       if (controller.branches.isEmpty) {
                         return _buildEmptyState();
                       }
 
-                      return _buildSimplifiedBranchList(controller);
+                      return _buildBranchList(controller);
                     }),
                   ),
                 ),
+
+                /// 🔹 الهيدر العلوي
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: _buildHeader(controller),
+                ),
+
+                /// 🔹 عناصر ديكور للخلفية
+                _buildBackgroundDecor(),
               ],
             ),
           ),
@@ -54,50 +72,70 @@ class BranchSelectionPage extends StatelessWidget {
     );
   }
 
+  /// 🟦 مكوّن الهيدر (شعار + نصوص ترحيب + زر خروج)
   Widget _buildHeader(BranchController controller) {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 30),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: AppColors.primaryGradient,
+          colors: [Color(0xFF034D97), Color(0xFF2E5BBA)],
         ),
-        borderRadius: const BorderRadius.only(
+        borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(30),
           bottomRight: Radius.circular(30),
         ),
       ),
       child: Column(
         children: [
-          // Top Row with Logo and Logout
+          /// --- الصف العلوي (الشعار + الاسم + زر خروج) ---
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Logo and Title
               Row(
                 children: [
-                  const ShamraLogo(size: 50, showShadow: false),
-                  const SizedBox(width: 12),
-                  const Text(
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Image.asset(
+                        "assets/images/shamra_logo.png",
+                        width: 60,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Text(
                     'شمرا',
                     style: TextStyle(
                       color: AppColors.white,
-                      fontSize: 24,
+                      fontSize: 25,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                 ],
               ),
 
-              // Logout Button
+              /// زر تسجيل الخروج
               Container(
                 decoration: BoxDecoration(
                   color: AppColors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: IconButton(
-                  onPressed: () => _showLogoutDialog(controller),
+                  onPressed: () => controller.logout(),
                   icon: const Icon(
                     Icons.logout_rounded,
                     color: AppColors.white,
@@ -108,15 +146,31 @@ class BranchSelectionPage extends StatelessWidget {
               ),
             ],
           ),
-
           const SizedBox(height: 24),
 
-          // Welcome Message
+          /// --- النصوص الترحيبية ---
           const Text(
-            'اختر الفرع لرؤية منتجاته',
+            'مرحباً بك',
             style: TextStyle(
-              color: AppColors.white,
+              color: Colors.white,
               fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const Text(
+            'اختر الفرع المناسب حسب مدينتك',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 25,
+              fontWeight: FontWeight.w700,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          Text(
+            'لعرض المنتجات والخدمات المتاحة',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.9),
+              fontSize: 18,
               fontWeight: FontWeight.w700,
             ),
             textAlign: TextAlign.center,
@@ -126,25 +180,32 @@ class BranchSelectionPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSimplifiedBranchList(BranchController controller) {
+  /// 🟦 مكوّن قائمة الفروع
+  Widget _buildBranchList(BranchController controller) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Branch Count
-          Text(
-            'الفروع المتاحة (${controller.branches.length})',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+          /// عنوان القائمة
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF4A90E2).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'الفروع المتاحة (${controller.branches.length})',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF4A90E2),
+              ),
             ),
           ),
-
           const SizedBox(height: 16),
 
-          // Branch Grid
+          /// شبكة الفروع
           Expanded(
             child: GridView.builder(
               physics: const BouncingScrollPhysics(),
@@ -156,7 +217,7 @@ class BranchSelectionPage extends StatelessWidget {
               itemCount: controller.branches.length,
               itemBuilder: (context, index) {
                 final branch = controller.branches[index];
-                return _buildSimpleBranchCard(branch, controller);
+                return _buildBranchCard(branch, controller);
               },
             ),
           ),
@@ -165,7 +226,8 @@ class BranchSelectionPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSimpleBranchCard(Branch branch, BranchController controller) {
+  /// 🟦 كرت فرع فردي
+  Widget _buildBranchCard(Branch branch, BranchController controller) {
     return Obx(() {
       final isSelected = controller.selectedBranch?.id == branch.id;
       final isSelecting = controller.isSelecting && isSelected;
@@ -176,37 +238,14 @@ class BranchSelectionPage extends StatelessWidget {
         margin: EdgeInsets.zero,
         child: Row(
           children: [
-            // Branch Icon
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: branch.isMainBranch
-                      ? AppColors.secondaryGradient
-                      : AppColors.primaryGradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(
-                branch.isMainBranch
-                    ? Icons.business_rounded
-                    : Icons.store_rounded,
-                color: AppColors.white,
-                size: 28,
-              ),
-            ),
-
             const SizedBox(width: 16),
 
-            // Branch Info
+            /// تفاصيل الفرع
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Branch Name with Badge
+                  /// اسم الفرع + إذا كان رئيسي
                   Row(
                     children: [
                       Expanded(
@@ -220,20 +259,19 @@ class BranchSelectionPage extends StatelessWidget {
                         ),
                       ),
                       if (branch.isMainBranch)
-                        ShamraChip(
+                        const ShamraChip(
                           label: 'رئيسي',
                           isSelected: true,
                           isSecondary: true,
                         ),
                     ],
                   ),
-
                   const SizedBox(height: 8),
 
-                  // Location
+                  /// العنوان
                   Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.location_on_rounded,
                         size: 16,
                         color: AppColors.textSecondary,
@@ -253,12 +291,12 @@ class BranchSelectionPage extends StatelessWidget {
                     ],
                   ),
 
-                  // Phone (if available)
+                  /// الهاتف (اختياري)
                   if (branch.phone?.isNotEmpty == true) ...[
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.phone_rounded,
                           size: 16,
                           color: AppColors.textSecondary,
@@ -280,7 +318,7 @@ class BranchSelectionPage extends StatelessWidget {
 
             const SizedBox(width: 12),
 
-            // Selection Indicator
+            /// أيقونة اختيار الفرع
             Container(
               width: 40,
               height: 40,
@@ -306,6 +344,7 @@ class BranchSelectionPage extends StatelessWidget {
     });
   }
 
+  /// 🟦 حالة التحميل (Shimmer Effect)
   Widget _buildLoadingState() {
     return Shimmer.fromColors(
       baseColor: AppColors.lightGrey,
@@ -315,7 +354,6 @@ class BranchSelectionPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Loading title
             Container(
               width: 150,
               height: 20,
@@ -324,10 +362,7 @@ class BranchSelectionPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-
             const SizedBox(height: 16),
-
-            // Loading cards
             Expanded(
               child: ListView.builder(
                 itemCount: 4,
@@ -347,147 +382,35 @@ class BranchSelectionPage extends StatelessWidget {
     );
   }
 
-  Widget _buildErrorState(BranchController controller) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(40),
-              ),
-              child: const Icon(
-                Icons.error_outline_rounded,
-                size: 40,
-                color: AppColors.error,
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            const Text(
-              'حدث خطأ',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-
-            const SizedBox(height: 8),
-
-            const Text(
-              'لا يمكن تحميل الفروع الآن',
-              style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-
-            const SizedBox(height: 32),
-
-            ShamraButton(
-              text: 'إعادة المحاولة',
-              onPressed: controller.refreshBranches,
-              icon: Icons.refresh_rounded,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
+  /// 🟦 حالة عدم وجود فروع
   Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: AppColors.grey.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(40),
-              ),
-              child: const Icon(
-                Icons.store_outlined,
-                size: 40,
-                color: AppColors.grey,
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            const Text(
-              'لا توجد فروع',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-
-            const SizedBox(height: 8),
-
-            const Text(
-              'لا توجد فروع متاحة حالياً',
-              style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+    return const EmptyStateWidget(
+      icon: Icons.store_outlined,
+      title: 'لا توجد فروع',
+      message: 'لا توجد فروع متاحة حالياً',
     );
   }
 
-  void _showLogoutDialog(BranchController controller) {
-    Get.dialog(
-      Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            'تسجيل الخروج',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          content: const Text(
-            'هل أنت متأكد من تسجيل الخروج؟',
-            style: TextStyle(color: AppColors.textSecondary),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: Text(
-                'إلغاء',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            ShamraButton(
-              text: 'تسجيل الخروج',
-              onPressed: () {
-                Get.back();
-                controller.logout();
-              },
-              width: 120,
-              height: 40,
-            ),
-          ],
-        ),
+  /// 🟦 عناصر ديكور في الخلفية
+  Widget _buildBackgroundDecor() {
+    return Stack(
+      children: [
+        Positioned(top: -50, right: -50, child: _circle(150, 0.1)),
+        Positioned(top: 50, left: -30, child: _circle(100, 0.4)),
+        Positioned(top: 100, right: 50, child: _circle(80, 0.2)),
+        Positioned(top: 190, left: 50, child: _circle(80, 0.2)),
+      ],
+    );
+  }
+
+  /// 🟦 مكوّن دائرة خلفية
+  Widget _circle(double size, double opacity) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withOpacity(opacity),
       ),
     );
   }

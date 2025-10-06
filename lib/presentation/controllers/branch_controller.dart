@@ -2,12 +2,11 @@ import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../data/models/branch.dart';
 import '../../data/repositories/branch_repository.dart';
-import '../../data/repositories/auth_repository.dart';
-import '../../routes/app_routes.dart';
+import '../widgets/common_widgets.dart';
+import 'auth_controller.dart';
 
 class BranchController extends GetxController {
   final BranchRepository _branchRepository = BranchRepository();
-  final AuthRepository _authRepository = AuthRepository();
 
   // Observables
   final RxList<Branch> _branches = <Branch>[].obs;
@@ -29,7 +28,7 @@ class BranchController extends GetxController {
     loadBranches();
   }
 
-  // Load all active branches
+  /// Load all active branches
   Future<void> loadBranches() async {
     try {
       _isLoading.value = true;
@@ -46,89 +45,150 @@ class BranchController extends GetxController {
       });
     } catch (e) {
       _errorMessage.value = e.toString();
-      Get.snackbar(
-        'خطأ',
-        'فشل في تحميل الفروع: ${e.toString()}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-      );
     } finally {
       _isLoading.value = false;
     }
   }
 
-  // Select a branch
+  /// Select a branch using AuthController
   Future<void> selectBranch(Branch branch) async {
     try {
       _isSelecting.value = true;
       _errorMessage.value = '';
       _selectedBranch.value = branch;
 
-      // Call the selectBranch API
-      final response = await _authRepository.selectBranch(branchId: branch.id);
+      final authController = Get.find<AuthController>();
+      final success = await authController.selectBranch(branch.id);
 
-      if (response.success) {
-        Get.snackbar(
-          'نجح',
-          'تم اختيار فرع ${branch.displayName} بنجاح',
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-          snackPosition: SnackPosition.TOP,
-        );
-
-        // Navigate to main page after successful branch selection
-        Get.offAllNamed(Routes.main);
-      } else {
-        throw Exception(
-          response.message.isEmpty ? 'فشل في اختيار الفرع' : response.message,
-        );
+      if (!success) {
+        _selectedBranch.value = null;
+        _errorMessage.value = authController.errorMessage;
       }
     } catch (e) {
       _errorMessage.value = e.toString();
       _selectedBranch.value = null;
 
-      Get.snackbar(
-        'خطأ',
-        'فشل في اختيار الفرع: ${e.toString()}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'فشل في اختيار الفرع: ${e.toString()}',
+        type: SnackBarType.error,
       );
     } finally {
       _isSelecting.value = false;
     }
   }
 
-  // Refresh branches
+  /// Refresh branches list
   Future<void> refreshBranches() async {
     await loadBranches();
   }
 
-  // Clear error message
+  /// Clear error message
   void clearError() {
     _errorMessage.value = '';
   }
 
-  // Logout and go back to login
+  /// Reset selection state (يمكن استدعاؤها عند الحاجة من الصفحة بدل onClose)
+  void resetSelection() {
+    _selectedBranch.value = null;
+    _isSelecting.value = false;
+  }
+
+  /// Logout using AuthController
   void logout() {
+    _showLogoutDialog();
+  }
+
+  /// Show logout confirmation dialog
+  void _showLogoutDialog() {
     Get.dialog(
       AlertDialog(
-        title: const Text('تسجيل الخروج'),
-        content: const Text('هل تريد تسجيل الخروج والعودة لصفحة تسجيل الدخول؟'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'تسجيل الخروج',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: Colors.black87,
+          ),
+        ),
+        content: const Text(
+          'هل تريد تسجيل الخروج والعودة لصفحة تسجيل الدخول؟',
+          style: TextStyle(color: Colors.black54),
+        ),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('إلغاء')),
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('إلغاء'),
+          ),
           ElevatedButton(
-            onPressed: () async {
-              Get.back(); // Close dialog
-              await _authRepository.logout();
-              Get.offAllNamed(Routes.login);
+            onPressed: () {
+              Get.back(); // Close dialog first
+              _performLogout();
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('تسجيل الخروج'),
           ),
         ],
       ),
     );
+  }
+
+  /// Perform logout using AuthController
+  void _performLogout() async {
+    try {
+      // لا تعدّل Rx أثناء التخلص من الصفحة
+      _selectedBranch.value = null;
+      _errorMessage.value = '';
+
+      final authController = Get.find<AuthController>();
+      await authController.logout();
+    } catch (e) {
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'خطأ أثناء تسجيل الخروج: ${e.toString()}',
+        type: SnackBarType.error,
+      );
+    }
+  }
+
+  /// Get branch by ID
+  Branch? getBranchById(String branchId) {
+    try {
+      return _branches.firstWhere((branch) => branch.id == branchId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Check if branch is selected
+  bool isBranchSelected(Branch branch) {
+    return _selectedBranch.value?.id == branch.id;
+  }
+
+  /// Get main branch
+  Branch? get mainBranch {
+    try {
+      return _branches.firstWhere((branch) => branch.isMainBranch);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get branches count
+  int get branchesCount => _branches.length;
+
+  /// Check if has branches
+  bool get hasBranches => _branches.isNotEmpty;
+
+  /// Check if has error
+  bool get hasError => _errorMessage.value.isNotEmpty;
+
+  @override
+  void onClose() {
+
+    super.onClose();
   }
 }

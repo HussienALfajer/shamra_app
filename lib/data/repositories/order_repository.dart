@@ -7,19 +7,30 @@ class OrderRepository {
     required String customerId,
     required String branchId,
     required List<OrderItem> items,
-    required double taxAmount,
     required double discountAmount,
     String? notes,
+    int? pointsToRedeem,
+    String? currency,
+
   }) async {
     try {
       return await OrderService.createOrder(
         customerId: customerId,
         branchId: branchId,
         items: items,
-        taxAmount: taxAmount,
         discountAmount: discountAmount,
         notes: notes,
+        pointsToRedeem: pointsToRedeem,
+        currency: currency,
       );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Order> cancelOrder(String orderId, {String? reason}) async {
+    try {
+      return await OrderService.cancelOrder(orderId: orderId, reason: reason);
     } catch (e) {
       rethrow;
     }

@@ -7,7 +7,7 @@ class ProductRepository {
     int page = 1,
     int limit = 20,
     String? categoryId,
-    String? branchId,
+    String? subCategoryId,
     String? search,
     String sort = '-createdAt',
   }) async {
@@ -16,7 +16,7 @@ class ProductRepository {
         page: page,
         limit: limit,
         categoryId: categoryId,
-        branchId: branchId,
+        subCategoryId: subCategoryId,
         search: search,
         sort: sort,
       );
@@ -25,19 +25,73 @@ class ProductRepository {
     }
   }
 
-  // Get featured products
-  Future<List<Product>> getFeaturedProducts({int limit = 10}) async {
+  // ✅ إصلاح: Get products by category يجب أن يعيد Map وليس List
+  Future<Map<String, dynamic>> getProductsByCategory({
+    required String categoryId,
+    int page = 1,
+    int limit = 20,
+    String? search
+  }) async {
     try {
-      return await ProductService.getFeaturedProducts(limit: limit);
+      return await ProductService.getProductsByCategory(
+        categoryId: categoryId,
+        page: page,
+        limit: limit,
+        search: search
+      );
     } catch (e) {
       rethrow;
     }
   }
 
-  // Get products on sale
-  Future<List<Product>> getOnSaleProducts({int limit = 20}) async {
+  // ✅ إضافة: Get products by subcategory
+  Future<Map<String, dynamic>> getProductsBySubCategory({
+    required String subCategoryId,
+    int page = 1,
+    int limit = 20,
+    String? search,
+  }) async {
     try {
-      return await ProductService.getOnSaleProducts(limit: limit);
+      return await ProductService.getProductsBySubCategory(
+        subCategoryId: subCategoryId,
+        page: page,
+        limit: limit,
+        search: search,
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Get featured products
+  Future<Map<String, dynamic>> getFeaturedProducts({
+    int limit = 20,
+    int page = 1,
+    String? search,
+  }) async {
+    try {
+      return await ProductService.getFeaturedProducts(
+        limit: limit,
+        page: page,
+        search: search,
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Get products on sale (directly from API)
+  Future<Map<String, dynamic>> getOnSaleProducts({
+    int limit = 20,
+    int page = 1,
+    String? search,
+  }) async {
+    try {
+      return await ProductService.getOnSaleProducts(
+        limit: limit,
+        page: page,
+        search: search,
+      );
     } catch (e) {
       rethrow;
     }
@@ -47,24 +101,6 @@ class ProductRepository {
   Future<Product> getProductById(String productId) async {
     try {
       return await ProductService.getProductById(productId);
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  // Get product by SKU
-  Future<Product> getProductBySku(String sku) async {
-    try {
-      return await ProductService.getProductBySku(sku);
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  // Get product by slug
-  Future<Product> getProductBySlug(String slug) async {
-    try {
-      return await ProductService.getProductBySlug(slug);
     } catch (e) {
       rethrow;
     }
@@ -83,23 +119,6 @@ class ProductRepository {
         page: page,
         limit: limit,
         categoryId: categoryId,
-      );
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  // Get products by category
-  Future<List<Product>> getProductsByCategory({
-    required String categoryId,
-    int page = 1,
-    int limit = 20,
-  }) async {
-    try {
-      return await ProductService.getProductsByCategory(
-        categoryId: categoryId,
-        page: page,
-        limit: limit,
       );
     } catch (e) {
       rethrow;

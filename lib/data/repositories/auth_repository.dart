@@ -1,5 +1,5 @@
 import 'package:shamra_app/data/models/auth_res.dart';
-
+import '../../core/services/notification_service.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../../core/services/storage_service.dart';
@@ -16,7 +16,7 @@ class AuthRepository {
         password: password,
       );
 
-      // Save token if login successf ul
+      // Save token if login successful
       if (response.data.token != null) {
         await StorageService.saveToken(response.data.token);
       }
@@ -35,7 +35,6 @@ class AuthRepository {
     }
   }
 
-  // Register user
   Future<AuthResponseApi> register({
     required String firstName,
     required String lastName,
@@ -44,23 +43,26 @@ class AuthRepository {
     String? phoneNumber,
   }) async {
     try {
+      // 👇 get FCM token
+      final fcmToken = await NotificationService.getToken();
+
       final response = await AuthService.register(
         firstName: firstName,
         lastName: lastName,
         email: email,
         password: password,
         phoneNumber: phoneNumber,
+        fcmToken: fcmToken, // أرسله للـ backend
       );
 
-      // Save token if registration successful
+      print('Response user: ${response.data.user.toJson()}');
+
       if (response.data.token != null) {
         await StorageService.saveToken(response.data.token);
       }
       if (response.data.refreshToken != null) {
         await StorageService.saveRefreshToken(response.data.refreshToken);
       }
-
-      // Save user data if available
       if (response.data.user != null) {
         await StorageService.saveUserData(response.data.user.toJson());
       }
@@ -71,20 +73,36 @@ class AuthRepository {
     }
   }
 
+
   // select branch return new access_token and refresh_token
   Future<AuthResponseApi> selectBranch({required String branchId}) async {
     try {
       final response = await AuthService.selectBranch(branchId: branchId);
+
+      // حفظ التوكن النشط الحالي
       if (response.data.token != null) {
         await StorageService.saveToken(response.data.token);
       }
       if (response.data.refreshToken != null) {
         await StorageService.saveRefreshToken(response.data.refreshToken);
       }
+
+      // حفظ بيانات المستخدم
       if (response.data.user != null) {
         await StorageService.saveUserData(response.data.user.toJson());
       }
+
+      // حفظ الفرع
       await StorageService.saveBranchId(branchId);
+
+      if (response.data.token != null) {
+        await StorageService.saveBranchAuth(
+          branchId,
+          token: response.data.token!,
+          refreshToken: response.data.refreshToken,
+        );
+      }
+
       return response;
     } catch (e) {
       rethrow;
@@ -95,7 +113,7 @@ class AuthRepository {
   Future<User> getProfile() async {
     try {
       final user = await AuthService.getProfile();
-      // Update stored user data
+      print("THIS IS FROM PROFILE ENDPOINT ${user.toJson()}");
       await StorageService.saveUserData(user.toJson());
       return user;
     } catch (e) {
@@ -115,8 +133,6 @@ class AuthRepository {
         lastName: lastName,
         phoneNumber: phoneNumber,
       );
-
-      // Update stored user data
       await StorageService.saveUserData(user.toJson());
       return user;
     } catch (e) {
@@ -139,6 +155,30 @@ class AuthRepository {
     }
   }
 
+  Future<void> addMerchantRequest({
+    required String storeName,
+    required String address,
+    required String phoneNumber,
+  }) async {
+    try {
+      await AuthService.addMerchantRequest(
+        address: address,
+        phoneNumber: phoneNumber,
+        storeName: storeName,
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getMyMerchantRequest() async {
+    try {
+      return await AuthService.getMyMerchantRequest();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // Logout user
   Future<void> logout() async {
     try {
@@ -146,17 +186,14 @@ class AuthRepository {
     } catch (e) {
       // Continue with logout even if API call fails
     } finally {
-      // Clear local storage
       await StorageService.clearAll();
     }
   }
 
-  // Check if user is logged in
   bool isLoggedIn() {
     return StorageService.isLoggedIn();
   }
 
-  // Get current user from storage
   User? getCurrentUser() {
     final userData = StorageService.getUserData();
     if (userData != null) {
@@ -165,7 +202,6 @@ class AuthRepository {
     return null;
   }
 
-  // Get token from storage
   String? getToken() {
     return StorageService.getToken();
   }

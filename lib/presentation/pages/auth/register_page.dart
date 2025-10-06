@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/constants/colors.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../controllers/auth_controller.dart';
 import '../../widgets/common_widgets.dart';
+import '../../../routes/app_routes.dart';
+
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -14,7 +15,10 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage>
     with TickerProviderStateMixin {
+  // مفاتيح وحالات
   final _formKey = GlobalKey<FormState>();
+
+  // Controllers للحقول
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -22,10 +26,12 @@ class _RegisterPageState extends State<RegisterPage>
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  // حالات الحقول
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   bool _acceptTerms = false;
 
+  // Animation
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -33,6 +39,8 @@ class _RegisterPageState extends State<RegisterPage>
   @override
   void initState() {
     super.initState();
+
+    // إعداد الأنيميشن
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
@@ -42,19 +50,19 @@ class _RegisterPageState extends State<RegisterPage>
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
 
-    _slideAnimation =
-        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _animationController,
-            curve: Curves.elasticOut,
-          ),
-        );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
+    );
 
     _animationController.forward();
   }
 
   @override
   void dispose() {
+    // التخلص من الـ Controllers لتفادي تسريب الذاكرة
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
@@ -68,289 +76,301 @@ class _RegisterPageState extends State<RegisterPage>
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: TextDirection.rtl, // دعم اللغة العربية
       child: Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            onPressed: () => Get.back(),
-            icon: Icon(Icons.arrow_forward_ios, color: AppColors.textPrimary),
-          ),
-        ),
         body: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: GetBuilder<AuthController>(
-                builder: (controller) {
-                  return Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 20),
+          child: GetBuilder<AuthController>(
+            builder: (controller) {
+              return Stack(
+                children: [
+                  /// خلفية ديكورية (دوائر ملونة)
+                  Positioned(
+                    left: -170,
+                    top: -225,
+                    child: Container(
+                      width: 500,
+                      height: 420,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryDark.withOpacity(0.5),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 120,
+                    top: -200,
+                    child: Container(
+                      width: 380,
+                      height: 380,
+                      decoration: BoxDecoration(
+                        color: AppColors.infoLight.withOpacity(0.9),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
 
-                        // Header Section
-                        FadeTransition(
+                  /// المحتوى الرئيسي
+                  SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      child: Form(
+                        key: _formKey,
+                        child: FadeTransition(
                           opacity: _fadeAnimation,
                           child: SlideTransition(
                             position: _slideAnimation,
-                            child: _buildHeader(),
-                          ),
-                        ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                const SizedBox(height: 20),
 
-                        const SizedBox(height: 40),
+                                /// رأس الصفحة (الشعار + العنوان)
+                                _buildHeader(),
+                                const SizedBox(height: 40),
 
-                        // Form Section
-                        FadeTransition(
-                          opacity: _fadeAnimation,
-                          child: Column(
-                            children: [
-                              // Name Fields Row
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: ShamraTextField(
-                                      label: 'الاسم الأول',
-                                      hintText: 'أدخل اسمك الأول',
-                                      icon: Icons.person_outline,
-                                      controller: _firstNameController,
-                                      textCapitalization:
-                                          TextCapitalization.words,
-                                      isRequired: true,
-                                      isSecondary: true,
-                                      validator: (value) {
-                                        if (value == null || value.isEmpty) {
-                                          return 'مطلوب';
-                                        }
-                                        if (value.length < 2) {
-                                          return 'قصير جداً';
-                                        }
-                                        return null;
-                                      },
+                                /// الاسم الأول واسم العائلة
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: ShamraTextField(
+                                        label: 'الاسم الأول',
+                                        hintText: 'أدخل اسمك الأول',
+                                        icon: Icons.person_outline,
+                                        controller: _firstNameController,
+                                        textCapitalization:
+                                        TextCapitalization.words,
+                                        isRequired: true,
+                                        isSecondary: true,
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'مطلوب';
+                                          }
+                                          if (value.length < 2) {
+                                            return 'قصير جداً';
+                                          }
+                                          return null;
+                                        },
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: ShamraTextField(
-                                      label: 'اسم العائلة',
-                                      hintText: 'أدخل اسم العائلة',
-                                      icon: Icons.person_outline,
-                                      controller: _lastNameController,
-                                      textCapitalization:
-                                          TextCapitalization.words,
-                                      isRequired: true,
-                                      isSecondary: true,
-                                      validator: (value) {
-                                        if (value == null || value.isEmpty) {
-                                          return 'مطلوب';
-                                        }
-                                        if (value.length < 2) {
-                                          return 'قصير جداً';
-                                        }
-                                        return null;
-                                      },
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: ShamraTextField(
+                                        label: 'اسم العائلة',
+                                        hintText: 'أدخل اسم العائلة',
+                                        icon: Icons.person_outline,
+                                        controller: _lastNameController,
+                                        textCapitalization:
+                                        TextCapitalization.words,
+                                        isRequired: true,
+                                        isSecondary: true,
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'مطلوب';
+                                          }
+                                          if (value.length < 2) {
+                                            return 'قصير جداً';
+                                          }
+                                          return null;
+                                        },
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 20),
-
-                              // Email Field
-                              ShamraTextField(
-                                label: 'البريد الإلكتروني',
-                                hintText: 'أدخل بريدك الإلكتروني',
-                                icon: Icons.email_outlined,
-                                controller: _emailController,
-                                keyboardType: TextInputType.emailAddress,
-                                isRequired: true,
-                                isSecondary: true,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'يرجى إدخال البريد الإلكتروني';
-                                  }
-                                  if (!GetUtils.isEmail(value)) {
-                                    return 'يرجى إدخال بريد إلكتروني صحيح';
-                                  }
-                                  return null;
-                                },
-                              ),
-
-                              const SizedBox(height: 20),
-
-                              // Phone Field
-                              ShamraTextField(
-                                label: 'رقم الهاتف (اختياري)',
-                                hintText: 'أدخل رقم هاتفك',
-                                icon: Icons.phone_outlined,
-                                controller: _phoneController,
-                                keyboardType: TextInputType.phone,
-                                isSecondary: true,
-                                validator: (value) {
-                                  if (value != null &&
-                                      value.isNotEmpty &&
-                                      value.length < 8) {
-                                    return 'يرجى إدخال رقم هاتف صحيح';
-                                  }
-                                  return null;
-                                },
-                              ),
-
-                              const SizedBox(height: 20),
-
-                              // Password Field
-                              ShamraTextField(
-                                label: 'كلمة المرور',
-                                hintText: 'أنشئ كلمة مرور قوية',
-                                icon: Icons.lock_outlined,
-                                controller: _passwordController,
-                                obscureText: !_isPasswordVisible,
-                                isRequired: true,
-                                isSecondary: true,
-                                suffixIcon: IconButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _isPasswordVisible = !_isPasswordVisible;
-                                    });
-                                  },
-                                  icon: Icon(
-                                    _isPasswordVisible
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                    color: AppColors.textSecondary,
-                                  ),
+                                  ],
                                 ),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'يرجى إدخال كلمة المرور';
-                                  }
-                                  if (value.length < 6) {
-                                    return 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
-                                  }
 
-                                  return null;
-                                },
-                              ),
+                                const SizedBox(height: 20),
 
-                              const SizedBox(height: 20),
-
-                              // Confirm Password Field
-                              ShamraTextField(
-                                label: 'تأكيد كلمة المرور',
-                                hintText: 'أعد إدخال كلمة المرور',
-                                icon: Icons.lock_outlined,
-                                controller: _confirmPasswordController,
-                                obscureText: !_isConfirmPasswordVisible,
-                                isRequired: true,
-                                isSecondary: true,
-                                suffixIcon: IconButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _isConfirmPasswordVisible =
-                                          !_isConfirmPasswordVisible;
-                                    });
-                                  },
-                                  icon: Icon(
-                                    _isConfirmPasswordVisible
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'يرجى تأكيد كلمة المرور';
-                                  }
-                                  if (value != _passwordController.text) {
-                                    return 'كلمات المرور غير متطابقة';
-                                  }
-                                  return null;
-                                },
-                              ),
-
-                              const SizedBox(height: 24),
-
-                              // Terms and Conditions
-                              _buildTermsCheckbox(),
-
-                              const SizedBox(height: 32),
-
-                              // Register Button
-                              Obx(() {
-                                return ShamraButton(
-                                  text: 'إنشاء حساب',
-                                  onPressed:
-                                      (controller.isLoading || !_acceptTerms)
-                                      ? null
-                                      : _handleRegister,
-                                  isLoading: controller.isLoading,
+                                /// البريد الإلكتروني
+                                ShamraTextField(
+                                  label: 'البريد الإلكتروني',
+                                  hintText: 'أدخل بريدك الإلكتروني',
+                                  icon: Icons.email_outlined,
+                                  controller: _emailController,
+                                  keyboardType: TextInputType.emailAddress,
+                                  isRequired: true,
                                   isSecondary: true,
-                                  icon: Icons.person_add_rounded,
-                                );
-                              }),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'يرجى إدخال البريد الإلكتروني';
+                                    }
+                                    if (!GetUtils.isEmail(value)) {
+                                      return 'يرجى إدخال بريد إلكتروني صحيح';
+                                    }
+                                    return null;
+                                  },
+                                ),
 
-                              const SizedBox(height: 32),
+                                const SizedBox(height: 20),
 
-                              // Sign In Link
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    'لديك حساب بالفعل؟ ',
-                                    style: TextStyle(
-                                      color: AppColors.textSecondary,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  TextButton(
+                                /// رقم الهاتف (اختياري)
+                                ShamraTextField(
+                                  label: 'رقم الهاتف',
+                                  hintText: 'أدخل رقم هاتفك',
+                                  icon: Icons.phone_outlined,
+                                  controller: _phoneController,
+                                  keyboardType: TextInputType.phone,
+                                  isSecondary: true,
+                                  validator: (value) {
+                                    if (value != null &&
+                                        value.isNotEmpty &&
+                                        value.length < 8) {
+                                      return 'يرجى إدخال رقم هاتف صحيح';
+                                    }
+                                    return null;
+                                  },
+                                ),
+
+                                const SizedBox(height: 20),
+
+                                /// كلمة المرور
+                                ShamraTextField(
+                                  label: 'كلمة المرور',
+                                  hintText: 'أنشئ كلمة مرور قوية',
+                                  icon: Icons.lock_outlined,
+                                  controller: _passwordController,
+                                  obscureText: !_isPasswordVisible,
+                                  isRequired: true,
+                                  isSecondary: true,
+                                  suffixIcon: IconButton(
                                     onPressed: () {
-                                      Get.back();
+                                      setState(() {
+                                        _isPasswordVisible =
+                                        !_isPasswordVisible;
+                                      });
                                     },
-                                    style: TextButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 4,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'تسجيل دخول',
-                                      style: TextStyle(
-                                        color: AppColors.primary,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                      ),
+                                    icon: Icon(
+                                      _isPasswordVisible
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                      color: AppColors.textSecondary,
                                     ),
                                   ),
-                                ],
-                              ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'يرجى إدخال كلمة المرور';
+                                    }
+                                    if (value.length < 8) {
+                                      return 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
+                                    }
+                                    return null;
+                                  },
+                                ),
 
-                              const SizedBox(height: 24),
-                            ],
+                                const SizedBox(height: 20),
+
+                                /// تأكيد كلمة المرور
+                                ShamraTextField(
+                                  label: 'تأكيد كلمة المرور',
+                                  hintText: 'أعد إدخال كلمة المرور',
+                                  icon: Icons.lock_outlined,
+                                  controller: _confirmPasswordController,
+                                  obscureText: !_isConfirmPasswordVisible,
+                                  isRequired: true,
+                                  isSecondary: true,
+                                  suffixIcon: IconButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _isConfirmPasswordVisible =
+                                        !_isConfirmPasswordVisible;
+                                      });
+                                    },
+                                    icon: Icon(
+                                      _isConfirmPasswordVisible
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'يرجى تأكيد كلمة المرور';
+                                    }
+                                    if (value != _passwordController.text) {
+                                      return 'كلمات المرور غير متطابقة';
+                                    }
+                                    return null;
+                                  },
+                                ),
+
+                                const SizedBox(height: 24),
+
+                                /// مربع اختيار الموافقة على الشروط
+                                _buildTermsCheckbox(),
+
+                                const SizedBox(height: 32),
+
+                                /// زر إنشاء حساب
+                                Obx(() {
+                                  return ShamraButton(
+                                    text: 'إنشاء حساب',
+                                    onPressed: (controller.isLoading ||
+                                        !_acceptTerms)
+                                        ? null
+                                        : _handleRegister,
+                                    isLoading: controller.isLoading,
+                                    isSecondary: true,
+                                    icon: Icons.person_add_rounded,
+                                  );
+                                }),
+
+                                const SizedBox(height: 32),
+
+                                /// رابط تسجيل الدخول
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'لديك حساب بالفعل؟ ',
+                                      style: TextStyle(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        Get.toNamed(Routes.login);
+                                      },
+                                      style: TextButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 4,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'تسجيل دخول',
+                                        style: TextStyle(
+                                          color: AppColors.primary,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 24),
+                              ],
+                            ),
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  );
-                },
-              ),
-            ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
     );
   }
 
+  /// رأس الصفحة: شعار + عنوان + وصف
   Widget _buildHeader() {
     return Column(
       children: [
-        // Shamra Logo - Gold version for register
         const ShamraLogo(size: 100, showShadow: true, isGoldVersion: true),
-
         const SizedBox(height: 20),
-
-        // Welcome Text
         Text(
           'إنشاء حساب جديد',
           style: Theme.of(context).textTheme.displaySmall?.copyWith(
@@ -360,14 +380,13 @@ class _RegisterPageState extends State<RegisterPage>
           ),
           textAlign: TextAlign.center,
         ),
-
         const SizedBox(height: 8),
-
         Text(
           'انضم إلى مجتمع شمرا اليوم',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
             color: AppColors.textSecondary,
             fontSize: 16,
+            fontWeight: FontWeight.w500,
           ),
           textAlign: TextAlign.center,
         ),
@@ -375,6 +394,7 @@ class _RegisterPageState extends State<RegisterPage>
     );
   }
 
+  /// مربع الموافقة على الشروط
   Widget _buildTermsCheckbox() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -389,7 +409,7 @@ class _RegisterPageState extends State<RegisterPage>
                 _acceptTerms = value ?? false;
               });
             },
-            activeColor: AppColors.secondary,
+            activeColor: AppColors.primaryDark,
             checkColor: AppColors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(4),
@@ -433,6 +453,7 @@ class _RegisterPageState extends State<RegisterPage>
     );
   }
 
+  /// دالة تنفيذ التسجيل
   void _handleRegister() async {
     if (_formKey.currentState!.validate() && _acceptTerms) {
       final authController = Get.find<AuthController>();
@@ -449,14 +470,16 @@ class _RegisterPageState extends State<RegisterPage>
         );
 
         if (success) {
+          // ✅ نجاح
           ShamraSnackBar.show(
             context: context,
             message: 'تم إنشاء الحساب بنجاح',
             type: SnackBarType.success,
           );
-          Get.offAllNamed('/branch-selection');
+          Get.offAllNamed(Routes.branchSelection);
         }
       } catch (e) {
+        // ❌ خطأ
         ShamraSnackBar.show(
           context: context,
           message: 'حدث خطأ في إنشاء الحساب',
@@ -464,6 +487,7 @@ class _RegisterPageState extends State<RegisterPage>
         );
       }
     } else if (!_acceptTerms) {
+      // ❗ لم يقبل الشروط
       ShamraSnackBar.show(
         context: context,
         message: 'يرجى الموافقة على شروط الخدمة وسياسة الخصوصية',
