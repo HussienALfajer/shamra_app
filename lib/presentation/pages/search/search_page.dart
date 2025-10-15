@@ -24,7 +24,7 @@ class SearchPage extends StatelessWidget {
           title: 'البحث',
           actions: [
             Obx(
-              () => IconButton(
+                  () => IconButton(
                 tooltip: 'مسح البحث',
                 onPressed: sc.searchQuery.isNotEmpty ? sc.clearSearch : null,
                 icon: Icon(
@@ -57,7 +57,7 @@ class SearchPage extends StatelessWidget {
                 onChanged: (q) {},
                 onSubmitted: (q) => sc.performSearch(q),
                 suffixIcon: Obx(
-                  () => Row(
+                      () => Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (sc.searchQuery.isNotEmpty)
@@ -80,7 +80,7 @@ class SearchPage extends StatelessWidget {
 
             // 🔹 ملخص الفلاتر النشطة (Chips قابلة للإزالة)
             Obx(
-              () => ActiveFiltersSummary(
+                  () => ActiveFiltersSummary(
                 activeFilters: _activeFiltersList(sc),
                 onClearAll: sc.clearAllFilters,
                 onRemoveFilter: (f) => _removeSingleFilter(sc, f),
@@ -89,15 +89,15 @@ class SearchPage extends StatelessWidget {
 
             // 🔹 رأس النتائج (العدّاد + ملخص)
             Obx(
-              () =>
-                  sc.searchQuery.isNotEmpty ||
-                      sc.resultsCount > 0 ||
-                      sc.hasActiveFilters
+                  () =>
+              sc.searchQuery.isNotEmpty ||
+                  sc.resultsCount > 0 ||
+                  sc.hasActiveFilters
                   ? SearchResultsHeader(
-                      totalResults: sc.resultsCount,
-                      query: sc.searchQuery,
-                      isLoading: sc.isSearching,
-                    )
+                totalResults: sc.resultsCount,
+                query: sc.searchQuery,
+                isLoading: sc.isSearching,
+              )
                   : const SizedBox.shrink(),
             ),
 
@@ -106,10 +106,10 @@ class SearchPage extends StatelessWidget {
               child: Obx(() {
                 final isIdle =
                     sc.searchQuery.isEmpty &&
-                    sc.resultsCount == 0 &&
-                    !sc.isSearching &&
-                    sc.errorMessage.isEmpty &&
-                    !sc.hasActiveFilters; // أضفنا التحقق من الفلاتر النشطة
+                        sc.resultsCount == 0 &&
+                        !sc.isSearching &&
+                        sc.errorMessage.isEmpty &&
+                        !sc.hasActiveFilters; // أضفنا التحقق من الفلاتر النشطة
 
                 if (sc.isSearching && sc.resultsCount == 0) {
                   return const LoadingWidget(message: 'جاري البحث…');
@@ -156,16 +156,16 @@ class SearchPage extends StatelessWidget {
                         ),
                         sliver: SliverGrid(
                           gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                mainAxisSpacing: 12,
-                                crossAxisSpacing: 12,
-                                childAspectRatio: 0.62,
-                              ),
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                            childAspectRatio: 0.62,
+                          ),
                           delegate: SliverChildBuilderDelegate((
-                            context,
-                            index,
-                          ) {
+                              context,
+                              index,
+                              ) {
                             final product = sc.filteredResults[index];
                             return ProductCard(
                               product: product,
@@ -184,14 +184,14 @@ class SearchPage extends StatelessWidget {
                       // مؤشر تحميل المزيد
                       SliverToBoxAdapter(
                         child: Obx(
-                          () => sc.isLoadingMore
+                              () => sc.isLoadingMore
                               ? const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 16),
-                                  child: LoadingWidget(
-                                    size: 28,
-                                    message: 'تحميل المزيد…',
-                                  ),
-                                )
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: LoadingWidget(
+                              size: 28,
+                              message: 'تحميل المزيد…',
+                            ),
+                          )
                               : const SizedBox.shrink(),
                         ),
                       ),
@@ -199,19 +199,19 @@ class SearchPage extends StatelessWidget {
                       // نهاية النتائج
                       SliverToBoxAdapter(
                         child: Obx(
-                          () =>
-                              (!sc.hasNextPage && sc.filteredResults.isNotEmpty)
+                              () =>
+                          (!sc.hasNextPage && sc.filteredResults.isNotEmpty)
                               ? Padding(
-                                  padding: const EdgeInsets.only(bottom: 24),
-                                  child: Center(
-                                    child: Text(
-                                      'تم عرض كل النتائج',
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodySmall,
-                                    ),
-                                  ),
-                                )
+                            padding: const EdgeInsets.only(bottom: 24),
+                            child: Center(
+                              child: Text(
+                                'تم عرض كل النتائج',
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.bodySmall,
+                              ),
+                            ),
+                          )
                               : const SizedBox.shrink(),
                         ),
                       ),
@@ -259,9 +259,9 @@ class SearchPage extends StatelessWidget {
   }
 
   static Future<void> _openFiltersSheet(
-    BuildContext context,
-    SearchController sc,
-  ) async {
+      BuildContext context,
+      SearchController sc,
+      ) async {
     await ShamraBottomSheet.show(
       context: context,
       title: 'الفلاتر المتقدمة',
@@ -290,15 +290,15 @@ class SearchPage extends StatelessWidget {
       child: Obx(() {
         // اشتقاق العلامات التجارية إن لم تكن موجودة
         final brandsFromResults =
-            sc.filteredResults
-                .map((p) => (p.brand ?? '').trim())
-                .where((b) => b.isNotEmpty)
-                .toSet()
-                .toList()
-              ..sort();
+        sc.filteredResults
+            .map((p) => (p.brand ?? '').trim())
+            .where((b) => b.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
         // دمج العلامات التجارية من المنتجات المحملة مع أي علامات تجارية أخرى قد تكون موجودة
         final allBrands =
-            (sc.brands.toList() + brandsFromResults).toSet().toList()..sort();
+        (sc.brands.toList() + brandsFromResults).toSet().toList()..sort();
 
         final min = sc.minPrice;
         final max = sc.maxPrice;
@@ -330,13 +330,13 @@ class SearchPage extends StatelessWidget {
                       items: sc.categories
                           .map(
                             (c) => DropdownMenuItem<String>(
-                              value: c.id,
-                              child: Text(
-                                c.displayName,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          )
+                          value: c.id,
+                          child: Text(
+                            c.displayName,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      )
                           .toList(),
                       onChanged: (v) => sc.selectCategory(v ?? ''),
                     ),
@@ -356,13 +356,13 @@ class SearchPage extends StatelessWidget {
                       items: sc.subCategories
                           .map(
                             (s) => DropdownMenuItem<String>(
-                              value: s.id,
-                              child: Text(
-                                s.displayName,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          )
+                          value: s.id,
+                          child: Text(
+                            s.displayName,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      )
                           .toList(),
                       onChanged: sc.subCategories.isNotEmpty
                           ? (v) => sc.selectSubCategory(v ?? '')
@@ -385,9 +385,9 @@ class SearchPage extends StatelessWidget {
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       value:
-                          (allBrands.isNotEmpty &&
-                              sc.selectedBrand.isNotEmpty &&
-                              allBrands.contains(sc.selectedBrand))
+                      (allBrands.isNotEmpty &&
+                          sc.selectedBrand.isNotEmpty &&
+                          allBrands.contains(sc.selectedBrand))
                           ? sc.selectedBrand
                           : null,
                       isExpanded: true,
@@ -399,10 +399,10 @@ class SearchPage extends StatelessWidget {
                       items: allBrands
                           .map(
                             (b) => DropdownMenuItem<String>(
-                              value: b,
-                              child: Text(b, overflow: TextOverflow.ellipsis),
-                            ),
-                          )
+                          value: b,
+                          child: Text(b, overflow: TextOverflow.ellipsis),
+                        ),
+                      )
                           .toList(),
                       onChanged: (v) => sc.selectBrand(v ?? ''),
                     ),
@@ -534,32 +534,32 @@ class _IdleSuggestions extends StatelessWidget {
             icon: Icons.history_rounded,
             action: sc.searchHistory.isNotEmpty
                 ? TextButton(
-                    onPressed: sc.clearSearchHistory,
-                    child: const Text('مسح الكل'),
-                  )
+              onPressed: sc.clearSearchHistory,
+              child: const Text('مسح الكل'),
+            )
                 : null,
           ),
           Obx(
-            () => sc.searchHistory.isEmpty
+                () => sc.searchHistory.isEmpty
                 ? const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                    child: Text('لا يوجد سجل بحث بعد.'),
-                  )
+              padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              child: Text('لا يوجد سجل بحث بعد.'),
+            )
                 : Column(
-                    children: sc.searchHistory
-                        .map(
-                          (h) => SearchHistoryItem(
-                            query: h,
-                            timestamp: DateTime.now(),
-                            // يجب أن يكون لديك timestamp حقيقي في الـ model
-                            showTime: false,
-                            // إخفاء الوقت مؤقتًا لعدم توفره في الـ model الحالي
-                            onTap: () => sc.performQuickSearch(h),
-                            onRemove: () => sc.removeFromHistory(h),
-                          ),
-                        )
-                        .toList(),
-                  ),
+              children: sc.searchHistory
+                  .map(
+                    (h) => SearchHistoryItem(
+                  query: h,
+                  timestamp: DateTime.now(),
+                  // يجب أن يكون لديك timestamp حقيقي في الـ model
+                  showTime: false,
+                  // إخفاء الوقت مؤقتًا لعدم توفره في الـ model الحالي
+                  onTap: () => sc.performQuickSearch(h),
+                  onRemove: () => sc.removeFromHistory(h),
+                ),
+              )
+                  .toList(),
+            ),
           ),
 
           const SizedBox(height: 20),
@@ -570,17 +570,17 @@ class _IdleSuggestions extends StatelessWidget {
             icon: Icons.trending_up_rounded,
           ),
           Obx(
-            () => Wrap(
+                () => Wrap(
               spacing: 8,
               runSpacing: 8,
               children: sc.popularSearches
                   .map(
                     (p) => ShamraChip(
-                      label: p,
-                      onTap: () => sc.performQuickSearch(p),
-                      icon: Icons.trending_up_rounded,
-                    ),
-                  )
+                  label: p,
+                  onTap: () => sc.performQuickSearch(p),
+                  icon: Icons.trending_up_rounded,
+                ),
+              )
                   .toList(),
             ),
           ),

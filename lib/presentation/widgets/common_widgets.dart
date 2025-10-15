@@ -258,12 +258,12 @@ class ShamraLogo extends StatelessWidget {
         borderRadius: BorderRadius.circular(size * 0.25),
         boxShadow: showShadow
             ? [
-                BoxShadow(
-                  color: shadowColor.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ]
+          BoxShadow(
+            color: shadowColor.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ]
             : null,
       ),
       child: Container(
@@ -354,31 +354,31 @@ class ShamraButton extends StatelessWidget {
         ),
         child: isLoading
             ? SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
-                ),
-              )
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+          ),
+        )
             : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (icon != null) ...[
-                    Icon(icon, size: 20),
-                    const SizedBox(width: 8),
-                  ],
-                  Text(
-                    text,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.white,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ],
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 20),
+              const SizedBox(width: 8),
+            ],
+            Text(
+              text,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.white,
+                letterSpacing: 0.5,
               ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -399,31 +399,31 @@ class ShamraButton extends StatelessWidget {
         ),
         child: isLoading
             ? SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(borderColor),
-                ),
-              )
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(borderColor),
+          ),
+        )
             : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (icon != null) ...[
-                    Icon(icon, size: 20, color: borderColor),
-                    const SizedBox(width: 8),
-                  ],
-                  Text(
-                    text,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: borderColor,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ],
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 20, color: borderColor),
+              const SizedBox(width: 8),
+            ],
+            Text(
+              text,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: borderColor,
+                letterSpacing: 0.5,
               ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -829,10 +829,10 @@ class ShamraSnackBar {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         action: actionLabel != null
             ? SnackBarAction(
-                label: actionLabel,
-                textColor: AppColors.white,
-                onPressed: onAction ?? () {},
-              )
+          label: actionLabel,
+          textColor: AppColors.white,
+          onPressed: onAction ?? () {},
+        )
             : null,
       ),
     );

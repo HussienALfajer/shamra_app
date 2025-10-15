@@ -107,7 +107,7 @@ class CartController extends GetxController {
       }
 
       _cart.value.updateItemQuantity(productId, newQuantity);
-       _cartRepository.saveCart(_cart.value);
+      _cartRepository.saveCart(_cart.value);
 
       _cart.refresh();
     } catch (e) {

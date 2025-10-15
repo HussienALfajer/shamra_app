@@ -19,8 +19,8 @@ class MainController extends GetxController {
   // --- 🔹 التنقل بين التبويبات ---
   final RxInt currentIndex = 0.obs; // التبويب الحالي
 
-  // سجل التاريخ للعودة إلى التبويب السابق عبر زر الرجوع
-  final List<int> _tabHistory = [];
+  // ✅ ابدأ بتاريخ يحتوي التبويب 0 للرئيسية
+  final List<int> _tabHistory = [0];
 
   /// استدعِ هذي من الـ BottomNav (أو أي مكان) عند الضغط على تبويب
   void onNavTap(int index) {
@@ -50,16 +50,21 @@ class MainController extends GetxController {
   }
 
   /// رجوع إلى التبويب السابق إن وُجد. تُرجع true إذا تم التعامل مع الرجوع.
+// داخل MainController
   bool backToPreviousTab() {
-    if (_tabHistory.isNotEmpty) {
-      final prev = _tabHistory.removeLast();
-      currentIndex.value = prev;
+    debugPrint('[MainController] back | currentIndex=${currentIndex.value}');
+
+    // لو لسنا على الرئيسية → ارجع للرئيسية واستهلك الرجوع
+    if (currentIndex.value != 0) {
+      currentIndex.value = 0;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        scrollToTop(prev, animate: false);
+        scrollToTop(0, animate: false);
       });
-      return true;
+      return true; // استهلكنا الرجوع
     }
+    // نحن أصلًا على الرئيسية → اسمح للنظام بالخروج
     return false;
+
   }
 
   void _pushHistoryIfNeeded(int index) {
@@ -109,11 +114,21 @@ class MainController extends GetxController {
   void scrollToTop(int index, {bool animate = true}) {
     ScrollController? c;
     switch (index) {
-      case 0: c = homeScrollController; break;
-      case 1: c = productsScrollController; break;
-      case 2: c = cartScrollController; break;
-      case 3: c = ordersScrollController; break;
-      case 4: c = profileScrollController; break;
+      case 0:
+        c = homeScrollController;
+        break;
+      case 1:
+        c = productsScrollController;
+        break;
+      case 2:
+        c = cartScrollController;
+        break;
+      case 3:
+        c = ordersScrollController;
+        break;
+      case 4:
+        c = profileScrollController;
+        break;
     }
     if (c != null && c.hasClients) {
       if (animate) {
@@ -158,11 +173,13 @@ class MainController extends GetxController {
       ]);
     } catch (e) {
       _errorMessage.value = e.toString();
-      ShamraSnackBar.show(
-        context: Get.context!,
-        message: 'فشل في تحميل البيانات: $e',
-        type: SnackBarType.error,
-      );
+      if (Get.context != null) {
+        ShamraSnackBar.show(
+          context: Get.context!,
+          message: 'فشل في تحميل البيانات: $e',
+          type: SnackBarType.error,
+        );
+      }
     } finally {
       _isLoading.value = false;
     }
@@ -174,6 +191,7 @@ class MainController extends GetxController {
       final products = await _productRepository.getFeaturedProducts(limit: 10);
       _featuredProducts.value = products['products'];
     } catch (e) {
+      // ignore: avoid_print
       print('Error loading featured products: $e');
     }
   }
@@ -184,6 +202,7 @@ class MainController extends GetxController {
       final products = await _productRepository.getOnSaleProducts(limit: 10);
       _onSaleProducts.value = products['products'];
     } catch (e) {
+      // ignore: avoid_print
       print('Error loading on sale products: $e');
     }
   }
@@ -194,6 +213,7 @@ class MainController extends GetxController {
       final result = await _productRepository.getProducts(page: 1, limit: 20);
       _recentProducts.value = result['products'] as List<Product>;
     } catch (e) {
+      // ignore: avoid_print
       print('Error loading recent products: $e');
     }
   }
@@ -205,6 +225,7 @@ class MainController extends GetxController {
       final categories = await _categoryRepository.getCategories();
       _categories.value = categories.take(8).toList(); // فقط أول 8
     } catch (e) {
+      // ignore: avoid_print
       print('Error loading categories: $e');
     } finally {
       _isLoadingCategories.value = false;
@@ -216,6 +237,7 @@ class MainController extends GetxController {
       BannerController bannerController = Get.find<BannerController>();
       await bannerController.loadBanners(refresh: true);
     } catch (e) {
+      // ignore: avoid_print
       print('Error loading Banners: $e');
     }
   }
@@ -239,11 +261,13 @@ class MainController extends GetxController {
 
       _searchResults.value = products;
     } catch (e) {
-      ShamraSnackBar.show(
-        context: Get.context!,
-        message: 'فشل في البحث: $e',
-        type: SnackBarType.error,
-      );
+      if (Get.context != null) {
+        ShamraSnackBar.show(
+          context: Get.context!,
+          message: 'فشل في البحث: $e',
+          type: SnackBarType.error,
+        );
+      }
     } finally {
       _isSearching.value = false;
     }

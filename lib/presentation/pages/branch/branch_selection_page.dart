@@ -329,14 +329,14 @@ class BranchSelectionPage extends StatelessWidget {
               child: isSelecting
                   ? const LoadingWidget(size: 20)
                   : Icon(
-                      isSelected
-                          ? Icons.check_rounded
-                          : Icons.arrow_back_ios_rounded,
-                      color: isSelected
-                          ? AppColors.white
-                          : AppColors.textSecondary,
-                      size: 20,
-                    ),
+                isSelected
+                    ? Icons.check_rounded
+                    : Icons.arrow_back_ios_rounded,
+                color: isSelected
+                    ? AppColors.white
+                    : AppColors.textSecondary,
+                size: 20,
+              ),
             ),
           ],
         ),

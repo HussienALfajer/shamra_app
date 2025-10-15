@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 import 'core/services/dio_service.dart';
+import 'core/services/notification_service.dart'; // Import your notification service
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
 import 'routes/app_pages.dart' hide InitialBinding;
@@ -16,29 +17,22 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  print("📩 [Background Handler] Message received");
   print("📩 [Background] Title: ${message.notification?.title}");
   print("📩 [Background] Body: ${message.notification?.body}");
+  print("📩 [Background] Data: ${message.data}");
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-
-  await FirebaseMessaging.instance.subscribeToTopic("shamra");
-  print("✅ Subscribed to topic: shamra");
-
+  // Register background message handler
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
-    alert: true,
-    badge: true,
-    sound: true,
-  );
-  print("🔔 User granted permission: ${settings.authorizationStatus}");
-
 
   // Initialize GetStorage
   await GetStorage.init();
@@ -49,17 +43,33 @@ void main() async {
   runApp(const ShamraApp());
 }
 
-class ShamraApp extends StatelessWidget {
+class ShamraApp extends StatefulWidget {
   const ShamraApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print("📩 [OpenedApp] Notification clicked!");
+  State<ShamraApp> createState() => _ShamraAppState();
+}
 
+class _ShamraAppState extends State<ShamraApp> {
+  @override
+  void initState() {
+    super.initState();
+    _initializeNotifications();
+  }
+
+  Future<void> _initializeNotifications() async {
+    // Initialize notification service
+    await NotificationService.initialize();
+
+    // 🔥 CRITICAL: Listen to notification taps and navigate
+    NotificationService.onNotificationTap.listen((RemoteMessage message) {
+      print("🎯 Notification tap detected! Navigating...");
+      NotificationService.navigateFromNotification(message);
     });
+  }
 
-
+  @override
+  Widget build(BuildContext context) {
     return GetMaterialApp(
       title: 'Shamra Electronics',
       debugShowCheckedModeBanner: false,

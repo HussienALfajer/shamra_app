@@ -58,10 +58,10 @@ class ProductService {
   }) async {
     try {
       return await getProducts(
-        page: page,
-        limit: limit,
-        categoryId: categoryId,
-        search: search
+          page: page,
+          limit: limit,
+          categoryId: categoryId,
+          search: search
       );
     } on DioException catch (e) {
       throw _handleError(e);
@@ -77,10 +77,10 @@ class ProductService {
   }) async {
     try {
       return await getProducts(
-        page: page,
-        limit: limit,
-        subCategoryId: subCategoryId,
-        search: search
+          page: page,
+          limit: limit,
+          subCategoryId: subCategoryId,
+          search: search
       );
     } on DioException catch (e) {
       throw _handleError(e);
@@ -92,10 +92,10 @@ class ProductService {
   }) async {
     try {
       return await getProducts(
-        page: page,
-        limit: limit,
-        isFeatured: true,
-        search: search
+          page: page,
+          limit: limit,
+          isFeatured: true,
+          search: search
       ) ;
     } on DioException catch (e) {
       throw _handleError(e);
@@ -110,7 +110,7 @@ class ProductService {
           page: page,
           limit: limit,
           isOnSale: true,
-        search: search
+          search: search
       ) ;
     } on DioException catch (e) {
       throw _handleError(e);

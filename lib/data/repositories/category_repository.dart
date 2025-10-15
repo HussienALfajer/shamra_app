@@ -22,9 +22,9 @@ class CategoryRepository {
 
   // Get category by ID
   Future<Category> getCategoryById(
-    String categoryId, {
-    bool withChildren = false,
-  }) async {
+      String categoryId, {
+        bool withChildren = false,
+      }) async {
     try {
       return await CategoryService.getCategoryById(
         categoryId,
@@ -37,9 +37,9 @@ class CategoryRepository {
 
   // Get category by slug
   Future<Category> getCategoryBySlug(
-    String slug, {
-    bool withChildren = false,
-  }) async {
+      String slug, {
+        bool withChildren = false,
+      }) async {
     try {
       return await CategoryService.getCategoryBySlug(
         slug,

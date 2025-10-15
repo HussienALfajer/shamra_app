@@ -71,7 +71,7 @@ class OrderItem {
 
   double get total => quantity * price;
 
-  /// URL نهائي لصورة العرض
+/// URL نهائي لصورة العرض
 
 }
 

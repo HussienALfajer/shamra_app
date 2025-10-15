@@ -12,10 +12,13 @@ class AuthResponseApi {
   });
 
   factory AuthResponseApi.fromJson(Map<String, dynamic> json) {
+    final success = json['success'] == true;
+    final message = (json['message'] ?? '').toString();
+    final dataMap = Map<String, dynamic>.from(json['data'] ?? {});
     return AuthResponseApi(
-      success: json['success'],
-      message: json['message'],
-      data: AuthResponse.fromJson(json['data']),
+      success: success,
+      message: message,
+      data: AuthResponse.fromJson(dataMap),
     );
   }
 }
@@ -32,10 +35,23 @@ class AuthResponse {
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
+    // ✅ يدعم شكلين:
+    // أ) login/select-branch: { access_token, refresh_token, user:{...} }
+    // ب) register:         { data:{ user:{...} } } (بدون توكنات)
+    final token = (json['access_token'] ?? json['token'] ?? '').toString();
+    final refreshToken = (json['refresh_token'] ?? '').toString();
+
+    Map<String, dynamic> userMap = {};
+    if (json['user'] is Map) {
+      userMap = Map<String, dynamic>.from(json['user']);
+    } else if (json['data'] is Map && (json['data']['user'] is Map)) {
+      userMap = Map<String, dynamic>.from(json['data']['user']);
+    }
+
     return AuthResponse(
-      token: json['access_token'],
-      refreshToken: json['refresh_token'],
-      user: User.fromJson(json['user']),
+      token: token,
+      refreshToken: refreshToken,
+      user: User.fromJson(userMap),
     );
   }
 }

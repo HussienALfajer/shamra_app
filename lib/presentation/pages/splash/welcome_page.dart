@@ -1,3 +1,4 @@
+// lib/presentation/pages/splash/welcome_page.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/constants/app_constants.dart';
@@ -5,9 +6,7 @@ import '../../../core/constants/colors.dart';
 import '../../../routes/app_routes.dart';
 import '../../widgets/common_widgets.dart';
 
-/// صفحة البداية (Splash Page)
-/// - تعرض شعار التطبيق مع أنيميشن.
-/// - من هنا يتم التوجيه إما إلى تسجيل الدخول أو التسجيل.
+/// Welcome screen with simple intro and two primary actions.
 class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
 
@@ -24,29 +23,15 @@ class _WelcomePageState extends State<WelcomePage>
   @override
   void initState() {
     super.initState();
-    _initializeAnimation();
-  }
-
-  /// تهيئة الأنيميشن (Fade + Slide)
-  void _initializeAnimation() {
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1800),
       vsync: this,
     );
-
-    _fadeAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    );
-
+    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
     _slideAnimation = Tween<double>(begin: 50, end: 0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeOutCubic,
-      ),
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
-
-    _controller.forward(); // تشغيل الأنيميشن
+    _controller.forward();
   }
 
   @override
@@ -55,41 +40,39 @@ class _WelcomePageState extends State<WelcomePage>
     super.dispose();
   }
 
-  /// الانتقال إلى صفحة التسجيل
-  void _goToRegister() {
-    Get.offAllNamed(Routes.register);
-  }
-
-  /// الانتقال إلى صفحة تسجيل الدخول
-  void _goToLogin() {
-    Get.offAllNamed(Routes.login);
-  }
+  void _goToRegister() => Get.offAllNamed(Routes.register);
+  void _goToLogin() => Get.offAllNamed(Routes.login);
 
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl, // دعم اللغة العربية
+      textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.white,
         body: FadeTransition(
-          opacity: _fadeAnimation, // أنيميشن الشفافية
+          opacity: _fadeAnimation,
           child: AnimatedBuilder(
             animation: _controller,
             builder: (context, child) {
+              final w = MediaQuery.of(context).size.width;
               return Stack(
                 children: [
-                  /// 🔹 شعار التطبيق (ShamraLogo)
+                  // App logo
                   Positioned(
-                    top: MediaQuery.of(context).size.height * 0.22 +
-                        _slideAnimation.value,
-                    left: MediaQuery.of(context).size.width * 0.5 - 73,
-                    child: Image.asset( '${AppConstants.logoPath}', fit: BoxFit.contain,width: 150,height: 150, ),
+                    top: MediaQuery.of(context).size.height * 0.22 + _slideAnimation.value,
+                    left: w * 0.5 - 73,
+                    child: Image.asset(
+                      AppConstants.logoPath,
+                      fit: BoxFit.contain,
+                      width: 150,
+                      height: 150,
+                    ),
                   ),
 
-                  /// 🔹 عنوان التطبيق
+                  // App title
                   Positioned(
                     top: 390 + _slideAnimation.value,
-                    left: MediaQuery.of(context).size.width * 0.5 - 100,
+                    left: w * 0.5 - 100,
                     child: const SizedBox(
                       width: 200,
                       child: Text(
@@ -106,10 +89,10 @@ class _WelcomePageState extends State<WelcomePage>
                     ),
                   ),
 
-                  /// 🔹 الوصف النصي
+                  // Short tagline
                   Positioned(
                     top: 469 + _slideAnimation.value,
-                    left: MediaQuery.of(context).size.width * 0.5 - 132.5,
+                    left: w * 0.5 - 132.5,
                     child: const SizedBox(
                       width: 265,
                       child: Text(
@@ -126,10 +109,10 @@ class _WelcomePageState extends State<WelcomePage>
                     ),
                   ),
 
-                  /// 🔹 زر: لنبدأ رحلتك الآن (ShamraButton)
+                  // Primary button
                   Positioned(
                     top: 634,
-                    left: MediaQuery.of(context).size.width * 0.5 - 167.5,
+                    left: w * 0.5 - 167.5,
                     child: ShamraButton(
                       text: "لنبدأ رحلتك الآن",
                       onPressed: _goToRegister,
@@ -138,11 +121,11 @@ class _WelcomePageState extends State<WelcomePage>
                     ),
                   ),
 
-                  /// 🔹 زر نصي: لدي حساب بالفعل
+                  // Secondary action: already have account
                   Positioned(
                     top: 713,
                     right: 80,
-                    left: MediaQuery.of(context).size.width * 0.5 - 120,
+                    left: w * 0.5 - 120,
                     child: GestureDetector(
                       onTap: _goToLogin,
                       child: Row(
@@ -166,21 +149,17 @@ class _WelcomePageState extends State<WelcomePage>
                               color: AppColors.primary,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
-                              Icons.arrow_forward_ios,
-                              size: 14,
-                              color: AppColors.white,
-                            ),
+                            child: const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.white),
                           )
                         ],
                       ),
                     ),
                   ),
 
-                  /// 🔹 الشريط السفلي (Indicator)
+                  // Bottom indicator
                   Positioned(
                     bottom: 14,
-                    left: MediaQuery.of(context).size.width * 0.5 - 67,
+                    left: w * 0.5 - 67,
                     child: Container(
                       width: 134,
                       height: 5,

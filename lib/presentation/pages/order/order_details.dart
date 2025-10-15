@@ -558,11 +558,11 @@ class OrderDetailsPage extends StatelessWidget {
   }
 
   Widget _summaryRow(
-    String label,
-    String value, {
-    bool isTotal = false,
-    bool isDiscount = false,
-  }) {
+      String label,
+      String value, {
+        bool isTotal = false,
+        bool isDiscount = false,
+      }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -729,7 +729,7 @@ class OrderDetailsPage extends StatelessWidget {
         Branch.fromJson(
           StorageService.getUserData()?['selectedBranchObject'],
         ).phone ??
-        "";
+            "";
 
     print('Original phone number: $phone');
 

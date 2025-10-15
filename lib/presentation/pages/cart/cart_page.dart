@@ -90,7 +90,7 @@ class CartPage extends StatelessWidget {
               height: 90,
               fit: BoxFit.cover,
               placeholder: (context, url) =>
-                  const Center(child: CircularProgressIndicator()),
+              const Center(child: CircularProgressIndicator()),
               errorWidget: (context, url, error) => const Icon(
                 Icons.image_outlined,
                 size: 40,
@@ -203,9 +203,9 @@ class CartPage extends StatelessWidget {
 
   // Bottom totals + checkout
   Widget _buildBottomSection(
-    CartController cartController,
-    BuildContext context,
-  ) {
+      CartController cartController,
+      BuildContext context,
+      ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -323,9 +323,9 @@ class CartPage extends StatelessWidget {
   // Checkout flow with map selection and notes
   // في cart_page.dart - تحديث _handleCheckout
   void _handleCheckout(
-    CartController cartController,
-    BuildContext context,
-  ) async {
+      CartController cartController,
+      BuildContext context,
+      ) async {
     final authController = Get.find<AuthController>();
 
     if (!authController.isLoggedIn) {
@@ -403,10 +403,10 @@ class CartPage extends StatelessWidget {
 
   // 🎯 Dialog جديد لاختيار النقاط
   Future<Map<String, dynamic>?> _showPointsDialog(
-    BuildContext context,
-    AuthController authController,
-    CartController cartController,
-  ) async {
+      BuildContext context,
+      AuthController authController,
+      CartController cartController,
+      ) async {
     final user = authController.currentUser;
     if (user == null || user.points <= 0) {
       // لا توجد نقاط - متابعة مباشرة
@@ -471,27 +471,27 @@ class CartPage extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Obx(
-                () => discount.value > 0
+                    () => discount.value > 0
                     ? Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.success.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('الخصم المتوقع:'),
+                      Text(
+                        '${discount.value.toStringAsFixed(2)} \$',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.success,
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('الخصم المتوقع:'),
-                            Text(
-                              '${discount.value.toStringAsFixed(2)} \$',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.success,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
+                      ),
+                    ],
+                  ),
+                )
                     : const SizedBox(),
               ),
             ],
@@ -521,94 +521,94 @@ class CartPage extends StatelessWidget {
 
   // 🎯 تحديث confirmation dialog
   Future<bool> _showOrderConfirmationDialog(
-    BuildContext context,
-    CartController cartController,
-    int? pointsUsed,
-    double? discount,
-  ) async {
+      BuildContext context,
+      CartController cartController,
+      int? pointsUsed,
+      double? discount,
+      ) async {
     return await Get.dialog<bool>(
-          AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: Row(
-              children: [
-                Icon(Icons.shopping_cart_checkout, color: AppColors.primary),
-                const SizedBox(width: 8),
-                const Text('تأكيد الطلب'),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('هل أنت متأكد من إتمام هذا الطلب؟'),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
+      AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.shopping_cart_checkout, color: AppColors.primary),
+            const SizedBox(width: 8),
+            const Text('تأكيد الطلب'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('هل أنت متأكد من إتمام هذا الطلب؟'),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('عدد المنتجات:'),
-                          Text('${cartController.itemCount} منتج'),
-                        ],
-                      ),
-                      if (pointsUsed != null && pointsUsed > 0) ...[
-                        const Divider(),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('النقاط المستخدمة:'),
-                            Text('$pointsUsed نقطة'),
-                          ],
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('الخصم:'),
-                            Text(
-                              '-${discount?.toStringAsFixed(2) ?? 0} \$',
-                              style: const TextStyle(color: AppColors.success),
-                            ),
-                          ],
+                      const Text('عدد المنتجات:'),
+                      Text('${cartController.itemCount} منتج'),
+                    ],
+                  ),
+                  if (pointsUsed != null && pointsUsed > 0) ...[
+                    const Divider(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('النقاط المستخدمة:'),
+                        Text('$pointsUsed نقطة'),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('الخصم:'),
+                        Text(
+                          '-${discount?.toStringAsFixed(2) ?? 0} \$',
+                          style: const TextStyle(color: AppColors.success),
                         ),
                       ],
-                      const Divider(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('المجموع النهائي:'),
-                          Text(
-                            '${(cartController.total - (discount ?? 0)).toStringAsFixed(0)} \$',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ],
+                    ),
+                  ],
+                  const Divider(),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('المجموع النهائي:'),
+                      Text(
+                        '${(cartController.total - (discount ?? 0)).toStringAsFixed(0)} \$',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Get.back(result: false),
-                child: const Text('إلغاء'),
-              ),
-              ElevatedButton(
-                onPressed: () => Get.back(result: true),
-                child: const Text('تأكيد الطلب'),
-              ),
-            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('إلغاء'),
           ),
-        ) ??
+          ElevatedButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('تأكيد الطلب'),
+          ),
+        ],
+      ),
+    ) ??
         false;
   }
 

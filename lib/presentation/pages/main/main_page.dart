@@ -1,26 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shamra_app/presentation/pages/search/search_page.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
+
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../routes/app_routes.dart';
 import '../../../data/utils/helpers.dart';
 import '../../../data/models/product.dart';
 import '../../../data/models/category.dart';
+
 import '../../controllers/main_controller.dart';
 import '../../controllers/cart_controller.dart';
 import '../../controllers/category_controller.dart';
 import '../../controllers/product_controller.dart';
 import '../../controllers/banner_controller.dart';
+
 import '../../widgets/banner_widget.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/common_widgets.dart';
+
 import '../cart/cart_page.dart';
 import '../order/order_page.dart';
 import '../product/product_page.dart';
 import '../profile/profile_page.dart';
+import '../search/search_page.dart';
 
 class MainPage extends StatelessWidget {
   const MainPage({super.key});
@@ -32,89 +36,105 @@ class MainPage extends StatelessWidget {
 
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Scaffold(
-        /// محتوى الصفحات بناءً على التبويب المحدد
-        body: Obx(() {
-          return IndexedStack(
-            index: mainController.currentIndex.value,
-            children: const [
-              CustomerHomePage(),
-              ProductsPage(),
-              CartPage(),
-              OrdersPage(),
-              ProfilePage(),
-            ],
-          );
-        }),
+      child: PopScope(
+        canPop: false, // منع الخروج التلقائي
+        onPopInvoked: (bool didPop) {
+          if (didPop) return; // إذا حدث pop بالفعل، لا تفعل شيء
 
-        /// شريط التنقل السفلي المحسّن مع أنيميشن
-        bottomNavigationBar: Obx(() {
-          return Container(
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.shadowColor.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, -5),
-                  spreadRadius: 0,
-                ),
+          final mainController = Get.find<MainController>();
+          final shouldExit = !mainController.backToPreviousTab();
+
+          debugPrint('[MainPage] onPopInvoked | shouldExit=$shouldExit | currentIndex=${mainController.currentIndex.value}');
+
+          if (shouldExit) {
+            // نحن في الصفحة الرئيسية، اخرج من التطبيق
+            Get.back();
+          }
+        },
+        child: Scaffold(
+          body: Obx(() {
+            return IndexedStack(
+              index: mainController.currentIndex.value,
+              children: const [
+                CustomerHomePage(),
+                ProductsPage(),
+                CartPage(),
+                OrdersPage(),
+                ProfilePage(),
               ],
-            ),
-            child: SafeArea(
-              child: Container(
-                height: 60,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildNavItem(
-                      index: 0,
-                      icon: Icons.home_outlined,
-                      activeIcon: Icons.home_rounded,
-                      label: 'الرئيسية',
-                      currentIndex: mainController.currentIndex.value,
-                      onTap: () => mainController.onNavTap(0),
-                    ),
-                    _buildNavItem(
-                      index: 1,
-                      icon: Icons.grid_view_outlined,
-                      activeIcon: Icons.grid_view_rounded,
-                      label: 'المنتجات',
-                      currentIndex: mainController.currentIndex.value,
-                      onTap: () => mainController.onNavTap(1),
-                    ),
-                    _buildNavItemWithBadge(
-                      index: 2,
-                      icon: Icons.shopping_cart_outlined,
-                      activeIcon: Icons.shopping_cart_rounded,
-                      label: 'السلة',
-                      currentIndex: mainController.currentIndex.value,
-                      badgeCount: cartController.itemCount,
-                      onTap: () => mainController.onNavTap(2),
-                    ),
-                    _buildNavItem(
-                      index: 3,
-                      icon: Icons.receipt_long_outlined,
-                      activeIcon: Icons.receipt_long_rounded,
-                      label: 'الطلبات',
-                      currentIndex: mainController.currentIndex.value,
-                      onTap: () => mainController.onNavTap(3),
-                    ),
-                    _buildNavItem(
-                      index: 4,
-                      icon: Icons.person_outline_rounded,
-                      activeIcon: Icons.person_rounded,
-                      label: 'الحساب',
-                      currentIndex: mainController.currentIndex.value,
-                      onTap: () => mainController.onNavTap(4),
-                    ),
-                  ],
+            );
+          }),
+
+          /// شريط التنقل السفلي مع Badge للسلة
+          bottomNavigationBar: Obx(() {
+            return Container(
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.shadowColor.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, -5),
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                child: Container(
+                  height: 60,
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildNavItem(
+                        index: 0,
+                        icon: Icons.home_outlined,
+                        activeIcon: Icons.home_rounded,
+                        label: 'الرئيسية',
+                        currentIndex: mainController.currentIndex.value,
+                        onTap: () => mainController.onNavTap(0),
+                      ),
+                      _buildNavItem(
+                        index: 1,
+                        icon: Icons.grid_view_outlined,
+                        activeIcon: Icons.grid_view_rounded,
+                        label: 'المنتجات',
+                        currentIndex: mainController.currentIndex.value,
+                        onTap: () => mainController.onNavTap(1),
+                      ),
+                      _buildNavItemWithBadge(
+                        index: 2,
+                        icon: Icons.shopping_cart_outlined,
+                        activeIcon: Icons.shopping_cart_rounded,
+                        label: 'السلة',
+                        currentIndex: mainController.currentIndex.value,
+                        badgeCount: cartController.itemCount,
+                        onTap: () => mainController.onNavTap(2),
+                      ),
+                      _buildNavItem(
+                        index: 3,
+                        icon: Icons.receipt_long_outlined,
+                        activeIcon: Icons.receipt_long_rounded,
+                        label: 'الطلبات',
+                        currentIndex: mainController.currentIndex.value,
+                        onTap: () => mainController.onNavTap(3),
+                      ),
+                      _buildNavItem(
+                        index: 4,
+                        icon: Icons.person_outline_rounded,
+                        activeIcon: Icons.person_rounded,
+                        label: 'الحساب',
+                        currentIndex: mainController.currentIndex.value,
+                        onTap: () => mainController.onNavTap(4),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        }),
+            );
+          }),
+        ),
       ),
     );
   }
@@ -178,7 +198,7 @@ class MainPage extends StatelessWidget {
     );
   }
 
-  /// بناء عنصر التنقل مع Badge (للسلة) مع أنيميشن متقدم
+  /// بناء عنصر التنقل مع Badge (للسلة) مع أنيميشن
   Widget _buildNavItemWithBadge({
     required int index,
     required IconData icon,
@@ -222,7 +242,7 @@ class MainPage extends StatelessWidget {
                     ),
                   ),
 
-                  /// Badge مع أنيميشن متطور
+                  /// Badge
                   if (badgeCount > 0)
                     Positioned(
                       right: 2,
@@ -233,13 +253,10 @@ class MainPage extends StatelessWidget {
                         scale: 1.0,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: AppColors.error,
                             borderRadius: BorderRadius.circular(10),
-
                           ),
                           constraints: const BoxConstraints(
                             minWidth: 10,
@@ -262,7 +279,7 @@ class MainPage extends StatelessWidget {
               ),
               const SizedBox(height: 4),
 
-              /// النص مع أنيميشن
+              /// النص
               AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 200),
                 style: TextStyle(
@@ -298,29 +315,24 @@ class CustomerHomePage extends StatelessWidget {
         child: CustomScrollView(
           controller: controller.homeScrollController,
           slivers: [
-            /// شريط التطبيق العلوي مع الشعار والإجراءات
             _buildSliverAppBar(),
-
-            /// البانرات الإعلانية
             SliverToBoxAdapter(
               child: GetBuilder<BannerController>(
                 init: BannerController(),
                 builder: (bannerController) => Column(
-                  children: [
-                    const SizedBox(height: 16),
+                  children: const [
+                    SizedBox(height: 16),
                     BannerCarousel(
                       height: 200,
                       autoPlay: true,
-                      autoPlayInterval: const Duration(seconds: 4),
+                      autoPlayInterval: Duration(seconds: 4),
                       showDots: true,
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                   ],
                 ),
               ),
             ),
-
-            /// الفئات الرئيسية
             SliverToBoxAdapter(
               child: GetBuilder<CategoryController>(
                 init: CategoryController(),
@@ -328,7 +340,6 @@ class CustomerHomePage extends StatelessWidget {
                   if (categoryController.isLoading) {
                     return _buildCategoriesShimmer();
                   }
-
                   if (categoryController.categories.isEmpty) {
                     return const EmptyStateWidget(
                       icon: Icons.category_outlined,
@@ -336,13 +347,10 @@ class CustomerHomePage extends StatelessWidget {
                       message: 'لم يتم العثور على أي فئات',
                     );
                   }
-
                   return _buildCategoriesSection(categoryController.categories);
                 }),
               ),
             ),
-
-            /// المنتجات المميزة
             SliverToBoxAdapter(
               child: Obx(() {
                 if (controller.isLoading) {
@@ -352,12 +360,10 @@ class CustomerHomePage extends StatelessWidget {
                   title: 'المنتجات المميزة',
                   icon: Icons.star_rounded,
                   products: controller.featuredProducts,
-                  onSeeAll: () => _navigateToProducts(1), // تبويبة المميزة
+                  onSeeAll: () => _navigateToProducts(1),
                 );
               }),
             ),
-
-            /// العروض الخاصة
             SliverToBoxAdapter(
               child: Obx(() {
                 if (controller.isLoading) {
@@ -367,12 +373,10 @@ class CustomerHomePage extends StatelessWidget {
                   title: 'عروض خاصة',
                   icon: Icons.local_offer_rounded,
                   products: controller.onSaleProducts,
-                  onSeeAll: () => _navigateToProducts(2), // تبويبة العروض
+                  onSeeAll: () => _navigateToProducts(2),
                 );
               }),
             ),
-
-            /// أحدث المنتجات
             SliverToBoxAdapter(
               child: Obx(() {
                 if (controller.isLoading) {
@@ -382,12 +386,10 @@ class CustomerHomePage extends StatelessWidget {
                   title: 'أحدث المنتجات',
                   icon: Icons.new_releases_rounded,
                   products: controller.recentProducts,
-                  onSeeAll: () => _navigateToProducts(0), // تبويبة الكل
+                  onSeeAll: () => _navigateToProducts(0),
                 );
               }),
             ),
-
-            /// مساحة سفلية للتنقل
             const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
         ),
@@ -419,15 +421,13 @@ class CustomerHomePage extends StatelessWidget {
         uiController.changeTab(initialTab);
         productController.switchToTab(targetTab);
       } catch (e) {
-        print('خطأ في التنقل إلى صفحة المنتجات: $e');
-
+        // إذا لم تكن الـ Controllers مسجلة
         if (!Get.isRegistered<ProductController>()) {
           Get.put(ProductController());
         }
         if (!Get.isRegistered<ProductsUIController>()) {
           Get.put(ProductsUIController());
         }
-
         final productController = Get.find<ProductController>();
         final uiController = Get.find<ProductsUIController>();
 
@@ -442,14 +442,12 @@ class CustomerHomePage extends StatelessWidget {
           default:
             targetTab = ProductTab.all;
         }
-
         uiController.changeTab(initialTab);
         productController.switchToTab(targetTab);
       }
     });
   }
 
-  /// بناء شريط التطبيق العلوي
   Widget _buildSliverAppBar() {
     return SliverAppBar(
       floating: true,
@@ -472,7 +470,7 @@ class CustomerHomePage extends StatelessWidget {
       actions: [
         IconButton(
           icon: const Icon(Icons.search, color: AppColors.textPrimary),
-          onPressed: () => Get.to(SearchPage()),
+          onPressed: () => Get.to(const SearchPage()),
         ),
         IconButton(
           icon: const Icon(Icons.favorite_border, color: AppColors.textPrimary),
@@ -489,7 +487,6 @@ class CustomerHomePage extends StatelessWidget {
     );
   }
 
-  /// بناء قسم الفئات الرئيسية
   Widget _buildCategoriesSection(List<Category> categories) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -515,8 +512,6 @@ class CustomerHomePage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-
-        /// قائمة الفئات (أفقية)
         SizedBox(
           height: 120,
           child: ListView.builder(
@@ -538,7 +533,6 @@ class CustomerHomePage extends StatelessWidget {
                   margin: const EdgeInsets.only(left: 12),
                   child: Column(
                     children: [
-                      /// صورة الفئة
                       Container(
                         width: 64,
                         height: 64,
@@ -552,38 +546,34 @@ class CustomerHomePage extends StatelessWidget {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child:
-                              category.image != null &&
-                                  category.image!.isNotEmpty
+                          child: (category.image != null &&
+                              category.image!.isNotEmpty)
                               ? CachedNetworkImage(
-                                  imageUrl: HelperMethod.getImageUrl(
-                                    category.image!,
-                                  ),
-                                  fit: BoxFit.cover,
-                                  placeholder: (context, url) => const Center(
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        AppColors.primary,
-                                      ),
-                                    ),
-                                  ),
-                                  errorWidget: (context, url, error) =>
-                                      const Icon(
-                                        Icons.broken_image,
-                                        color: AppColors.grey,
-                                      ),
-                                )
+                            imageUrl:
+                            HelperMethod.getImageUrl(category.image!),
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => const Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                AlwaysStoppedAnimation<Color>(
+                                    AppColors.primary),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) =>
+                            const Icon(
+                              Icons.broken_image,
+                              color: AppColors.grey,
+                            ),
+                          )
                               : const Icon(
-                                  Icons.category,
-                                  color: AppColors.white,
-                                  size: 28,
-                                ),
+                            Icons.category,
+                            color: AppColors.white,
+                            size: 28,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 6),
-
-                      /// اسم الفئة
                       Text(
                         category.displayName,
                         maxLines: 2,
@@ -606,16 +596,13 @@ class CustomerHomePage extends StatelessWidget {
     );
   }
 
-  /// بناء قسم المنتجات مع زر عرض الكل
   Widget _buildProductSection({
     required String title,
     required IconData icon,
     required List<Product> products,
     required VoidCallback onSeeAll,
   }) {
-    if (products.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    if (products.isEmpty) return const SizedBox.shrink();
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 16),
@@ -675,7 +662,6 @@ class CustomerHomePage extends StatelessWidget {
     );
   }
 
-  /// مؤثر التحميل للفئات (Shimmer)
   Widget _buildCategoriesShimmer() {
     return Shimmer.fromColors(
       baseColor: AppColors.lightGrey,
@@ -699,7 +685,6 @@ class CustomerHomePage extends StatelessWidget {
     );
   }
 
-  /// مؤثر التحميل للمنتجات (Shimmer)
   Widget _buildProductsShimmer() {
     return Shimmer.fromColors(
       baseColor: AppColors.lightGrey,

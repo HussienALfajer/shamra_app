@@ -38,9 +38,9 @@ class CategoryService {
 
   // Get category by ID
   static Future<Category> getCategoryById(
-    String categoryId, {
-    bool withChildren = false,
-  }) async {
+      String categoryId, {
+        bool withChildren = false,
+      }) async {
     try {
       final response = await DioService.get(
         '${ApiConstants.categories}/$categoryId',
@@ -55,9 +55,9 @@ class CategoryService {
 
   // Get category by slug
   static Future<Category> getCategoryBySlug(
-    String slug, {
-    bool withChildren = false,
-  }) async {
+      String slug, {
+        bool withChildren = false,
+      }) async {
     try {
       final response = await DioService.get(
         '${ApiConstants.categories}/slug/$slug',

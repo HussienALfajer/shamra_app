@@ -622,7 +622,13 @@ class _ProfilePageState extends State<ProfilePage> {
       children: [
         ShamraButton(
           text: 'تغيير كلمة المرور',
-          onPressed: () => Get.toNamed('/change-password'),
+          onPressed: () => Get.toNamed(
+            Routes.otp,
+            arguments: {
+              'phone': '+963 9X XXX XXXX',
+              'flow': 'reset',
+            },
+          ),
           icon: Icons.lock_outlined,
           isOutlined: true,
           width: double.infinity,

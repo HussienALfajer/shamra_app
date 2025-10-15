@@ -34,10 +34,10 @@ class ProductRepository {
   }) async {
     try {
       return await ProductService.getProductsByCategory(
-        categoryId: categoryId,
-        page: page,
-        limit: limit,
-        search: search
+          categoryId: categoryId,
+          page: page,
+          limit: limit,
+          search: search
       );
     } catch (e) {
       rethrow;

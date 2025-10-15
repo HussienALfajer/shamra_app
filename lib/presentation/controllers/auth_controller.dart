@@ -12,15 +12,15 @@ class AuthController extends GetxController {
 
   final Rx<User?> _currentUser = Rx<User?>(null);
   Rx<User?> get currentUserRx => _currentUser;
+
   final RxBool _isLoading = false.obs;
   final RxBool _isLoggedIn = false.obs;
   final RxString _errorMessage = ''.obs;
   final RxBool isPasswordVisible = false.obs;
-  final Rx<Map<String, dynamic>?> _merchantRequest = Rx<Map<String, dynamic>?>(null);
 
+  final Rx<Map<String, dynamic>?> _merchantRequest = Rx<Map<String, dynamic>?>(null);
   Map<String, dynamic>? get merchantRequest => _merchantRequest.value;
 
-  final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
   User? get currentUser => _currentUser.value;
@@ -37,7 +37,6 @@ class AuthController extends GetxController {
 
   @override
   void onClose() {
-    emailController.dispose();
     passwordController.dispose();
     super.onClose();
   }
@@ -47,13 +46,14 @@ class AuthController extends GetxController {
     _currentUser.value = _authRepository.getCurrentUser();
   }
 
-  Future<bool> login(String email, String password) async {
+  /// Login with phone (E.164) + password
+  Future<bool> login(String phoneNumber, String password) async {
     try {
       _isLoading.value = true;
       _errorMessage.value = '';
 
       final response = await _authRepository.login(
-        email: email,
+        phoneNumber: phoneNumber,
         password: password,
       );
 
@@ -64,7 +64,7 @@ class AuthController extends GetxController {
         try {
           final appController = Get.find<AppController>();
           appController.recheckAuthStatus();
-        } catch (e) {
+        } catch (_) {
           Get.offAllNamed(Routes.branchSelection);
         }
 
@@ -74,9 +74,7 @@ class AuthController extends GetxController {
           type: SnackBarType.success,
         );
 
-        emailController.clear();
         passwordController.clear();
-
         return true;
       }
 
@@ -94,12 +92,13 @@ class AuthController extends GetxController {
     }
   }
 
+  /// Register without email; phoneNumber is REQUIRED
   Future<bool> register({
     required String firstName,
     required String lastName,
-    required String email,
     required String password,
-    String? phoneNumber,
+    required String phoneNumber, // إلزامي
+    required dynamic branch,
   }) async {
     try {
       _isLoading.value = true;
@@ -108,21 +107,14 @@ class AuthController extends GetxController {
       final response = await _authRepository.register(
         firstName: firstName,
         lastName: lastName,
-        email: email,
         password: password,
         phoneNumber: phoneNumber,
+        branchId: branch.id,
       );
 
       if (response.data.user != null) {
         _currentUser.value = User.fromJson(response.data.user.toJson());
         _isLoggedIn.value = true;
-
-        try {
-          final appController = Get.find<AppController>();
-          appController.recheckAuthStatus();
-        } catch (e) {
-          Get.offAllNamed(Routes.branchSelection);
-        }
 
         ShamraSnackBar.show(
           context: Get.context!,
@@ -146,13 +138,52 @@ class AuthController extends GetxController {
     }
   }
 
+
+  Future<bool> verifyPhoneWithOtp({
+    required String phoneNumber,
+    required String otp,
+  }) async {
+    try {
+      _isLoading.value = true;
+      _errorMessage.value = '';
+
+      final res = await _authRepository.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        otp: otp,
+      );
+
+      _currentUser.value = res.data.user;
+      _isLoggedIn.value = true;
+
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'تم التحقق من الرقم بنجاح ✅',
+        type: SnackBarType.success,
+      );
+
+      // ✅ توجيه مركزي بعد التحقق
+      Get.offAllNamed(Routes.main);
+
+      return true;
+    } catch (e) {
+      _errorMessage.value = e.toString();
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'فشل التحقق: ${e.toString()}',
+        type: SnackBarType.error,
+      );
+      return false;
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
   Future<void> getProfile() async {
     try {
       _isLoading.value = true;
       final user = await _authRepository.getProfile();
       _currentUser.value = user;
-      update(); // لتحديث GetBuilder widgets
-
+      update();
     } catch (e) {
       _errorMessage.value = e.toString();
     } finally {
@@ -242,7 +273,7 @@ class AuthController extends GetxController {
       try {
         final appController = Get.find<AppController>();
         await appController.logout();
-      } catch (e) {
+      } catch (_) {
         await StorageService.clearAll();
         Get.offAllNamed(Routes.welcome);
       }
@@ -257,7 +288,7 @@ class AuthController extends GetxController {
       try {
         final appController = Get.find<AppController>();
         await appController.logout();
-      } catch (e2) {
+      } catch (_) {
         await StorageService.clearAll();
         Get.offAllNamed(Routes.welcome);
       }
@@ -274,6 +305,31 @@ class AuthController extends GetxController {
     _errorMessage.value = '';
   }
 
+  Future<bool> selectBranchSilent(String branchId) async {
+    try {
+      _isLoading.value = true;
+      final response = await _authRepository.selectBranch(branchId: branchId);
+
+      if (response.data.user != null) {
+        final updatedUser = User.fromJson(response.data.user.toJson());
+        _currentUser.value = updatedUser;
+
+        await StorageService.saveUserData(updatedUser.toJson());
+        await StorageService.saveBranchId(branchId);
+
+        update();
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      _errorMessage.value = e.toString();
+      return false;
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
   Future<bool> selectBranch(String branchId) async {
     try {
       _isLoading.value = true;
@@ -286,13 +342,12 @@ class AuthController extends GetxController {
         await StorageService.saveUserData(updatedUser.toJson());
         await StorageService.saveBranchId(branchId);
 
-        // إعلام الواجهات
         update();
 
         try {
           final appController = Get.find<AppController>();
           appController.recheckAuthStatus();
-        } catch (e) {
+        } catch (_) {
           Get.offAllNamed(Routes.main);
         }
 
@@ -371,16 +426,11 @@ class AuthController extends GetxController {
     _currentUser.value = user;
   }
 
-  bool isValidEmail(String email) {
-    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
-  }
-
   bool isValidPassword(String password) {
     return password.length >= 6;
   }
 
   void resetForm() {
-    emailController.clear();
     passwordController.clear();
     isPasswordVisible.value = false;
     _errorMessage.value = '';
@@ -393,9 +443,7 @@ class AuthController extends GetxController {
   }
 
   String? get savedBranchId => StorageService.getBranchId();
-
   bool get hasBranchSelected => savedBranchId != null;
-
 
   Future<void> reloadFromStorage() async {
     final data = StorageService.getUserData();
@@ -404,5 +452,4 @@ class AuthController extends GetxController {
       update();
     }
   }
-
 }

@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
+
 import '../../../core/constants/colors.dart';
-import '../../controllers/auth_controller.dart';
-import '../../widgets/common_widgets.dart';
+import '../../../data/models/branch.dart';
 import '../../../routes/app_routes.dart';
+import '../../controllers/auth_controller.dart';
+import '../../controllers/branch_controller.dart';
+import '../../widgets/common_widgets.dart';
 
-
+/// Register Page (UI only)
+/// - No email field (phone is mandatory)
+/// - Uses IntlPhoneField for country picker + flags + E.164 phone
+/// - Caches selected Branch pre-auth; server selection happens post-register
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -13,25 +20,29 @@ class RegisterPage extends StatefulWidget {
   State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage>
-    with TickerProviderStateMixin {
-  // مفاتيح وحالات
+class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMixin {
+  // Form
   final _formKey = GlobalKey<FormState>();
 
-  // Controllers للحقول
+  // Field controllers
   final _firstNameController = TextEditingController();
-  final _lastNameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _lastNameController  = TextEditingController();
+  final _passwordController  = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  // حالات الحقول
+  // Phone (E.164)
+  String? _phoneE164;
+  String _initialCountryCode = 'SY'; // 'NL' لو بدك هولندا افتراضيًا
+
+  // Field states
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   bool _acceptTerms = false;
 
-  // Animation
+  // Branch selection
+  Branch? _selectedBranch;
+
+  // Animations
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -39,8 +50,11 @@ class _RegisterPageState extends State<RegisterPage>
   @override
   void initState() {
     super.initState();
+// داخل build:
+    final branchCtrl = Get.isRegistered<BranchController>()
+        ? Get.find<BranchController>()
+        : Get.put(BranchController(), permanent: true);
 
-    // إعداد الأنيميشن
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
@@ -62,11 +76,8 @@ class _RegisterPageState extends State<RegisterPage>
 
   @override
   void dispose() {
-    // التخلص من الـ Controllers لتفادي تسريب الذاكرة
     _firstNameController.dispose();
     _lastNameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _animationController.dispose();
@@ -75,8 +86,10 @@ class _RegisterPageState extends State<RegisterPage>
 
   @override
   Widget build(BuildContext context) {
+    final branchCtrl = Get.find<BranchController>();
+
     return Directionality(
-      textDirection: TextDirection.rtl, // دعم اللغة العربية
+      textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: SafeArea(
@@ -84,7 +97,7 @@ class _RegisterPageState extends State<RegisterPage>
             builder: (controller) {
               return Stack(
                 children: [
-                  /// خلفية ديكورية (دوائر ملونة)
+                  // Decorative background
                   Positioned(
                     left: -170,
                     top: -225,
@@ -110,7 +123,7 @@ class _RegisterPageState extends State<RegisterPage>
                     ),
                   ),
 
-                  /// المحتوى الرئيسي
+                  // Content
                   SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     child: Padding(
@@ -125,12 +138,10 @@ class _RegisterPageState extends State<RegisterPage>
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 const SizedBox(height: 20),
-
-                                /// رأس الصفحة (الشعار + العنوان)
                                 _buildHeader(),
                                 const SizedBox(height: 40),
 
-                                /// الاسم الأول واسم العائلة
+                                // First/Last name
                                 Row(
                                   children: [
                                     Expanded(
@@ -139,17 +150,12 @@ class _RegisterPageState extends State<RegisterPage>
                                         hintText: 'أدخل اسمك الأول',
                                         icon: Icons.person_outline,
                                         controller: _firstNameController,
-                                        textCapitalization:
-                                        TextCapitalization.words,
+                                        textCapitalization: TextCapitalization.words,
                                         isRequired: true,
                                         isSecondary: true,
                                         validator: (value) {
-                                          if (value == null || value.isEmpty) {
-                                            return 'مطلوب';
-                                          }
-                                          if (value.length < 2) {
-                                            return 'قصير جداً';
-                                          }
+                                          if (value == null || value.isEmpty) return 'مطلوب';
+                                          if (value.length < 2) return 'قصير جداً';
                                           return null;
                                         },
                                       ),
@@ -161,17 +167,12 @@ class _RegisterPageState extends State<RegisterPage>
                                         hintText: 'أدخل اسم العائلة',
                                         icon: Icons.person_outline,
                                         controller: _lastNameController,
-                                        textCapitalization:
-                                        TextCapitalization.words,
+                                        textCapitalization: TextCapitalization.words,
                                         isRequired: true,
                                         isSecondary: true,
                                         validator: (value) {
-                                          if (value == null || value.isEmpty) {
-                                            return 'مطلوب';
-                                          }
-                                          if (value.length < 2) {
-                                            return 'قصير جداً';
-                                          }
+                                          if (value == null || value.isEmpty) return 'مطلوب';
+                                          if (value.length < 2) return 'قصير جداً';
                                           return null;
                                         },
                                       ),
@@ -181,49 +182,125 @@ class _RegisterPageState extends State<RegisterPage>
 
                                 const SizedBox(height: 20),
 
-                                /// البريد الإلكتروني
-                                ShamraTextField(
-                                  label: 'البريد الإلكتروني',
-                                  hintText: 'أدخل بريدك الإلكتروني',
-                                  icon: Icons.email_outlined,
-                                  controller: _emailController,
-                                  keyboardType: TextInputType.emailAddress,
-                                  isRequired: true,
-                                  isSecondary: true,
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'يرجى إدخال البريد الإلكتروني';
-                                    }
-                                    if (!GetUtils.isEmail(value)) {
-                                      return 'يرجى إدخال بريد إلكتروني صحيح';
-                                    }
-                                    return null;
-                                  },
+                                // Phone (mandatory)
+                                Directionality(
+                                  textDirection: TextDirection.ltr,
+                                  child: IntlPhoneField(
+                                    decoration: const InputDecoration(
+                                      labelText: 'رقم الهاتف',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    initialCountryCode: _initialCountryCode,
+                                    showCountryFlag: true,
+                                    showDropdownIcon: true,
+                                    dropdownIconPosition: IconPosition.trailing,
+                                    disableLengthCheck: true,
+                                    onChanged: (phone) {
+                                      _phoneE164 = phone.completeNumber; // +9639xxxxxx
+                                    },
+                                    onCountryChanged: (country) {
+                                      _initialCountryCode = country.code;
+                                    },
+                                    validator: (phone) {
+                                      if (phone == null || phone.number.isEmpty) {
+                                        return 'رقم الهاتف مطلوب';
+                                      }
+                                      if (phone.number.length < 8) {
+                                        return 'يرجى إدخال رقم هاتف صحيح';
+                                      }
+                                      return null;
+                                    },
+                                  ),
                                 ),
 
                                 const SizedBox(height: 20),
 
-                                /// رقم الهاتف (اختياري)
-                                ShamraTextField(
-                                  label: 'رقم الهاتف',
-                                  hintText: 'أدخل رقم هاتفك',
-                                  icon: Icons.phone_outlined,
-                                  controller: _phoneController,
-                                  keyboardType: TextInputType.phone,
-                                  isSecondary: true,
-                                  validator: (value) {
-                                    if (value != null &&
-                                        value.isNotEmpty &&
-                                        value.length < 8) {
-                                      return 'يرجى إدخال رقم هاتف صحيح';
-                                    }
-                                    return null;
-                                  },
-                                ),
+                                // Branch dropdown — caches selection immediately
+                                Obx(() {
+                                  final branchCtrl = Get.find<BranchController>();
+
+                                  if (branchCtrl.isLoading) {
+                                    return Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 8),
+                                        child: SizedBox(
+                                          width: 28,
+                                          height: 28,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppColors.primaryDark,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+
+                                  if (branchCtrl.errorMessage.isNotEmpty) {
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        Text(
+                                          branchCtrl.errorMessage,
+                                          style: const TextStyle(color: Colors.red, fontSize: 13),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        OutlinedButton.icon(
+                                          onPressed: branchCtrl.refreshBranches,
+                                          icon: const Icon(Icons.refresh),
+                                          label: const Text('إعادة المحاولة'),
+                                        ),
+                                      ],
+                                    );
+                                  }
+
+                                  final items = branchCtrl.branches
+                                      .map(
+                                        (b) => DropdownMenuItem<Branch>(
+                                      value: b,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (b.isMainBranch)
+                                            const Padding(
+                                              padding: EdgeInsetsDirectional.only(end: 6),
+                                              child: Icon(
+                                                Icons.star_rounded,
+                                                size: 18,
+                                                color: AppColors.textSecondary,
+                                              ),
+                                            ),
+                                          Flexible(
+                                            child: Text(
+                                              b.displayName,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                      .toList();
+
+                                  return DropdownButtonFormField<Branch>(
+                                    value: _selectedBranch,
+                                    items: items,
+                                    onChanged: (b) async {
+                                      setState(() => _selectedBranch = b);
+                                      if (b != null) {
+                                        await branchCtrl.cacheSelectedBranch(b);
+                                      }
+                                    },
+                                    validator: (b) => b == null ? 'الرجاء اختيار الفرع' : null,
+                                    decoration: const InputDecoration(
+                                      labelText: 'اختر الفرع',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                  );
+                                }),
 
                                 const SizedBox(height: 20),
 
-                                /// كلمة المرور
+                                // Password
                                 ShamraTextField(
                                   label: 'كلمة المرور',
                                   hintText: 'أنشئ كلمة مرور قوية',
@@ -233,12 +310,7 @@ class _RegisterPageState extends State<RegisterPage>
                                   isRequired: true,
                                   isSecondary: true,
                                   suffixIcon: IconButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _isPasswordVisible =
-                                        !_isPasswordVisible;
-                                      });
-                                    },
+                                    onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
                                     icon: Icon(
                                       _isPasswordVisible
                                           ? Icons.visibility_off_outlined
@@ -259,7 +331,7 @@ class _RegisterPageState extends State<RegisterPage>
 
                                 const SizedBox(height: 20),
 
-                                /// تأكيد كلمة المرور
+                                // Confirm password
                                 ShamraTextField(
                                   label: 'تأكيد كلمة المرور',
                                   hintText: 'أعد إدخال كلمة المرور',
@@ -269,12 +341,7 @@ class _RegisterPageState extends State<RegisterPage>
                                   isRequired: true,
                                   isSecondary: true,
                                   suffixIcon: IconButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _isConfirmPasswordVisible =
-                                        !_isConfirmPasswordVisible;
-                                      });
-                                    },
+                                    onPressed: () => setState(() => _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
                                     icon: Icon(
                                       _isConfirmPasswordVisible
                                           ? Icons.visibility_off_outlined
@@ -295,20 +362,18 @@ class _RegisterPageState extends State<RegisterPage>
 
                                 const SizedBox(height: 24),
 
-                                /// مربع اختيار الموافقة على الشروط
+                                // Terms checkbox
                                 _buildTermsCheckbox(),
 
                                 const SizedBox(height: 32),
 
-                                /// زر إنشاء حساب
+                                // Register button
                                 Obx(() {
+                                  final isBusy = Get.find<AuthController>().isLoading;
                                   return ShamraButton(
                                     text: 'إنشاء حساب',
-                                    onPressed: (controller.isLoading ||
-                                        !_acceptTerms)
-                                        ? null
-                                        : _handleRegister,
-                                    isLoading: controller.isLoading,
+                                    onPressed: (isBusy || !_acceptTerms) ? null : _handleRegister,
+                                    isLoading: isBusy,
                                     isSecondary: true,
                                     icon: Icons.person_add_rounded,
                                   );
@@ -316,7 +381,7 @@ class _RegisterPageState extends State<RegisterPage>
 
                                 const SizedBox(height: 32),
 
-                                /// رابط تسجيل الدخول
+                                // Go to login
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
@@ -328,14 +393,8 @@ class _RegisterPageState extends State<RegisterPage>
                                       ),
                                     ),
                                     TextButton(
-                                      onPressed: () {
-                                        Get.toNamed(Routes.login);
-                                      },
-                                      style: TextButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 4,
-                                        ),
-                                      ),
+                                      onPressed: () => Get.toNamed(Routes.login),
+                                      style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)),
                                       child: Text(
                                         'تسجيل دخول',
                                         style: TextStyle(
@@ -365,7 +424,6 @@ class _RegisterPageState extends State<RegisterPage>
     );
   }
 
-  /// رأس الصفحة: شعار + عنوان + وصف
   Widget _buildHeader() {
     return Column(
       children: [
@@ -394,7 +452,6 @@ class _RegisterPageState extends State<RegisterPage>
     );
   }
 
-  /// مربع الموافقة على الشروط
   Widget _buildTermsCheckbox() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -404,16 +461,10 @@ class _RegisterPageState extends State<RegisterPage>
           height: 24,
           child: Checkbox(
             value: _acceptTerms,
-            onChanged: (value) {
-              setState(() {
-                _acceptTerms = value ?? false;
-              });
-            },
+            onChanged: (value) => setState(() => _acceptTerms = value ?? false),
             activeColor: AppColors.primaryDark,
             checkColor: AppColors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(4),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
           ),
         ),
         const SizedBox(width: 12),
@@ -421,11 +472,7 @@ class _RegisterPageState extends State<RegisterPage>
           child: RichText(
             textAlign: TextAlign.right,
             text: TextSpan(
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-                height: 1.4,
-              ),
+              style: TextStyle(fontSize: 14, color: AppColors.textSecondary, height: 1.4),
               children: [
                 const TextSpan(text: 'أوافق على '),
                 TextSpan(
@@ -453,45 +500,66 @@ class _RegisterPageState extends State<RegisterPage>
     );
   }
 
-  /// دالة تنفيذ التسجيل
-  void _handleRegister() async {
-    if (_formKey.currentState!.validate() && _acceptTerms) {
-      final authController = Get.find<AuthController>();
-
-      try {
-        final success = await authController.register(
-          firstName: _firstNameController.text.trim(),
-          lastName: _lastNameController.text.trim(),
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-          phoneNumber: _phoneController.text.trim().isEmpty
-              ? null
-              : _phoneController.text.trim(),
-        );
-
-        if (success) {
-          // ✅ نجاح
-          ShamraSnackBar.show(
-            context: context,
-            message: 'تم إنشاء الحساب بنجاح',
-            type: SnackBarType.success,
-          );
-          Get.offAllNamed(Routes.branchSelection);
-        }
-      } catch (e) {
-        // ❌ خطأ
-        ShamraSnackBar.show(
-          context: context,
-          message: 'حدث خطأ في إنشاء الحساب',
-          type: SnackBarType.error,
-        );
-      }
-    } else if (!_acceptTerms) {
-      // ❗ لم يقبل الشروط
+  Future<void> _handleRegister() async {
+    if (!_acceptTerms) {
       ShamraSnackBar.show(
         context: context,
         message: 'يرجى الموافقة على شروط الخدمة وسياسة الخصوصية',
         type: SnackBarType.warning,
+      );
+      return;
+    }
+
+    if (_formKey.currentState?.validate() != true) return;
+
+    if (_selectedBranch == null) {
+      ShamraSnackBar.show(
+        context: context,
+        message: 'الرجاء اختيار الفرع',
+        type: SnackBarType.warning,
+      );
+      return;
+    }
+
+    final phoneNumber = _phoneE164?.trim() ?? '';
+    if (phoneNumber.isEmpty) {
+      ShamraSnackBar.show(
+        context: context,
+        message: 'رقم الهاتف مطلوب',
+        type: SnackBarType.warning,
+      );
+      return;
+    }
+
+    try {
+      final authController = Get.find<AuthController>();
+      final success = await authController.register(
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        password: _passwordController.text,
+        phoneNumber: phoneNumber,
+        branch: _selectedBranch!,
+      );
+
+      if (success) {
+        await authController.selectBranchSilent(_selectedBranch!.id);
+
+        ShamraSnackBar.show(
+          context: context,
+          message: 'تم إنشاء الحساب بنجاح. سنرسل لك رمز التحقق',
+          type: SnackBarType.success,
+        );
+
+        Get.offAllNamed(
+          Routes.otp,
+          arguments: {'flow': 'register', 'phone': phoneNumber},
+        );
+      }
+    } catch (e) {
+      ShamraSnackBar.show(
+        context: context,
+        message: 'حدث خطأ في إنشاء الحساب',
+        type: SnackBarType.error,
       );
     }
   }

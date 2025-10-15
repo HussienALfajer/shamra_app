@@ -52,7 +52,7 @@ class Cart {
 
   void addItem(Product product, {int quantity = 1}) {
     final existingItemIndex = items.indexWhere(
-      (item) => item.product.id == product.id,
+          (item) => item.product.id == product.id,
     );
 
     if (existingItemIndex != -1) {

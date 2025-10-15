@@ -1,18 +1,16 @@
+// lib/core/services/storage_service.dart
 import 'package:get_storage/get_storage.dart';
 import '../constants/app_constants.dart';
 
+/// Lightweight wrapper over GetStorage for auth/session persistence.
 class StorageService {
-  static final storage = GetStorage();
+  static final GetStorage storage = GetStorage();
 
   static const String _branchAuthKey = 'branch_auth';
 
   // ========================== Token management ==========================
   static Future<void> saveToken(String token) async {
     await storage.write(AppConstants.tokenKey, token);
-  }
-
-  static Future<void> saveRefreshToken(String refreshToken) async {
-    await storage.write(AppConstants.refreshTokenKey, refreshToken);
   }
 
   static String? getToken() {
@@ -23,6 +21,19 @@ class StorageService {
     await storage.remove(AppConstants.tokenKey);
   }
 
+  static Future<void> saveRefreshToken(String refreshToken) async {
+    await storage.write(AppConstants.refreshTokenKey, refreshToken);
+  }
+
+  static String? getRefreshToken() {
+    return storage.read<String>(AppConstants.refreshTokenKey);
+  }
+
+  static Future<void> removeRefreshToken() async {
+    await storage.remove(AppConstants.refreshTokenKey);
+  }
+
+  // ========================== Branch & user ==========================
   static Future<void> saveBranchId(String branchId) async {
     await storage.write(AppConstants.branchIdKey, branchId);
   }
@@ -47,6 +58,7 @@ class StorageService {
     await storage.remove(AppConstants.userKey);
   }
 
+  // ========================== App prefs ==========================
   static Future<void> saveLanguage(String languageCode) async {
     await storage.write(AppConstants.languageKey, languageCode);
   }
@@ -63,7 +75,7 @@ class StorageService {
     return storage.read<String>(AppConstants.themeKey) ?? 'light';
   }
 
-
+  // ========================== Branch auth map ==========================
   static Future<void> saveBranchAuth(
       String branchId, {
         required String token,

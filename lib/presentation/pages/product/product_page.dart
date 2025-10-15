@@ -242,12 +242,6 @@ class ProductsPage extends StatelessWidget {
                     );
                   },
                 ),
-                const SizedBox(width: 0),
-                _buildActionButton(
-                  icon: Icons.notifications_outlined,
-                  hasNotification: true,
-                  onPressed: () => Get.toNamed(Routes.notifications),
-                ),
               ],
             ),
           ],

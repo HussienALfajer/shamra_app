@@ -25,8 +25,8 @@ class SubCategoryRepository {
 
   // Get sub-categories by category ID
   Future<List<SubCategory>> getSubCategoriesByCategory(
-    String categoryId,
-  ) async {
+      String categoryId,
+      ) async {
     try {
       return await SubCategoryService.getSubCategoriesByCategory(categoryId);
     } catch (e) {

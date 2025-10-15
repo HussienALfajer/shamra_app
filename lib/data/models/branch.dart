@@ -49,10 +49,10 @@ class Branch {
       totalOrders: json['totalOrders'] ?? 0,
       sortOrder: json['sortOrder'] ?? 0,
       createdAt:
-          DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
+      DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
           DateTime.now(),
       updatedAt:
-          DateTime.tryParse(json['updatedAt']?.toString() ?? '') ??
+      DateTime.tryParse(json['updatedAt']?.toString() ?? '') ??
           DateTime.now(),
     );
   }

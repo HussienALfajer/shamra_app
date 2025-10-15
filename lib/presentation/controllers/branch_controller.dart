@@ -4,11 +4,16 @@ import '../../data/models/branch.dart';
 import '../../data/repositories/branch_repository.dart';
 import '../widgets/common_widgets.dart';
 import 'auth_controller.dart';
+import '../../core/services/storage_service.dart';
 
+/// BranchController
+/// - Loads active branches
+/// - Handles selecting a branch (API) after auth
+/// - Provides a light-weight cache selection for pre-auth flows (e.g., Register)
 class BranchController extends GetxController {
   final BranchRepository _branchRepository = BranchRepository();
 
-  // Observables
+  // State
   final RxList<Branch> _branches = <Branch>[].obs;
   final RxBool _isLoading = false.obs;
   final RxBool _isSelecting = false.obs;
@@ -28,16 +33,18 @@ class BranchController extends GetxController {
     loadBranches();
   }
 
-  /// Load all active branches
+  /// Load all active branches from repository.
   Future<void> loadBranches() async {
     try {
       _isLoading.value = true;
       _errorMessage.value = '';
 
-      final branches = await _branchRepository.getActiveBranches();
-      _branches.value = branches;
+      final list = await _branchRepository.getActiveBranches();
+      _branches
+        ..clear()
+        ..addAll(list);
 
-      // Sort branches: main branch first, then by sortOrder
+      // Sort: main branch first, then by sortOrder.
       _branches.sort((a, b) {
         if (a.isMainBranch && !b.isMainBranch) return -1;
         if (!a.isMainBranch && b.isMainBranch) return 1;
@@ -50,7 +57,8 @@ class BranchController extends GetxController {
     }
   }
 
-  /// Select a branch using AuthController
+  /// Select a branch via API (requires user to be authenticated).
+  /// Mirrors the behavior used on the dedicated Branch Selection page.
   Future<void> selectBranch(Branch branch) async {
     try {
       _isSelecting.value = true;
@@ -58,9 +66,9 @@ class BranchController extends GetxController {
       _selectedBranch.value = branch;
 
       final authController = Get.find<AuthController>();
-      final success = await authController.selectBranch(branch.id);
+      final ok = await authController.selectBranch(branch.id);
 
-      if (!success) {
+      if (!ok) {
         _selectedBranch.value = null;
         _errorMessage.value = authController.errorMessage;
       }
@@ -68,61 +76,56 @@ class BranchController extends GetxController {
       _errorMessage.value = e.toString();
       _selectedBranch.value = null;
 
-      ShamraSnackBar.show(
-        context: Get.context!,
-        message: 'فشل في اختيار الفرع: ${e.toString()}',
-        type: SnackBarType.error,
-      );
+      if (Get.context != null) {
+        ShamraSnackBar.show(
+          context: Get.context!,
+          message: 'Branch selection failed: ${e.toString()}',
+          type: SnackBarType.error,
+        );
+      }
     } finally {
       _isSelecting.value = false;
     }
   }
 
-  /// Refresh branches list
-  Future<void> refreshBranches() async {
-    await loadBranches();
+  /// Cache-only selection (no API) for pre-auth flows (e.g., Register).
+  /// - Persists selected branch id into storage so Dio adds `x-branch-id` header.
+  /// - Keeps current selection state for UI.
+  Future<void> cacheSelectedBranch(Branch branch) async {
+    _selectedBranch.value = branch;
+    await StorageService.saveBranchId(branch.id);
   }
 
-  /// Clear error message
-  void clearError() {
-    _errorMessage.value = '';
-  }
+  Future<void> refreshBranches() async => loadBranches();
 
-  /// Reset selection state (يمكن استدعاؤها عند الحاجة من الصفحة بدل onClose)
+  void clearError() => _errorMessage.value = '';
+
   void resetSelection() {
     _selectedBranch.value = null;
     _isSelecting.value = false;
   }
 
-  /// Logout using AuthController
   void logout() {
     _showLogoutDialog();
   }
 
-  /// Show logout confirmation dialog
   void _showLogoutDialog() {
     Get.dialog(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           'تسجيل الخروج',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: Colors.black87,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black87),
         ),
         content: const Text(
           'هل تريد تسجيل الخروج والعودة لصفحة تسجيل الدخول؟',
           style: TextStyle(color: Colors.black54),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('إلغاء'),
-          ),
+          TextButton(onPressed: () => Get.back(), child: const Text('إلغاء')),
           ElevatedButton(
             onPressed: () {
-              Get.back(); // Close dialog first
+              Get.back();
               _performLogout();
             },
             style: ElevatedButton.styleFrom(
@@ -136,59 +139,42 @@ class BranchController extends GetxController {
     );
   }
 
-  /// Perform logout using AuthController
-  void _performLogout() async {
+  Future<void> _performLogout() async {
     try {
-      // لا تعدّل Rx أثناء التخلص من الصفحة
       _selectedBranch.value = null;
       _errorMessage.value = '';
-
       final authController = Get.find<AuthController>();
       await authController.logout();
     } catch (e) {
-      ShamraSnackBar.show(
-        context: Get.context!,
-        message: 'خطأ أثناء تسجيل الخروج: ${e.toString()}',
-        type: SnackBarType.error,
-      );
+      if (Get.context != null) {
+        ShamraSnackBar.show(
+          context: Get.context!,
+          message: 'Logout error: ${e.toString()}',
+          type: SnackBarType.error,
+        );
+      }
     }
   }
 
-  /// Get branch by ID
   Branch? getBranchById(String branchId) {
     try {
-      return _branches.firstWhere((branch) => branch.id == branchId);
-    } catch (e) {
+      return _branches.firstWhere((b) => b.id == branchId);
+    } catch (_) {
       return null;
     }
   }
 
-  /// Check if branch is selected
-  bool isBranchSelected(Branch branch) {
-    return _selectedBranch.value?.id == branch.id;
-  }
+  bool isBranchSelected(Branch branch) => _selectedBranch.value?.id == branch.id;
 
-  /// Get main branch
   Branch? get mainBranch {
     try {
-      return _branches.firstWhere((branch) => branch.isMainBranch);
-    } catch (e) {
+      return _branches.firstWhere((b) => b.isMainBranch);
+    } catch (_) {
       return null;
     }
   }
 
-  /// Get branches count
   int get branchesCount => _branches.length;
-
-  /// Check if has branches
   bool get hasBranches => _branches.isNotEmpty;
-
-  /// Check if has error
   bool get hasError => _errorMessage.value.isNotEmpty;
-
-  @override
-  void onClose() {
-
-    super.onClose();
-  }
 }

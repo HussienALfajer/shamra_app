@@ -1,21 +1,27 @@
-// API Constants
-class ApiConstants {
-  static const String baseUrl = 'http://62.171.153.198:3399/api/v1';
-  static const String storageUrl = 'http://62.171.153.198:3399';
+// lib/core/constants/app_constants.dart
 
-  // Endpoints
+/// API endpoints and base URLs used by the app.
+class ApiConstants {
+  static const String baseUrl = 'http://192.168.1.104:3000/api/v1';
+  static const String storageUrl = 'http://192.168.1.104:3000';
+
+  // Auth
   static const String login = '/auth/login';
   static const String register = '/auth/register';
-  static const String profile = '/users/profile/me';
   static const String logout = '/auth/logout';
+  static const String profile = '/users/profile/me';
   static const String selectBranch = '/auth/select-branch';
+  static const String refresh = '/auth/refresh'; // Added for token refresh
+
+  // Core resources
   static const String products = '/products';
   static const String categories = '/categories';
   static const String subCategories = '/sub-categories';
   static const String branches = '/branches';
   static const String customers = '/customers';
   static const String orders = '/orders';
-  // my orders
+
+  // My orders
   static const String myOrders = '/orders/my';
 
   // Product specific
@@ -32,7 +38,7 @@ class ApiConstants {
   static const String salesReport = '/reports/sales';
 }
 
-// App Constants
+/// App-level constants and storage keys.
 class AppConstants {
   static const String appName = 'Shamra Electronics';
   static const String appVersion = '1.0.0';
@@ -44,16 +50,14 @@ class AppConstants {
   static const String userKey = 'user_data';
   static const String branchIdKey = 'branch_id';
   static const String languageKey = 'app_language';
-  static const String themeKey = 'app_theme';
+  static const String themeKey = 'app_theme'; // kept for compatibility
 
   // Pagination
   static const int defaultPageSize = 20;
   static const int maxPageSize = 100;
 
   // Image placeholders
-  static const String productPlaceholder =
-      'assets/images/product_placeholder.png';
-  static const String avatarPlaceholder =
-      'assets/images/avatar_placeholder.png';
+  static const String productPlaceholder = 'assets/images/product_placeholder.png';
+  static const String avatarPlaceholder = 'assets/images/avatar_placeholder.png';
   static const String logoPath = 'assets/images/shamra_logo.png';
 }

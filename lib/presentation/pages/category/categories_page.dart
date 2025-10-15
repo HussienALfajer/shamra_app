@@ -64,39 +64,39 @@ class CategoriesPage extends StatelessWidget {
               color: AppColors.white,
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
               child:  TextField(
-                  controller: searchController,
-                  onChanged: onSearchChanged,
-                  textDirection: TextDirection.rtl,
-                  style: const TextStyle(fontSize: 16),
-                  decoration: InputDecoration(
-                    hintText: 'ابحث عن الفئات...',
-                    hintStyle: TextStyle(
-                      color: AppColors.textSecondary.withOpacity(0.7),
-                      fontSize: 16,
-                    ),
-                    prefixIcon: Icon(
-                      Icons.search,
+                controller: searchController,
+                onChanged: onSearchChanged,
+                textDirection: TextDirection.rtl,
+                style: const TextStyle(fontSize: 16),
+                decoration: InputDecoration(
+                  hintText: 'ابحث عن الفئات...',
+                  hintStyle: TextStyle(
+                    color: AppColors.textSecondary.withOpacity(0.7),
+                    fontSize: 16,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: AppColors.textSecondary.withOpacity(0.6),
+                    size: 22,
+                  ),
+                  suffixIcon: Obx(() => searchQuery.value.isNotEmpty
+                      ? IconButton(
+                    icon: Icon(
+                      Icons.clear,
                       color: AppColors.textSecondary.withOpacity(0.6),
                       size: 22,
                     ),
-                    suffixIcon: Obx(() => searchQuery.value.isNotEmpty
-                        ? IconButton(
-                      icon: Icon(
-                        Icons.clear,
-                        color: AppColors.textSecondary.withOpacity(0.6),
-                        size: 22,
-                      ),
-                      onPressed: clearSearch,
-                    )
-                        : const SizedBox.shrink()),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
+                    onPressed: clearSearch,
+                  )
+                      : const SizedBox.shrink()),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
                   ),
                 ),
               ),
+            ),
 
             // Categories content
             Expanded(

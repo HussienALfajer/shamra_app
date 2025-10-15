@@ -217,11 +217,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
             (subCategoryResult['products'] as List<Product>?)
                 ?.where(
                   (p) =>
-                      p.subCategoryId == product!.subCategoryId &&
-                      p.id != product!.id,
-                )
+              p.subCategoryId == product!.subCategoryId &&
+                  p.id != product!.id,
+            )
                 .toList() ??
-            [];
+                [];
         allProducts.addAll(subCategoryProducts);
       }
 
@@ -235,11 +235,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
             (categoryResult['products'] as List<Product>?)
                 ?.where(
                   (p) =>
-                      p.id != product!.id &&
-                      !allProducts.any((existing) => existing.id == p.id),
-                )
+              p.id != product!.id &&
+                  !allProducts.any((existing) => existing.id == p.id),
+            )
                 .toList() ??
-            [];
+                [];
         allProducts.addAll(categoryProducts);
       }
 
@@ -248,7 +248,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         final priceRangeProducts = await _getSimilarPriceProducts();
         allProducts.addAll(
           priceRangeProducts.where(
-            (p) => !allProducts.any((existing) => existing.id == p.id),
+                (p) => !allProducts.any((existing) => existing.id == p.id),
           ),
         );
       }
@@ -288,10 +288,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
       return products
           .where(
             (p) =>
-                p.id != product!.id &&
-                p.displayPrice >= minPrice &&
-                p.displayPrice <= maxPrice,
-          )
+        p.id != product!.id &&
+            p.displayPrice >= minPrice &&
+            p.displayPrice <= maxPrice,
+      )
           .toList();
     } catch (e) {
       return [];
@@ -329,7 +329,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
 
     // Similar price range (±30%)
     final priceDifference =
-        (compareProduct.displayPrice - product!.displayPrice).abs();
+    (compareProduct.displayPrice - product!.displayPrice).abs();
     final priceThreshold = product!.displayPrice * 0.3;
     if (priceDifference <= priceThreshold) {
       score += 20;
@@ -534,7 +534,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
             ],
           ),
           child: Obx(
-            () => IconButton(
+                () => IconButton(
               icon: Icon(
                 favController.isFavorite(product!.id)
                     ? Icons.favorite
@@ -1041,7 +1041,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
           const SizedBox(height: 16),
 
           ...product!.specifications!.entries.map(
-            (entry) => Container(
+                (entry) => Container(
               margin: const EdgeInsets.only(bottom: 12),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1270,9 +1270,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
           else if (similarProductsError.isNotEmpty)
             _buildSimilarProductsError()
           else if (similarProducts.isEmpty)
-            _buildNoSimilarProducts()
-          else
-            _buildSimilarProductsList(),
+              _buildNoSimilarProducts()
+            else
+              _buildSimilarProductsList(),
         ],
       ),
     );
@@ -1488,12 +1488,12 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                           onPressed: product!.inStock
                               ? () => cartController.addToCart(product!)
                               : () => ShamraSnackBar.show(
-                                  context: Get.context!,
-                                  message:
-                                      'المنتج ${product!.name} غير متوفر حاليًا، ولا يمكن إضافته إلى السلة.',
-                                  type: SnackBarType
-                                      .error, // الأفضل يكون error بدلاً من success
-                                ),
+                            context: Get.context!,
+                            message:
+                            'المنتج ${product!.name} غير متوفر حاليًا، ولا يمكن إضافته إلى السلة.',
+                            type: SnackBarType
+                                .error, // الأفضل يكون error بدلاً من success
+                          ),
                           isOutlined: true,
                           icon: Icons.add_shopping_cart_rounded,
                           height: 56,

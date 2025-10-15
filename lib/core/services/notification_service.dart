@@ -1,77 +1,149 @@
+// lib/core/services/notification_service.dart
+import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 
+/// FCM bootstrap with explicit streams:
+/// - onNotificationTap: emits messages that opened the app (terminated/background).
+/// - onForegroundMessage: emits messages received while the app is in foreground.
+/// UI is handled in pages/controllers, not here.
 class NotificationService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
 
-  /// Request notification permission
-  static Future<void> requestPermission() async {
-    NotificationSettings settings = await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-    print("✅ Notification Permission: ${settings.authorizationStatus}");
+  static final StreamController<RemoteMessage> _tapController =
+  StreamController<RemoteMessage>.broadcast();
+  static final StreamController<RemoteMessage> _foregroundController =
+  StreamController<RemoteMessage>.broadcast();
+
+  static Stream<RemoteMessage> get onNotificationTap => _tapController.stream;
+  static Stream<RemoteMessage> get onForegroundMessage =>
+      _foregroundController.stream;
+
+  /// Public initializer: requests permission, wires listeners, subscribes to topic.
+  static Future<void> initialize() async {
+    if (kDebugMode) debugPrint('🔔 Initializing Notification Service...');
+
+    await _requestPermission();
+    await _syncTokenAndTopic();
+
+    // App opened from terminated state via a notification tap.
+    _messaging.getInitialMessage().then((RemoteMessage? message) {
+      if (message != null) {
+        if (kDebugMode) debugPrint('🚀 [TERMINATED] Opened by notification');
+        // Delay ensures GetX is ready.
+        Future.delayed(const Duration(milliseconds: 600), () {
+          _tapController.add(message);
+        });
+      }
+    });
+
+    // App in background → user tapped a notification.
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      if (kDebugMode) debugPrint('🚀 [BACKGROUND] Opened by notification');
+      _tapController.add(message);
+    });
+
+    // Notification received while app is in foreground.
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      if (kDebugMode) {
+        debugPrint('📩 [FOREGROUND] Notification received');
+        debugPrint('title=${message.notification?.title}');
+        debugPrint('body=${message.notification?.body}');
+        debugPrint('data=${message.data}');
+      }
+      _foregroundController.add(message);
+    });
+
+    if (kDebugMode) debugPrint('✅ Notification Service initialized');
   }
 
-  /// Get FCM token
+  /// Backward-compatible: request permission explicitly if needed by legacy code.
+  static Future<void> requestPermission() => _requestPermission();
+
+  /// Backward-compatible: expose FCM token getter (used by AuthService/Repository).
   static Future<String?> getToken() async {
     try {
       final token = await _messaging.getToken();
-      print("✅ FCM Token: $token");
-
-      // Subscribe to topic shamra
-      await _messaging.subscribeToTopic("shamra");
-      print("✅ Subscribed to topic: shamra");
-
+      if (kDebugMode) debugPrint('✅ FCM Token: $token');
       return token;
     } catch (e) {
-      print("❌ Error getting FCM token: $e");
+      if (kDebugMode) debugPrint('❌ Error getting FCM token: $e');
       return null;
     }
   }
 
-  /// Initialize notification handlers
-  static Future<void> initialize(BuildContext context) async {
-    await requestPermission();
-    await getToken();
+  /// Optional helper: Perform navigation based on message data using GetX.
+  static void navigateFromNotification(RemoteMessage message) {
+    final data = message.data;
+    if (kDebugMode) {
+      debugPrint('🧭 Navigation attempt with data: $data');
+      debugPrint('🧭 Get context ready: ${Get.context != null}');
+    }
 
-    // Handle notification when app is opened from terminated state
-    FirebaseMessaging.instance.getInitialMessage().then((message) {
-      if (message != null) {
-        _handleNotificationNavigation(context, message);
-      }
-    });
+    if (data.containsKey('orderId') && data['orderId'] != null) {
+      final orderId = data['orderId'].toString();
+      Get.toNamed('/order-details', arguments: orderId);
+      return;
+    }
 
-    // Handle notification when app is in background and user taps on it
-    FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      _handleNotificationNavigation(context, message);
-    });
+    if (data.containsKey('productId') && data['productId'] != null) {
+      final productId = data['productId'].toString();
+      Get.toNamed('/product-details', arguments: productId);
+      return;
+    }
 
-    // Handle notification when app is in foreground
-    FirebaseMessaging.onMessage.listen((message) {
-      print("📩 Foreground Notification: ${message.notification?.title}");
-      // You can show a dialog or local notification here
-    });
+    if (data.containsKey('categoryId') && data['categoryId'] != null) {
+      final categoryId = data['categoryId'].toString();
+      Get.toNamed('/category-details', arguments: categoryId);
+      return;
+    }
+
+    if (data.containsKey('route') && data['route'] != null) {
+      final route = data['route'].toString();
+      Get.toNamed(route, arguments: data);
+      return;
+    }
+
+    if (kDebugMode) {
+      debugPrint('⚠️ No navigation mapping found. Stay on current page.');
+    }
   }
 
-  /// Handle navigation based on notification data
-  static void _handleNotificationNavigation(
-    BuildContext context,
-    RemoteMessage message,
-  ) {
-    final data = message.data;
-    print("🔔 Notification Data: $data");
+  /// Cleanup streams.
+  static void dispose() {
+    _tapController.close();
+    _foregroundController.close();
+  }
 
-    if (data.containsKey('productId')) {
-      final productId = data['productId'];
-      Navigator.pushNamed(context, '/product-details', arguments: productId);
-    } else if (data.containsKey('categoryId')) {
-      final categoryId = data['categoryId'];
-      Navigator.pushNamed(context, '/category-details', arguments: categoryId);
-    } else if (data.containsKey('orderId')) {
-      final orderId = data['orderId'];
-      Navigator.pushNamed(context, '/order-details', arguments: orderId);
+  // ========================== Internals ==========================
+  static Future<void> _requestPermission() async {
+    final settings = await _messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      provisional: false,
+    );
+    if (kDebugMode) {
+      debugPrint('Notification permission: ${settings.authorizationStatus}');
+    }
+  }
+
+  /// Fetches/refreshes token and subscribes to topic. Internal only.
+  static Future<void> _syncTokenAndTopic() async {
+    try {
+      final token = await _messaging.getToken();
+      if (kDebugMode) debugPrint('✅ FCM Token (init): $token');
+
+      await _messaging.subscribeToTopic('shamra');
+      if (kDebugMode) debugPrint('✅ Subscribed to topic: shamra');
+
+      _messaging.onTokenRefresh.listen((newToken) {
+        if (kDebugMode) debugPrint('🔄 FCM Token refreshed: $newToken');
+        // TODO: Send new token to backend if needed.
+      });
+    } catch (e) {
+      if (kDebugMode) debugPrint('❌ Error during FCM init: $e');
     }
   }
 }

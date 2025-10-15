@@ -1,3 +1,4 @@
+// lib/presentation/pages/splash/splash.dart
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/colors.dart';
@@ -18,25 +19,13 @@ class _SplashPageState extends State<SplashPage>
   @override
   void initState() {
     super.initState();
-    _initializeAnimation();
-  }
-
-  void _initializeAnimation() {
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
-
-    _fadeAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    );
-
-    _pulseAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.2,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-
+    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
     _controller.repeat(reverse: true);
   }
 

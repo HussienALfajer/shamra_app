@@ -1,20 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
+
 import 'package:shamra_app/routes/app_routes.dart';
 import '../../../core/constants/colors.dart';
 import '../../controllers/auth_controller.dart';
 import '../../widgets/common_widgets.dart';
 
-/// صفحة تسجيل الدخول (Stateless)
-/// -----------------------------
-/// - تستخدم [AuthController] للتحكم بالمنطق.
-/// - تعرض حقول البريد وكلمة المرور.
-/// - تعتمد على Widgets مشتركة لسهولة إعادة الاستخدام.
-class LoginPage extends StatelessWidget {
-  LoginPage({super.key});
+/// Login Page (UI only)
+/// - Login with phone (E.164) + password
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
 
-  // مفتاح الفورم
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
+  String? _phoneE164;
+  String _initialCountryCode = 'SY';
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +32,6 @@ class LoginPage extends StatelessWidget {
         body: SafeArea(
           child: Stack(
             children: [
-              /// خلفية زخرفية دوائر
               Positioned(
                 left: -170,
                 top: -250,
@@ -53,7 +57,6 @@ class LoginPage extends StatelessWidget {
                 ),
               ),
 
-              /// المحتوى الرئيسي
               SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 child: Padding(
@@ -64,8 +67,6 @@ class LoginPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const SizedBox(height: 230),
-
-                        /// العنوان
                         const Text(
                           "تسجيل الدخول",
                           textAlign: TextAlign.center,
@@ -77,8 +78,6 @@ class LoginPage extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 8),
-
-                        /// الوصف
                         const Text(
                           "سررنا برؤيتك مجددًا! 🖤",
                           textAlign: TextAlign.center,
@@ -89,63 +88,75 @@ class LoginPage extends StatelessWidget {
                             color: Color(0xFF202020),
                           ),
                         ),
-
                         const SizedBox(height: 24),
 
-                        /// حقل البريد الإلكتروني
-                        ShamraTextField(
-                          hintText: 'أدخل بريدك الإلكتروني',
-                          icon: Icons.email_outlined,
-                          controller: controller.emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'يرجى إدخال البريد الإلكتروني';
-                            }
-                            if (!GetUtils.isEmail(value)) {
-                              return 'يرجى إدخال بريد إلكتروني صحيح';
-                            }
-                            return null;
-                          },
+                        // Phone
+                        Directionality(
+                          textDirection: TextDirection.ltr,
+                          child: IntlPhoneField
+                            (
+                            decoration: const InputDecoration(
+                              labelText: 'رقم الهاتف',
+                              border: OutlineInputBorder(),
+                            ),
+                            initialCountryCode: _initialCountryCode,
+                            showCountryFlag: true,
+                            showDropdownIcon: true,
+                            dropdownIconPosition: IconPosition.trailing,
+                            disableLengthCheck: true,
+                            onChanged: (phone) => _phoneE164 = phone.completeNumber,
+                            onCountryChanged: (c) => _initialCountryCode = c.code,
+                            validator: (phone) {
+                              if (phone == null || phone.number.isEmpty) {
+                                return 'يرجى إدخال رقم الهاتف';
+                              }
+                              if (phone.number.length < 8) {
+                                return 'يرجى إدخال رقم هاتف صحيح';
+                              }
+                              return null;
+                            },
+                          ),
                         ),
 
                         const SizedBox(height: 20),
 
-                        /// حقل كلمة المرور
-                        Obx(() => ShamraTextField(
-                          hintText: 'أدخل كلمة المرور',
-                          icon: Icons.lock_outlined,
-                          controller: controller.passwordController,
-                          obscureText: !controller.isPasswordVisible.value,
-                          suffixIcon: IconButton(
-                            onPressed: controller.togglePasswordVisibility,
-                            icon: Icon(
-                              controller.isPasswordVisible.value
-                                  ? Icons.visibility_off_outlined
-                                  : Icons.visibility_outlined,
-                              color: AppColors.textSecondary,
+                        // Password
+                        Obx(
+                              () => ShamraTextField(
+                            hintText: 'أدخل كلمة المرور',
+                            icon: Icons.lock_outlined,
+                            controller: controller.passwordController,
+                            obscureText: !controller.isPasswordVisible.value,
+                            suffixIcon: IconButton(
+                              onPressed: controller.togglePasswordVisibility,
+                              icon: Icon(
+                                controller.isPasswordVisible.value
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                                color: AppColors.textSecondary,
+                              ),
                             ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'يرجى إدخال كلمة المرور';
+                              }
+                              if (value.length < 6) {
+                                return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+                              }
+                              return null;
+                            },
                           ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'يرجى إدخال كلمة المرور';
-                            }
-                            if (value.length < 6) {
-                              return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
-                            }
-                            return null;
-                          },
-                        )),
+                        ),
 
                         const SizedBox(height: 12),
 
-                        /// رابط نسيت كلمة المرور
                         Align(
                           alignment: Alignment.centerLeft,
                           child: TextButton(
-                            onPressed: () {
-                              // TODO: إضافة صفحة استرجاع كلمة المرور
-                            },
+                            onPressed: () => Get.toNamed(
+                              Routes.forgotPassword,
+                              arguments: {'phone': _phoneE164?.trim() ?? ''}, // ✅ تمرير الرقم إن وُجد
+                            ),
                             child: Text(
                               'نسيت كلمة المرور؟',
                               style: TextStyle(
@@ -159,26 +170,36 @@ class LoginPage extends StatelessWidget {
 
                         const SizedBox(height: 32),
 
-                        /// زر تسجيل الدخول
-                        Obx(() => ShamraButton(
-                          text: 'تسجيل الدخول',
-                          onPressed: controller.isLoading
-                              ? null
-                              : () async {
-                            if (_formKey.currentState!.validate()) {
-                              await controller.login(
-                                controller.emailController.text.trim(),
-                                controller.passwordController.text,
-                              );
-                            }
-                          },
-                          isLoading: controller.isLoading,
-                          icon: Icons.login_rounded,
-                        )),
+                        // Submit
+                        Obx(
+                              () => ShamraButton(
+                            text: 'تسجيل الدخول',
+                            onPressed: controller.isLoading
+                                ? null
+                                : () async {
+                              if (_formKey.currentState!.validate()) {
+                                final phone = _phoneE164?.trim() ?? '';
+                                if (phone.isEmpty) {
+                                  ShamraSnackBar.show(
+                                    context: context,
+                                    message: 'يرجى إدخال رقم الهاتف',
+                                    type: SnackBarType.warning,
+                                  );
+                                  return;
+                                }
+                                await controller.login(
+                                  phone,
+                                  controller.passwordController.text,
+                                );
+                              }
+                            },
+                            isLoading: controller.isLoading,
+                            icon: Icons.login_rounded,
+                          ),
+                        ),
 
                         const SizedBox(height: 40),
 
-                        /// رابط إلى صفحة التسجيل
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -190,9 +211,7 @@ class LoginPage extends StatelessWidget {
                               ),
                             ),
                             TextButton(
-                              onPressed: () {
-                                Get.toNamed(Routes.register);
-                              },
+                              onPressed: () => Get.toNamed(Routes.register),
                               child: Text(
                                 'إنشاء حساب',
                                 style: TextStyle(

@@ -62,7 +62,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
 
   void _onTap(LatLng p) {
     setState(() => _selected = p);
-   geocoding:
+    geocoding:
     _reverseGeocode(p);
   }
 

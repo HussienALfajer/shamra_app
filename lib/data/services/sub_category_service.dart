@@ -34,8 +34,8 @@ class SubCategoryService {
 
   // Get sub-categories by category ID
   static Future<List<SubCategory>> getSubCategoriesByCategory(
-    String categoryId,
-  ) async {
+      String categoryId,
+      ) async {
     try {
       final response = await DioService.get(
         '${ApiConstants.subCategories}/category/$categoryId',
