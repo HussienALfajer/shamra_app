@@ -1,7 +1,7 @@
 name: CI Flutter
 on:
   pull_request:
-    paths: ["lib/**", "pubspec.yaml", ".github/**"]
+    paths: ["lib/**", "pubspec.yaml", "..github/**"]
   push:
     branches: ["main"]
 jobs:
