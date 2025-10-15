@@ -1,36 +1,38 @@
-// lib/core/base/base_controller.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import '../../presentation/widgets/common_widgets.dart';
 
 /// Base controller with unified loading/error/info handling.
-/// - Wrap async work with safeCall() to manage loading/errors.
-/// - Exposes isLoading and errorMessage for the UI.
-/// - Optional snack helpers (require BuildContext).
+///
+/// This abstract controller exposes reactive state variables for loading and
+/// error information. It provides a [safeCall] helper to execute
+/// asynchronous operations while automatically toggling the [isLoading]
+/// flag and capturing any error into [errorMessage]. Callers should
+/// listen to these observables from the UI layer to update widgets.
 abstract class BaseController extends GetxController {
+  /// Whether the controller is currently performing a long‑running operation.
   final RxBool isLoading = false.obs;
 
-  // Keep RxnString and expose it via a getter to avoid override mismatches.
-  final RxnString _errorMessage = RxnString(null);
-  RxnString get errorMessage => _errorMessage;
+  /// Holds the last error message. `null` represents no error.
+  final RxnString errorMessage = RxnString(null);
 
-  /// Wrap any async call with loading + error capture.
-  Future<T> safeCall<T>(
-      Future<T> Function() body, {
-        VoidCallback? onFinally,
-      }) async {
+  /// Executes an asynchronous [body] while automatically managing the
+  /// [isLoading] and [errorMessage] state. Any thrown exception will be
+  /// rethrown after updating [errorMessage].
+  Future<T> safeCall<T>(Future<T> Function() body, {VoidCallback? onFinally}) async {
     try {
       isLoading.value = true;
-      _errorMessage.value = null;
+      errorMessage.value = null;
       final result = await body();
       return result;
     } catch (e, st) {
       if (kDebugMode) {
-        debugPrint('❌ safeCall error: $e');
+        debugPrint('\u274c safeCall error: $e');
         debugPrint(st.toString());
       }
-      _errorMessage.value = e.toString();
+      errorMessage.value = e.toString();
       rethrow;
     } finally {
       isLoading.value = false;
@@ -38,8 +40,9 @@ abstract class BaseController extends GetxController {
     }
   }
 
+  /// Emits an error message. Optionally show a snack bar via [context].
   void emitError(String message, {BuildContext? context}) {
-    _errorMessage.value = message;
+    errorMessage.value = message;
     if (context != null) {
       ShamraSnackBar.show(
         context: context,
@@ -49,6 +52,7 @@ abstract class BaseController extends GetxController {
     }
   }
 
+  /// Emits an informational message. Optionally show a snack bar via [context].
   void emitInfo(String message, {BuildContext? context}) {
     if (context != null) {
       ShamraSnackBar.show(
@@ -59,22 +63,13 @@ abstract class BaseController extends GetxController {
     }
   }
 
+  /// Emits a success message. Optionally show a snack bar via [context].
   void emitSuccess(String message, {BuildContext? context}) {
     if (context != null) {
       ShamraSnackBar.show(
         context: context,
         message: message,
         type: SnackBarType.success,
-      );
-    }
-  }
-
-  void emitWarning(String message, {BuildContext? context}) {
-    if (context != null) {
-      ShamraSnackBar.show(
-        context: context,
-        message: message,
-        type: SnackBarType.warning,
       );
     }
   }
