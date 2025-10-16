@@ -238,7 +238,9 @@ class MainBinding extends Bindings {
   void dependencies() {
     Get.lazyPut<CartController>(() => CartController());
     Get.lazyPut<AuthController>(() => AuthController(), fenix: true);
+    Get.lazyPut<MainController>(() => MainController(), fenix: true);
     Get.lazyPut<BannerController>(() => BannerController(), fenix: true);
+    Get.put<FavoriteController>(FavoriteController(), permanent: true);
   }
 }
 
@@ -315,7 +317,6 @@ class SearchBinding extends Bindings {
   @override
   void dependencies() {
     Get.lazyPut<SearchController>(() => SearchController());
-    // يمكن إضافة controllers أخرى إذا لزم الأمر
     Get.lazyPut<ProductController>(() => ProductController());
     Get.lazyPut<CategoryController>(() => CategoryController());
   }
