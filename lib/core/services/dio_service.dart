@@ -10,7 +10,7 @@ import 'storage_service.dart';
 class DioService {
   static final Dio _dio = Dio();
 
-  // Single-flight refresh guard.
+  // Single-flight refresh guard to prevent concurrent refresh calls.
   static Future<void>? _refreshFuture;
 
   static Dio get instance => _dio;
@@ -31,7 +31,7 @@ class DioService {
   }
 
   static void _addInterceptors() {
-    // Pretty logger in debug only.
+    // Pretty logger in debug mode only.
     if (kDebugMode) {
       _dio.interceptors.add(
         PrettyDioLogger(
@@ -43,7 +43,6 @@ class DioService {
           compact: false,
           maxWidth: 90,
           enabled: kDebugMode,
-          // Keep auth/refresh responses hidden if desired by the package version.
           filter: (options, args) => !options.path.contains(ApiConstants.refresh),
         ),
       );
@@ -52,13 +51,13 @@ class DioService {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          // Attach access token
+          // Attach access token if available
           final token = StorageService.getToken();
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
 
-          // Attach branch id
+          // Attach branch id if available
           final branchId = StorageService.getBranchId();
           if (branchId != null && branchId.isNotEmpty) {
             options.headers['x-branch-id'] = branchId;
@@ -68,8 +67,7 @@ class DioService {
         },
         onError: (error, handler) async {
           // Skip refresh logic if it's the refresh endpoint itself.
-          final isRefreshCall =
-          error.requestOptions.path.contains(ApiConstants.refresh);
+          final isRefreshCall = error.requestOptions.path.contains(ApiConstants.refresh);
 
           // Attempt token refresh on 401 (unauthorized).
           if (error.response?.statusCode == 401 && !isRefreshCall) {
@@ -123,21 +121,20 @@ class DioService {
       throw Exception('No refresh token available');
     }
 
-    // Use a clean request without auth header.
+    // Use a clean request without auth header to avoid recursion.
     final response = await _dio.post(
       ApiConstants.refresh,
       data: {'refreshToken': refreshToken},
       options: Options(
         headers: {
-          // Ensure no stale access token is sent.
-          'Authorization': null,
+          'Authorization': null, // Ensure no stale access token is sent
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
       ),
     );
 
-    // Be defensive about API shapes.
+    // Parse response defensively (handle different API shapes).
     final dynamic body = response.data;
     Map<String, dynamic> map;
     if (body is Map<String, dynamic>) {
@@ -147,12 +144,9 @@ class DioService {
     }
 
     // Common shapes: {token, refreshToken} OR {data:{accessToken, refreshToken}}.
-    final data = (map['data'] is Map)
-        ? Map<String, dynamic>.from(map['data'] as Map)
-        : map;
+    final data = (map['data'] is Map) ? Map<String, dynamic>.from(map['data'] as Map) : map;
 
-    final String? newAccess =
-    (data['accessToken'] ?? data['token'])?.toString();
+    final String? newAccess = (data['accessToken'] ?? data['token'])?.toString();
     final String? newRefresh = data['refreshToken']?.toString();
 
     if (newAccess == null || newAccess.isEmpty) {
@@ -165,7 +159,8 @@ class DioService {
     }
   }
 
-  // ========================== HTTP verbs ==========================
+  // HTTP verbs
+
   static Future<Response> get(
       String path, {
         Map<String, dynamic>? queryParameters,

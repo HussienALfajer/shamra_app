@@ -8,7 +8,8 @@ class StorageService {
 
   static const String _branchAuthKey = 'branch_auth';
 
-  // ========================== Token management ==========================
+  // Token management
+
   static Future<void> saveToken(String token) async {
     await storage.write(AppConstants.tokenKey, token);
   }
@@ -33,7 +34,8 @@ class StorageService {
     await storage.remove(AppConstants.refreshTokenKey);
   }
 
-  // ========================== Branch & user ==========================
+  // Branch & user data management
+
   static Future<void> saveBranchId(String branchId) async {
     await storage.write(AppConstants.branchIdKey, branchId);
   }
@@ -58,7 +60,8 @@ class StorageService {
     await storage.remove(AppConstants.userKey);
   }
 
-  // ========================== App prefs ==========================
+  // App preferences
+
   static Future<void> saveLanguage(String languageCode) async {
     await storage.write(AppConstants.languageKey, languageCode);
   }
@@ -75,15 +78,15 @@ class StorageService {
     return storage.read<String>(AppConstants.themeKey) ?? 'light';
   }
 
-  // ========================== Branch auth map ==========================
+  // Branch-specific auth map (per-branch tokens)
+
   static Future<void> saveBranchAuth(
       String branchId, {
         required String token,
         String? refreshToken,
       }) async {
     final raw = storage.read(_branchAuthKey);
-    final Map<String, dynamic> map =
-    raw is Map ? Map<String, dynamic>.from(raw as Map) : <String, dynamic>{};
+    final Map<String, dynamic> map = raw is Map ? Map<String, dynamic>.from(raw as Map) : <String, dynamic>{};
 
     map[branchId] = {
       'token': token,
@@ -114,7 +117,8 @@ class StorageService {
     await storage.remove(_branchAuthKey);
   }
 
-  // ========================== Utils ==========================
+  // Utility methods
+
   static Future<void> clearAll() async {
     await storage.erase();
   }

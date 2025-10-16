@@ -1,3 +1,4 @@
+// lib/data/models/branch.dart
 class Branch {
   final String id;
   final String name;
@@ -48,11 +49,9 @@ class Branch {
       totalSales: (json['totalSales'] ?? 0.0).toDouble(),
       totalOrders: json['totalOrders'] ?? 0,
       sortOrder: json['sortOrder'] ?? 0,
-      createdAt:
-      DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
           DateTime.now(),
-      updatedAt:
-      DateTime.tryParse(json['updatedAt']?.toString() ?? '') ??
+      updatedAt: DateTime.tryParse(json['updatedAt']?.toString() ?? '') ??
           DateTime.now(),
     );
   }

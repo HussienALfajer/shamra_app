@@ -1,3 +1,4 @@
+// lib/data/repositories/auth_repository.dart
 import 'package:shamra_app/data/models/auth_res.dart';
 import '../../core/services/notification_service.dart';
 import '../models/user.dart';
@@ -5,10 +6,12 @@ import '../services/auth_service.dart';
 import '../../core/services/storage_service.dart';
 
 class AuthRepository {
+  /// Request password reset OTP.
   Future<void> requestPasswordReset({required String phoneNumber}) async {
     await AuthService.requestPasswordReset(phoneNumber: phoneNumber);
   }
 
+  /// Reset password with OTP verification.
   Future<void> resetPassword({
     required String phoneNumber,
     required String newPassword,
@@ -21,6 +24,7 @@ class AuthRepository {
     );
   }
 
+  /// Verify phone number with OTP (used after registration).
   Future<AuthResponseApi> verifyPhoneNumber({
     required String phoneNumber,
     required String otp,
@@ -41,6 +45,7 @@ class AuthRepository {
     return res;
   }
 
+  /// Login with phone number and password.
   Future<AuthResponseApi> login({
     required String phoneNumber,
     required String password,
@@ -57,6 +62,7 @@ class AuthRepository {
     return response;
   }
 
+  /// Register new user account.
   Future<AuthResponseApi> register({
     required String firstName,
     required String lastName,
@@ -82,6 +88,7 @@ class AuthRepository {
     return response;
   }
 
+  /// Select branch for authenticated user.
   Future<AuthResponseApi> selectBranch({required String branchId}) async {
     final response = await AuthService.selectBranch(branchId: branchId);
 
@@ -99,12 +106,14 @@ class AuthRepository {
     return response;
   }
 
+  /// Get current user profile.
   Future<User> getProfile() async {
     final user = await AuthService.getProfile();
     await StorageService.saveUserData(user.toJson());
     return user;
   }
 
+  /// Update user profile.
   Future<User> updateProfile({
     String? firstName,
     String? lastName,
@@ -119,6 +128,7 @@ class AuthRepository {
     return user;
   }
 
+  /// Change user password.
   Future<void> changePassword({
     required String oldPassword,
     required String newPassword,
@@ -129,6 +139,7 @@ class AuthRepository {
     );
   }
 
+  /// Submit merchant request.
   Future<void> addMerchantRequest({
     required String storeName,
     required String address,
@@ -141,10 +152,12 @@ class AuthRepository {
     );
   }
 
+  /// Get current user's merchant request.
   Future<Map<String, dynamic>?> getMyMerchantRequest() {
     return AuthService.getMyMerchantRequest();
   }
 
+  /// Logout current user.
   Future<void> logout() async {
     try {
       await AuthService.logout();
@@ -153,12 +166,15 @@ class AuthRepository {
     }
   }
 
+  /// Check if user is logged in.
   bool isLoggedIn() => StorageService.isLoggedIn();
 
+  /// Get current user from storage.
   User? getCurrentUser() {
     final data = StorageService.getUserData();
     return data == null ? null : User.fromJson(data);
   }
 
+  /// Get access token from storage.
   String? getToken() => StorageService.getToken();
 }

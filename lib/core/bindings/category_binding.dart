@@ -10,7 +10,10 @@ class CategoryBinding extends Bindings {
   @override
   void dependencies() {
     Get.lazyPut<CategoryController>(() => CategoryController(), fenix: true);
-    Get.lazyPut<SubCategoryController>(() => SubCategoryController(), fenix: true);
+    Get.lazyPut<SubCategoryController>(
+          () => SubCategoryController(),
+      fenix: true,
+    );
     Get.lazyPut<ProductController>(() => ProductController(), fenix: true);
   }
 }

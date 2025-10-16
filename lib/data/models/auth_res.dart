@@ -1,5 +1,8 @@
+// lib/data/models/auth_res.dart
 import 'package:shamra_app/data/models/user.dart';
 
+/// Wrapper for authentication API responses.
+/// Standard shape: { success, message, data: AuthResponse }
 class AuthResponseApi {
   final bool success;
   final String message;
@@ -23,6 +26,10 @@ class AuthResponseApi {
   }
 }
 
+/// Inner authentication response containing tokens and user data.
+/// Supports multiple API shapes:
+/// - Login/select-branch: { access_token, refresh_token, user:{...} }
+/// - Register: { data:{ user:{...} } } (may not include tokens immediately)
 class AuthResponse {
   final String token;
   final String refreshToken;
@@ -35,12 +42,11 @@ class AuthResponse {
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
-    // ✅ يدعم شكلين:
-    // أ) login/select-branch: { access_token, refresh_token, user:{...} }
-    // ب) register:         { data:{ user:{...} } } (بدون توكنات)
+    // Extract tokens (support both naming conventions)
     final token = (json['access_token'] ?? json['token'] ?? '').toString();
     final refreshToken = (json['refresh_token'] ?? '').toString();
 
+    // Extract user object (handle nested data structure)
     Map<String, dynamic> userMap = {};
     if (json['user'] is Map) {
       userMap = Map<String, dynamic>.from(json['user']);

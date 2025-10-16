@@ -6,10 +6,14 @@ import '../../../core/constants/colors.dart';
 import '../../widgets/common_widgets.dart';
 import '../../controllers/auth_controller.dart';
 
+/// OTP Verification Page (UI only)
+/// Flows:
+/// - 'verify' (after register) → verify then go to Main
+/// - 'reset' (forgot password) → go to ResetPassword page with phone+otp
 class OtpPage extends StatefulWidget {
   final String? phone;
-  final String flow; // 'verify' أو 'reset'
-  const OtpPage({super.key, this.phone, this.flow = 'verify'});
+  final String? flow; // 'verify' or 'reset'
+  const OtpPage({super.key, this.phone, this.flow});
 
   static OtpPage fromArgs() {
     final args = (Get.arguments is Map) ? Map<String, dynamic>.from(Get.arguments) : const {};
@@ -26,7 +30,7 @@ class OtpPage extends StatefulWidget {
 class _OtpPageState extends State<OtpPage> {
   final _auth = Get.find<AuthController>();
 
-  static const _len = 4; // طول الرمز
+  static const _len = 4;
   late final List<TextEditingController> _tcs;
   late final List<FocusNode> _fns;
   late final List<bool> _filled;
@@ -35,15 +39,19 @@ class _OtpPageState extends State<OtpPage> {
   String? _error;
 
   String get _phone {
-    final p = widget.phone ?? '';
     final argsPhone = (Get.arguments is Map) ? (Get.arguments['phone']?.toString() ?? '') : '';
-    return p.isNotEmpty ? p : argsPhone;
+    final wPhone = widget.phone ?? '';
+    // Prefer arguments if provided
+    return (argsPhone.isNotEmpty) ? argsPhone : wPhone;
   }
 
   String get _flow {
-    final f = widget.flow;
-    final argsFlow = (Get.arguments is Map) ? (Get.arguments['flow']?.toString() ?? 'verify') : 'verify';
-    return f.isNotEmpty ? f : argsFlow;
+    final argsFlow = (Get.arguments is Map) ? (Get.arguments['flow']?.toString() ?? '') : '';
+    final wFlow = widget.flow ?? '';
+    // Prefer arguments if provided
+    if (argsFlow.isNotEmpty) return argsFlow;
+    if (wFlow.isNotEmpty) return wFlow;
+    return 'verify';
   }
 
   @override
@@ -80,7 +88,9 @@ class _OtpPageState extends State<OtpPage> {
   }
 
   Future<void> _clearAll() async {
-    for (final c in _tcs) c.clear();
+    for (final c in _tcs) {
+      c.clear();
+    }
     setState(() {
       for (var i = 0; i < _filled.length; i++) _filled[i] = false;
       _error = null;
@@ -114,33 +124,23 @@ class _OtpPageState extends State<OtpPage> {
       return;
     }
 
-    // ✅ مسار استرجاع كلمة السر: لا نتحقق هنا من السيرفر
+    // Password reset flow → go to reset page (NO server call here)
     if (_flow == 'reset') {
-      Get.toNamed(
-        Routes.resetPassword,
-        arguments: {'phone': _phone, 'otp': code},
-      );
+      Get.toNamed(Routes.resetPassword, arguments: {'phone': _phone, 'otp': code});
       return;
     }
 
-    // ✅ مسار تفعيل الحساب بعد التسجيل: استخدم verify-otp
+    // Verify flow (after registration)
     try {
       setState(() {
         _isVerifying = true;
         _error = null;
       });
 
-      final ok = await _auth.verifyPhoneWithOtp(
-        phoneNumber: _phone,
-        otp: code,
-      );
+      final ok = await _auth.verifyPhoneWithOtp(phoneNumber: _phone, otp: code);
 
       if (ok) {
-        if (Get.previousRoute.isNotEmpty) {
-          Get.back(result: true);
-        } else {
-          // Get.offAllNamed(Routes.branchSelection);
-        }
+        Get.offAllNamed(Routes.main);
       } else {
         setState(() => _error = _auth.errorMessage.isNotEmpty ? _auth.errorMessage : 'فشل التحقق');
       }
@@ -164,13 +164,7 @@ class _OtpPageState extends State<OtpPage> {
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.shadowColor.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                boxShadow: [BoxShadow(color: AppColors.shadowColor.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))],
               ),
               child: const Icon(Icons.arrow_back, color: AppColors.primary, size: 20),
             ),
@@ -178,113 +172,57 @@ class _OtpPageState extends State<OtpPage> {
           ),
         ),
         body: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: IntrinsicHeight(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 20),
-                        _AnimatedLogo(),
-                        const SizedBox(height: 32),
-                        Text(
-                          _flow == 'reset' ? 'تحقق من رقمك' : 'رمز التحقق',
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text('أدخل الرمز المرسل إلى',
-                            style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),
-                        const SizedBox(height: 8),
-                        if (_phone.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryLight,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              _phone,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primary,
-                                letterSpacing: 1,
-                              ),
-                            ),
-                          ),
-                        const SizedBox(height: 40),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 20),
+                _AnimatedLogo(),
+                const SizedBox(height: 32),
+                Text(_flow == 'reset' ? 'تحقق من رقمك' : 'رمز التحقق',
+                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                const SizedBox(height: 12),
+                Text('أدخل الرمز المرسل إلى', style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
+                if (_phone.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(20)),
+                    child: Text(_phone,
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.primary, letterSpacing: 1)),
+                  ),
+                const SizedBox(height: 40),
 
-                        _OtpBoxes(
-                          length: _len,
-                          tcs: _tcs,
-                          fns: _fns,
-                          filled: _filled,
-                          onChanged: _onChanged,
-                        ),
+                _OtpBoxes(length: _len, tcs: _tcs, fns: _fns, filled: _filled, onChanged: _onChanged),
 
-                        const SizedBox(height: 16),
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          height: (_error != null && _error!.isNotEmpty) ? 30 : 0,
-                          child: (_error != null && _error!.isNotEmpty)
-                              ? Text(
-                            _error!,
-                            style: const TextStyle(
-                              color: AppColors.error,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          )
-                              : const SizedBox.shrink(),
-                        ),
-                        const SizedBox(height: 24),
+                const SizedBox(height: 16),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  height: (_error != null && _error!.isNotEmpty) ? 30 : 0,
+                  child: (_error != null && _error!.isNotEmpty)
+                      ? Text(_error!, style: const TextStyle(color: AppColors.error, fontSize: 14, fontWeight: FontWeight.w500))
+                      : const SizedBox.shrink(),
+                ),
+                const SizedBox(height: 24),
 
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Flexible(
-                                child: _ActionButton(
-                                  icon: Icons.content_paste,
-                                  label: 'لصق',
-                                  onTap: _paste,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Flexible(
-                                child: _ActionButton(
-                                  icon: Icons.clear,
-                                  label: 'مسح',
-                                  onTap: _clearAll,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const Spacer(),
-                        ShamraButton(
-                          text: 'تأكيد',
-                          onPressed: _isVerifying ? null : _verify,
-                          isLoading: _isVerifying,
-                          icon: Icons.verified_user,
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                    ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(child: _ActionButton(icon: Icons.content_paste, label: 'لصق', onTap: _paste)),
+                      const SizedBox(width: 16),
+                      Flexible(child: _ActionButton(icon: Icons.clear, label: 'مسح', onTap: _clearAll)),
+                    ],
                   ),
                 ),
-              );
-            },
+
+                const SizedBox(height: 24),
+                ShamraButton(text: 'تأكيد', onPressed: _isVerifying ? null : _verify, isLoading: _isVerifying, icon: Icons.verified_user),
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),
@@ -292,6 +230,7 @@ class _OtpPageState extends State<OtpPage> {
   }
 }
 
+// _OtpBoxes, _AnimatedLogo, _ActionButton: نفس الموجودين لديك دون تغيير جوهري
 class _OtpBoxes extends StatelessWidget {
   final int length;
   final List<TextEditingController> tcs;
@@ -299,13 +238,7 @@ class _OtpBoxes extends StatelessWidget {
   final List<bool> filled;
   final void Function(int idx, String v) onChanged;
 
-  const _OtpBoxes({
-    required this.length,
-    required this.tcs,
-    required this.fns,
-    required this.filled,
-    required this.onChanged,
-  });
+  const _OtpBoxes({required this.length, required this.tcs, required this.fns, required this.filled, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -335,16 +268,11 @@ class _OtpBoxes extends StatelessWidget {
                     color: filled[i] ? AppColors.primary : AppColors.textPrimary,
                   ),
                   keyboardType: TextInputType.number,
-                  inputFormatters:  [
+                  inputFormatters: [
                     FilteringTextInputFormatter.digitsOnly,
                     LengthLimitingTextInputFormatter(1),
                   ],
                   onChanged: (v) => onChanged(i, v),
-                  onSubmitted: (_) {
-                    if (i < length - 1) {
-                      fns[i + 1].requestFocus();
-                    }
-                  },
                   decoration: InputDecoration(
                     counterText: '',
                     filled: true,
@@ -352,10 +280,7 @@ class _OtpBoxes extends StatelessWidget {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(
-                        color: filled[i] ? AppColors.primary : AppColors.outline,
-                        width: filled[i] ? 2 : 1.5,
-                      ),
+                      borderSide: BorderSide(color: filled[i] ? AppColors.primary : AppColors.outline, width: filled[i] ? 2 : 1.5),
                     ),
                     focusedBorder: const OutlineInputBorder(
                       borderRadius: BorderRadius.all(Radius.circular(16)),
@@ -386,13 +311,8 @@ class __AnimatedLogoState extends State<_AnimatedLogo> with SingleTickerProvider
   void initState() {
     super.initState();
     _controller = AnimationController(duration: const Duration(seconds: 2), vsync: this);
-
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0)
-        .animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
-
-    _rotateAnimation =
-        Tween<double>(begin: -0.1, end: 0.1).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
+    _rotateAnimation = Tween<double>(begin: -0.1, end: 0.1).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
     _controller.repeat(reverse: true);
   }
 
@@ -406,34 +326,22 @@ class __AnimatedLogoState extends State<_AnimatedLogo> with SingleTickerProvider
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _controller,
-      builder: (context, child) {
-        return Transform.rotate(
-          angle: _rotateAnimation.value,
-          child: Transform.scale(
-            scale: _scaleAnimation.value,
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: AppColors.primaryGradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: const Icon(Icons.lock_outline, size: 45, color: Colors.white),
+      builder: (_, __) => Transform.rotate(
+        angle: _rotateAnimation.value,
+        child: Transform.scale(
+          scale: _scaleAnimation.value,
+          child: Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: AppColors.primaryGradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+              shape: BoxShape.circle,
+              boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8))],
             ),
+            child: const Icon(Icons.lock_outline, size: 45, color: Colors.white),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -442,12 +350,7 @@ class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
+  const _ActionButton({required this.icon, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -466,14 +369,7 @@ class _ActionButton extends StatelessWidget {
           children: [
             Icon(icon, size: 18, color: AppColors.primary),
             const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.primary,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            Text(label, style: const TextStyle(color: AppColors.primary, fontSize: 14, fontWeight: FontWeight.w600)),
           ],
         ),
       ),

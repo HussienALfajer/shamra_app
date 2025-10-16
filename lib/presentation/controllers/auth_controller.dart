@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:shamra_app/routes/app_routes.dart';
+
 import '../../core/services/storage_service.dart';
 import '../../data/models/user.dart';
 import '../../data/repositories/auth_repository.dart';
@@ -10,23 +11,21 @@ import 'app_controller.dart';
 class AuthController extends GetxController {
   final AuthRepository _authRepository = AuthRepository();
 
+  // Observables
   final Rx<User?> _currentUser = Rx<User?>(null);
-  Rx<User?> get currentUserRx => _currentUser;
-
   final RxBool _isLoading = false.obs;
   final RxBool _isLoggedIn = false.obs;
   final RxString _errorMessage = ''.obs;
   final RxBool isPasswordVisible = false.obs;
-
   final Rx<Map<String, dynamic>?> _merchantRequest = Rx<Map<String, dynamic>?>(null);
-  Map<String, dynamic>? get merchantRequest => _merchantRequest.value;
 
-  final passwordController = TextEditingController();
-
+  // Getters
+  Rx<User?> get currentUserRx => _currentUser;
   User? get currentUser => _currentUser.value;
   bool get isLoading => _isLoading.value;
   bool get isLoggedIn => _isLoggedIn.value;
   String get errorMessage => _errorMessage.value;
+  Map<String, dynamic>? get merchantRequest => _merchantRequest.value;
 
   @override
   void onInit() {
@@ -35,18 +34,16 @@ class AuthController extends GetxController {
     getMerchantRequest();
   }
 
-  @override
-  void onClose() {
-    passwordController.dispose();
-    super.onClose();
-  }
-
+  /// Check if user is logged in and load current user from storage.
   void checkLoginStatus() {
     _isLoggedIn.value = _authRepository.isLoggedIn();
     _currentUser.value = _authRepository.getCurrentUser();
   }
 
-  /// Login with phone (E.164) + password
+  /// Login with phone (E.164) + password.
+  /// After successful login, checks if user has a selected branch:
+  /// - If yes → navigate to Main
+  /// - If no → navigate to Branch Selection
   Future<bool> login(String phoneNumber, String password) async {
     try {
       _isLoading.value = true;
@@ -61,11 +58,28 @@ class AuthController extends GetxController {
         _currentUser.value = User.fromJson(response.data.user.toJson());
         _isLoggedIn.value = true;
 
+        // Save branch ID if user has selected branch
+        if (_currentUser.value!.hasSelectedBranch) {
+          final branchId = _currentUser.value!.selectedBranch.isNotEmpty
+              ? _currentUser.value!.selectedBranch
+              : _currentUser.value!.branchId;
+
+          if (branchId.isNotEmpty) {
+            await StorageService.saveBranchId(branchId);
+          }
+        }
+
+        // Navigate based on branch selection status
         try {
           final appController = Get.find<AppController>();
           appController.recheckAuthStatus();
         } catch (_) {
-          Get.offAllNamed(Routes.branchSelection);
+          // Fallback navigation if AppController not found
+          if (_currentUser.value!.hasSelectedBranch) {
+            Get.offAllNamed(Routes.main);
+          } else {
+            Get.offAllNamed(Routes.branchSelection);
+          }
         }
 
         ShamraSnackBar.show(
@@ -73,8 +87,6 @@ class AuthController extends GetxController {
           message: 'تم تسجيل الدخول بنجاح',
           type: SnackBarType.success,
         );
-
-        passwordController.clear();
         return true;
       }
 
@@ -92,12 +104,12 @@ class AuthController extends GetxController {
     }
   }
 
-  /// Register without email; phoneNumber is REQUIRED
+  /// Register new user without email; phoneNumber is REQUIRED.
   Future<bool> register({
     required String firstName,
     required String lastName,
     required String password,
-    required String phoneNumber, // إلزامي
+    required String phoneNumber,
     required dynamic branch,
   }) async {
     try {
@@ -138,7 +150,8 @@ class AuthController extends GetxController {
     }
   }
 
-
+  /// Verify phone number with OTP (used after registration).
+  /// Note: Navigation is handled by the calling page, not here.
   Future<bool> verifyPhoneWithOtp({
     required String phoneNumber,
     required String otp,
@@ -161,9 +174,6 @@ class AuthController extends GetxController {
         type: SnackBarType.success,
       );
 
-      // ✅ توجيه مركزي بعد التحقق
-      Get.offAllNamed(Routes.main);
-
       return true;
     } catch (e) {
       _errorMessage.value = e.toString();
@@ -178,6 +188,7 @@ class AuthController extends GetxController {
     }
   }
 
+  /// Get current user profile from server.
   Future<void> getProfile() async {
     try {
       _isLoading.value = true;
@@ -191,6 +202,7 @@ class AuthController extends GetxController {
     }
   }
 
+  /// Update user profile.
   Future<bool> updateProfile({
     String? firstName,
     String? lastName,
@@ -228,6 +240,7 @@ class AuthController extends GetxController {
     }
   }
 
+  /// Change user password.
   Future<bool> changePassword({
     required String oldPassword,
     required String newPassword,
@@ -261,6 +274,7 @@ class AuthController extends GetxController {
     }
   }
 
+  /// Logout user and clear all data.
   Future<void> logout() async {
     try {
       _isLoading.value = true;
@@ -297,14 +311,18 @@ class AuthController extends GetxController {
     }
   }
 
+  /// Toggle password visibility.
   void togglePasswordVisibility() {
     isPasswordVisible.value = !isPasswordVisible.value;
   }
 
+  /// Clear error message.
   void clearErrorMessage() {
     _errorMessage.value = '';
   }
 
+  /// Select branch silently (without navigation or snackbar).
+  /// Used during registration flow.
   Future<bool> selectBranchSilent(String branchId) async {
     try {
       _isLoading.value = true;
@@ -330,6 +348,7 @@ class AuthController extends GetxController {
     }
   }
 
+  /// Select branch with navigation and snackbar feedback.
   Future<bool> selectBranch(String branchId) async {
     try {
       _isLoading.value = true;
@@ -373,6 +392,7 @@ class AuthController extends GetxController {
     }
   }
 
+  /// Get merchant request for current user.
   Future<void> getMerchantRequest() async {
     try {
       _isLoading.value = true;
@@ -385,6 +405,7 @@ class AuthController extends GetxController {
     }
   }
 
+  /// Submit merchant request.
   Future<bool> submitMerchantRequest({
     required String storeName,
     required String address,
@@ -422,29 +443,36 @@ class AuthController extends GetxController {
     }
   }
 
+  /// Update current user object.
   void updateCurrentUser(User user) {
     _currentUser.value = user;
   }
 
+  /// Validate password strength.
   bool isValidPassword(String password) {
     return password.length >= 6;
   }
 
+  /// Reset form flags (no controllers here).
   void resetForm() {
-    passwordController.clear();
     isPasswordVisible.value = false;
     _errorMessage.value = '';
   }
 
+  /// Check if user has valid session.
   bool get hasValidSession {
     final token = StorageService.getToken();
     final userData = StorageService.getUserData();
     return token != null && userData != null;
   }
 
+  /// Get saved branch ID from storage.
   String? get savedBranchId => StorageService.getBranchId();
+
+  /// Check if branch is selected.
   bool get hasBranchSelected => savedBranchId != null;
 
+  /// Reload user data from storage.
   Future<void> reloadFromStorage() async {
     final data = StorageService.getUserData();
     if (data != null) {

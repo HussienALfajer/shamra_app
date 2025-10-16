@@ -4,9 +4,10 @@ import 'package:get/get.dart';
 import '../../core/services/storage_service.dart';
 import '../../routes/app_routes.dart';
 
-/// AppController:
-/// - Checks auth/branch status on startup.
-/// - Routes the user accordingly.
+/// App-wide controller responsible for:
+/// - Checking authentication and branch selection status on startup
+/// - Routing the user to the appropriate page based on their status
+/// - Handling logout across the app
 class AppController extends GetxController {
   final RxBool _isCheckingAuth = true.obs;
   final RxBool _isLoggedIn = false.obs;
@@ -22,11 +23,15 @@ class AppController extends GetxController {
     checkAuthStatus();
   }
 
+  /// Checks auth status and navigates to the appropriate page.
+  /// Flow: Splash → Welcome (if not logged in)
+  ///              → Branch Selection (if logged in but no branch selected)
+  ///              → Main (if logged in and branch selected)
   Future<void> checkAuthStatus() async {
     try {
       _isCheckingAuth.value = true;
 
-      // Small delay to keep splash visible a bit.
+      // Small delay to keep splash visible for better UX
       await Future.delayed(const Duration(seconds: 2));
 
       final token = StorageService.getToken();
@@ -36,6 +41,7 @@ class AppController extends GetxController {
       _isLoggedIn.value = token != null && userData != null;
       _hasBranchSelected.value = branchId != null;
 
+      // Navigate based on auth status
       if (_isLoggedIn.value && _hasBranchSelected.value) {
         Get.offAllNamed(Routes.main);
       } else if (_isLoggedIn.value && !_hasBranchSelected.value) {
@@ -51,10 +57,12 @@ class AppController extends GetxController {
     }
   }
 
+  /// Re-checks auth status (useful after login/logout).
   void recheckAuthStatus() {
     checkAuthStatus();
   }
 
+  /// Logs out the user and clears all local data.
   Future<void> logout() async {
     try {
       await StorageService.clearAll();

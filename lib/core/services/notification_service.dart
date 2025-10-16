@@ -7,18 +7,15 @@ import 'package:get/get.dart';
 /// FCM bootstrap with explicit streams:
 /// - onNotificationTap: emits messages that opened the app (terminated/background).
 /// - onForegroundMessage: emits messages received while the app is in foreground.
-/// UI is handled in pages/controllers, not here.
+/// UI handling is delegated to pages/controllers, not done here.
 class NotificationService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
 
-  static final StreamController<RemoteMessage> _tapController =
-  StreamController<RemoteMessage>.broadcast();
-  static final StreamController<RemoteMessage> _foregroundController =
-  StreamController<RemoteMessage>.broadcast();
+  static final StreamController<RemoteMessage> _tapController = StreamController<RemoteMessage>.broadcast();
+  static final StreamController<RemoteMessage> _foregroundController = StreamController<RemoteMessage>.broadcast();
 
   static Stream<RemoteMessage> get onNotificationTap => _tapController.stream;
-  static Stream<RemoteMessage> get onForegroundMessage =>
-      _foregroundController.stream;
+  static Stream<RemoteMessage> get onForegroundMessage => _foregroundController.stream;
 
   /// Public initializer: requests permission, wires listeners, subscribes to topic.
   static Future<void> initialize() async {
@@ -116,7 +113,8 @@ class NotificationService {
     _foregroundController.close();
   }
 
-  // ========================== Internals ==========================
+  // Internal methods
+
   static Future<void> _requestPermission() async {
     final settings = await _messaging.requestPermission(
       alert: true,
@@ -129,7 +127,7 @@ class NotificationService {
     }
   }
 
-  /// Fetches/refreshes token and subscribes to topic. Internal only.
+  /// Fetches/refreshes token and subscribes to topic.
   static Future<void> _syncTokenAndTopic() async {
     try {
       final token = await _messaging.getToken();

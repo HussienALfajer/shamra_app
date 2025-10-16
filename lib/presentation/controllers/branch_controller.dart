@@ -1,3 +1,4 @@
+// lib/presentation/controllers/branch_controller.dart
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../data/models/branch.dart';
@@ -6,10 +7,10 @@ import '../widgets/common_widgets.dart';
 import 'auth_controller.dart';
 import '../../core/services/storage_service.dart';
 
-/// BranchController
-/// - Loads active branches
-/// - Handles selecting a branch (API) after auth
-/// - Provides a light-weight cache selection for pre-auth flows (e.g., Register)
+/// Branch Controller
+/// - Loads active branches from repository
+/// - Handles selecting a branch (API call) after authentication
+/// - Provides cache-only selection for pre-auth flows (e.g., Register)
 class BranchController extends GetxController {
   final BranchRepository _branchRepository = BranchRepository();
 
@@ -44,7 +45,7 @@ class BranchController extends GetxController {
         ..clear()
         ..addAll(list);
 
-      // Sort: main branch first, then by sortOrder.
+      // Sort: main branch first, then by sortOrder
       _branches.sort((a, b) {
         if (a.isMainBranch && !b.isMainBranch) return -1;
         if (!a.isMainBranch && b.isMainBranch) return 1;
@@ -89,26 +90,31 @@ class BranchController extends GetxController {
   }
 
   /// Cache-only selection (no API) for pre-auth flows (e.g., Register).
-  /// - Persists selected branch id into storage so Dio adds `x-branch-id` header.
-  /// - Keeps current selection state for UI.
+  /// - Persists selected branch ID into storage so Dio adds `x-branch-id` header
+  /// - Keeps current selection state for UI
   Future<void> cacheSelectedBranch(Branch branch) async {
     _selectedBranch.value = branch;
     await StorageService.saveBranchId(branch.id);
   }
 
+  /// Refresh branches list.
   Future<void> refreshBranches() async => loadBranches();
 
+  /// Clear error message.
   void clearError() => _errorMessage.value = '';
 
+  /// Reset branch selection.
   void resetSelection() {
     _selectedBranch.value = null;
     _isSelecting.value = false;
   }
 
+  /// Trigger logout dialog.
   void logout() {
     _showLogoutDialog();
   }
 
+  /// Show logout confirmation dialog.
   void _showLogoutDialog() {
     Get.dialog(
       AlertDialog(
@@ -122,7 +128,10 @@ class BranchController extends GetxController {
           style: TextStyle(color: Colors.black54),
         ),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('إلغاء')),
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('إلغاء'),
+          ),
           ElevatedButton(
             onPressed: () {
               Get.back();
@@ -139,6 +148,7 @@ class BranchController extends GetxController {
     );
   }
 
+  /// Perform logout via auth controller.
   Future<void> _performLogout() async {
     try {
       _selectedBranch.value = null;
@@ -156,6 +166,7 @@ class BranchController extends GetxController {
     }
   }
 
+  /// Get branch by ID from loaded branches.
   Branch? getBranchById(String branchId) {
     try {
       return _branches.firstWhere((b) => b.id == branchId);
@@ -164,8 +175,11 @@ class BranchController extends GetxController {
     }
   }
 
-  bool isBranchSelected(Branch branch) => _selectedBranch.value?.id == branch.id;
+  /// Check if a branch is currently selected.
+  bool isBranchSelected(Branch branch) =>
+      _selectedBranch.value?.id == branch.id;
 
+  /// Get the main branch (if exists).
   Branch? get mainBranch {
     try {
       return _branches.firstWhere((b) => b.isMainBranch);
@@ -174,7 +188,12 @@ class BranchController extends GetxController {
     }
   }
 
+  /// Get total number of branches.
   int get branchesCount => _branches.length;
+
+  /// Check if any branches are loaded.
   bool get hasBranches => _branches.isNotEmpty;
+
+  /// Check if there's an error.
   bool get hasError => _errorMessage.value.isNotEmpty;
 }

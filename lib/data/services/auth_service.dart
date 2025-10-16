@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:shamra_app/data/utils/phone_utils.dart';
 import '../../core/services/dio_service.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/services/notification_service.dart';
@@ -6,13 +7,15 @@ import '../models/user.dart';
 import '../models/auth_res.dart';
 
 class AuthService {
+  /// Request password reset OTP.
   static Future<Map<String, dynamic>> requestPasswordReset({
     required String phoneNumber,
   }) async {
     try {
+      final normalized = PhoneUtils.normalizeToE164(phoneNumber);
       final response = await DioService.post(
-        '/auth/forgot-password', // ✅ مطابق للباك-إند
-        data: {'phoneNumber': phoneNumber},
+        '/auth/forgot-password',
+        data: {'phoneNumber': normalized},
       );
       return Map<String, dynamic>.from(response.data ?? {});
     } on DioException catch (e) {
@@ -20,16 +23,18 @@ class AuthService {
     }
   }
 
+  /// Reset password with OTP verification.
   static Future<void> resetPassword({
     required String phoneNumber,
     required String newPassword,
     required String otp,
   }) async {
     try {
+      final normalized = PhoneUtils.normalizeToE164(phoneNumber);
       await DioService.post(
-        '/auth/reset-password', // ✅ مطابق للباك-إند
+        '/auth/reset-password',
         data: {
-          'phoneNumber': phoneNumber,
+          'phoneNumber': normalized,
           'newPassword': newPassword,
           'otp': otp,
         },
@@ -39,14 +44,16 @@ class AuthService {
     }
   }
 
+  /// Verify phone number with OTP (used after registration).
   static Future<AuthResponseApi> verifyPhoneNumber({
     required String phoneNumber,
     required String otp,
   }) async {
     try {
+      final normalized = PhoneUtils.normalizeToE164(phoneNumber);
       final response = await DioService.post(
         '/auth/verify-otp',
-        data: {'phoneNumber': phoneNumber, 'otp': otp},
+        data: {'phoneNumber': normalized, 'otp': otp},
       );
       return AuthResponseApi.fromJson(
         Map<String, dynamic>.from(response.data ?? {}),
@@ -56,16 +63,18 @@ class AuthService {
     }
   }
 
+  /// Login with phone number and password.
   static Future<AuthResponseApi> login({
     required String phoneNumber,
     required String password,
   }) async {
     try {
       final fcmToken = await NotificationService.getToken();
+      final normalized = PhoneUtils.normalizeToE164(phoneNumber);
       final response = await DioService.post(
         ApiConstants.login,
         data: {
-          'phoneNumber': phoneNumber,
+          'phoneNumber': normalized,
           'password': password,
           'fcmToken': fcmToken,
         },
@@ -78,6 +87,7 @@ class AuthService {
     }
   }
 
+  /// Register new user account.
   static Future<AuthResponseApi> register({
     required String firstName,
     required String lastName,
@@ -87,6 +97,7 @@ class AuthService {
     String? fcmToken,
   }) async {
     try {
+      final normalized = PhoneUtils.normalizeToE164(phoneNumber);
       final response = await DioService.post(
         ApiConstants.register,
         data: {
@@ -94,7 +105,7 @@ class AuthService {
           'lastName': lastName,
           'password': password,
           'branchId': branchId,
-          'phoneNumber': phoneNumber,
+          'phoneNumber': normalized,
           if (fcmToken != null && fcmToken.isNotEmpty) 'fcmToken': fcmToken,
         },
       );
@@ -106,6 +117,7 @@ class AuthService {
     }
   }
 
+  /// Select branch for authenticated user.
   static Future<AuthResponseApi> selectBranch({required String branchId}) async {
     try {
       final response = await DioService.post(
@@ -120,6 +132,7 @@ class AuthService {
     }
   }
 
+  /// Get current user profile.
   static Future<User> getProfile() async {
     try {
       final response = await DioService.get(ApiConstants.profile);
@@ -131,20 +144,21 @@ class AuthService {
     }
   }
 
+  /// Update user profile.
   static Future<User> updateProfile({
     String? firstName,
     String? lastName,
     String? phoneNumber,
   }) async {
     try {
-      final response = await DioService.patch(
-        '/users/profile',
-        data: {
-          if (firstName != null) 'firstName': firstName,
-          if (lastName != null) 'lastName': lastName,
-          if (phoneNumber != null) 'phoneNumber': phoneNumber,
-        },
-      );
+      final data = <String, dynamic>{};
+      if (firstName != null) data['firstName'] = firstName;
+      if (lastName != null) data['lastName'] = lastName;
+      if (phoneNumber != null) {
+        data['phoneNumber'] = PhoneUtils.normalizeToE164(phoneNumber);
+      }
+
+      final response = await DioService.patch('/users/profile', data: data);
       return User.fromJson(
         Map<String, dynamic>.from(response.data['data'] ?? {}),
       );
@@ -153,6 +167,7 @@ class AuthService {
     }
   }
 
+  /// Change user password.
   static Future<void> changePassword({
     required String oldPassword,
     required String newPassword,
@@ -167,6 +182,7 @@ class AuthService {
     }
   }
 
+  /// Logout current user.
   static Future<void> logout() async {
     try {
       await DioService.post(ApiConstants.logout);
@@ -175,18 +191,20 @@ class AuthService {
     }
   }
 
+  /// Submit merchant request.
   static Future<Map<String, dynamic>> addMerchantRequest({
     required String storeName,
     required String address,
     required String phoneNumber,
   }) async {
     try {
+      final normalized = PhoneUtils.normalizeToE164(phoneNumber);
       final response = await DioService.post(
         '/merchants/request',
         data: {
           'storeName': storeName,
           'address': address,
-          'phoneNumber': phoneNumber,
+          'phoneNumber': normalized,
         },
       );
       return Map<String, dynamic>.from(response.data ?? {});
@@ -195,6 +213,7 @@ class AuthService {
     }
   }
 
+  /// Get current user's merchant request.
   static Future<Map<String, dynamic>?> getMyMerchantRequest() async {
     try {
       final response = await DioService.get('/merchants/my-request');
@@ -207,9 +226,12 @@ class AuthService {
     }
   }
 
+  /// Handle Dio errors and convert to user-friendly messages.
   static String _handleError(DioException error) {
     final data = error.response?.data;
-    if (data is Map && data['message'] != null) return data['message'].toString();
+    if (data is Map && data['message'] != null) {
+      return data['message'].toString();
+    }
     if (data is String && data.trim().isNotEmpty) return data;
 
     switch (error.type) {

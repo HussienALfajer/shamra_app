@@ -1,3 +1,4 @@
+// lib/main.dart
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -5,22 +6,24 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 import 'core/services/dio_service.dart';
-import 'core/services/notification_service.dart'; // Import your notification service
+import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
 import 'routes/app_pages.dart' hide InitialBinding;
 import 'routes/app_routes.dart';
 import 'core/bindings/initial_binding.dart';
 
+/// Background message handler for Firebase Cloud Messaging.
+/// Must be a top-level function for the @pragma annotation.
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  print("📩 [Background Handler] Message received");
-  print("📩 [Background] Title: ${message.notification?.title}");
-  print("📩 [Background] Body: ${message.notification?.body}");
-  print("📩 [Background] Data: ${message.data}");
+  debugPrint("📩 [Background Handler] Message received");
+  debugPrint("📩 [Background] Title: ${message.notification?.title}");
+  debugPrint("📩 [Background] Body: ${message.notification?.body}");
+  debugPrint("📩 [Background] Data: ${message.data}");
 }
 
 void main() async {
@@ -34,10 +37,10 @@ void main() async {
   // Register background message handler
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // Initialize GetStorage
+  // Initialize GetStorage for local persistence
   await GetStorage.init();
 
-  // Initialize Dio service
+  // Initialize Dio service with interceptors
   DioService.initialize();
 
   runApp(const ShamraApp());
@@ -57,13 +60,14 @@ class _ShamraAppState extends State<ShamraApp> {
     _initializeNotifications();
   }
 
+  /// Initialize notification service and listen for notification taps.
   Future<void> _initializeNotifications() async {
     // Initialize notification service
     await NotificationService.initialize();
 
-    // 🔥 CRITICAL: Listen to notification taps and navigate
+    // Listen to notification taps and navigate accordingly
     NotificationService.onNotificationTap.listen((RemoteMessage message) {
-      print("🎯 Notification tap detected! Navigating...");
+      debugPrint("🎯 Notification tap detected! Navigating...");
       NotificationService.navigateFromNotification(message);
     });
   }
@@ -79,11 +83,12 @@ class _ShamraAppState extends State<ShamraApp> {
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.light,
 
+      // Routing
       initialRoute: Routes.splash,
       getPages: AppPages.routes,
       initialBinding: InitialBinding(),
 
-      // Localization
+      // Localization (Arabic by default)
       locale: const Locale('ar', 'SA'),
       fallbackLocale: const Locale('ar', 'SA'),
 
@@ -91,7 +96,7 @@ class _ShamraAppState extends State<ShamraApp> {
       defaultTransition: Transition.cupertino,
       transitionDuration: const Duration(milliseconds: 300),
 
-      // Error handling
+      // Error handling for unknown routes
       unknownRoute: GetPage(
         name: '/not-found',
         page: () => const Scaffold(

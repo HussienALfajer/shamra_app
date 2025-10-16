@@ -6,7 +6,8 @@ import '../../../core/constants/colors.dart';
 import '../../../routes/app_routes.dart';
 import '../../widgets/common_widgets.dart';
 
-/// Welcome screen with simple intro and two primary actions.
+/// Welcome screen with app introduction and navigation to auth pages.
+/// Displayed when user is not logged in.
 class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
 
@@ -27,7 +28,10 @@ class _WelcomePageState extends State<WelcomePage>
       duration: const Duration(milliseconds: 1800),
       vsync: this,
     );
-    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
     _slideAnimation = Tween<double>(begin: 50, end: 0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
@@ -59,7 +63,8 @@ class _WelcomePageState extends State<WelcomePage>
                 children: [
                   // App logo
                   Positioned(
-                    top: MediaQuery.of(context).size.height * 0.22 + _slideAnimation.value,
+                    top: MediaQuery.of(context).size.height * 0.22 +
+                        _slideAnimation.value,
                     left: w * 0.5 - 73,
                     child: Image.asset(
                       AppConstants.logoPath,
@@ -89,7 +94,7 @@ class _WelcomePageState extends State<WelcomePage>
                     ),
                   ),
 
-                  // Short tagline
+                  // Tagline
                   Positioned(
                     top: 469 + _slideAnimation.value,
                     left: w * 0.5 - 132.5,
@@ -109,7 +114,7 @@ class _WelcomePageState extends State<WelcomePage>
                     ),
                   ),
 
-                  // Primary button
+                  // Primary button - Register
                   Positioned(
                     top: 634,
                     left: w * 0.5 - 167.5,
@@ -121,7 +126,7 @@ class _WelcomePageState extends State<WelcomePage>
                     ),
                   ),
 
-                  // Secondary action: already have account
+                  // Secondary action - Login
                   Positioned(
                     top: 713,
                     right: 80,
@@ -149,7 +154,11 @@ class _WelcomePageState extends State<WelcomePage>
                               color: AppColors.primary,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.white),
+                            child: const Icon(
+                              Icons.arrow_forward_ios,
+                              size: 14,
+                              color: AppColors.white,
+                            ),
                           )
                         ],
                       ),

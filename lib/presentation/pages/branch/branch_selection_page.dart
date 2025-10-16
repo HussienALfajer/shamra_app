@@ -1,3 +1,4 @@
+// lib/presentation/pages/branch/branch_selection_page.dart
 import 'package:flutter/material.dart' hide ErrorWidget;
 import 'package:get/get.dart';
 import 'package:shimmer/shimmer.dart';
@@ -6,19 +7,17 @@ import '../../controllers/branch_controller.dart';
 import '../../../data/models/branch.dart';
 import '../../widgets/common_widgets.dart';
 
-/// 🌐 صفحة اختيار الفرع (Branch Selection Page)
-/// ---------------------------------------------------------
-/// - تعرض قائمة الفروع المتاحة للمستخدم.
-/// - تسمح بتحديد فرع ليتم استخدامه في بقية التطبيق.
-/// - تعتمد على [BranchController] لإدارة الحالة.
-/// - تستخدم Widgets مشتركة من [common_widgets] لواجهة موحدة.
+/// Branch Selection Page (UI only)
+/// - Displays list of available branches
+/// - Allows user to select a branch
+/// - Uses BranchController for state management
 class BranchSelectionPage extends StatelessWidget {
   const BranchSelectionPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl, // ✅ دعم العربية
+      textDirection: TextDirection.rtl,
       child: GetBuilder<BranchController>(
         init: BranchController(),
         builder: (controller) => Scaffold(
@@ -26,7 +25,7 @@ class BranchSelectionPage extends StatelessWidget {
           body: SafeArea(
             child: Stack(
               children: [
-                /// 🔹 قائمة الفروع (أسفل الهيدر)
+                // Branch list (below header)
                 Positioned.fill(
                   top: 223,
                   child: RefreshIndicator(
@@ -38,7 +37,6 @@ class BranchSelectionPage extends StatelessWidget {
                       }
 
                       if (controller.errorMessage.isNotEmpty) {
-                        // 🟦 استخدام ErrorWidget الجاهز
                         return ErrorWidget(
                           message: controller.errorMessage,
                           onRetry: controller.refreshBranches,
@@ -54,7 +52,7 @@ class BranchSelectionPage extends StatelessWidget {
                   ),
                 ),
 
-                /// 🔹 الهيدر العلوي
+                // Header
                 Positioned(
                   top: 0,
                   left: 0,
@@ -62,7 +60,7 @@ class BranchSelectionPage extends StatelessWidget {
                   child: _buildHeader(controller),
                 ),
 
-                /// 🔹 عناصر ديكور للخلفية
+                // Background decoration
                 _buildBackgroundDecor(),
               ],
             ),
@@ -72,7 +70,7 @@ class BranchSelectionPage extends StatelessWidget {
     );
   }
 
-  /// 🟦 مكوّن الهيدر (شعار + نصوص ترحيب + زر خروج)
+  /// Header component (logo + welcome text + logout button)
   Widget _buildHeader(BranchController controller) {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 30),
@@ -89,7 +87,7 @@ class BranchSelectionPage extends StatelessWidget {
       ),
       child: Column(
         children: [
-          /// --- الصف العلوي (الشعار + الاسم + زر خروج) ---
+          // Top row (logo + name + logout button)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -116,8 +114,8 @@ class BranchSelectionPage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  SizedBox(width: 12),
-                  Text(
+                  const SizedBox(width: 12),
+                  const Text(
                     'شمرا',
                     style: TextStyle(
                       color: AppColors.white,
@@ -128,7 +126,7 @@ class BranchSelectionPage extends StatelessWidget {
                 ],
               ),
 
-              /// زر تسجيل الخروج
+              // Logout button
               Container(
                 decoration: BoxDecoration(
                   color: AppColors.white.withOpacity(0.2),
@@ -148,7 +146,7 @@ class BranchSelectionPage extends StatelessWidget {
           ),
           const SizedBox(height: 24),
 
-          /// --- النصوص الترحيبية ---
+          // Welcome text
           const Text(
             'مرحباً بك',
             style: TextStyle(
@@ -180,14 +178,14 @@ class BranchSelectionPage extends StatelessWidget {
     );
   }
 
-  /// 🟦 مكوّن قائمة الفروع
+  /// Branch list component
   Widget _buildBranchList(BranchController controller) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          /// عنوان القائمة
+          // List title
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -205,7 +203,7 @@ class BranchSelectionPage extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          /// شبكة الفروع
+          // Branch grid
           Expanded(
             child: GridView.builder(
               physics: const BouncingScrollPhysics(),
@@ -226,7 +224,7 @@ class BranchSelectionPage extends StatelessWidget {
     );
   }
 
-  /// 🟦 كرت فرع فردي
+  /// Individual branch card
   Widget _buildBranchCard(Branch branch, BranchController controller) {
     return Obx(() {
       final isSelected = controller.selectedBranch?.id == branch.id;
@@ -240,12 +238,12 @@ class BranchSelectionPage extends StatelessWidget {
           children: [
             const SizedBox(width: 16),
 
-            /// تفاصيل الفرع
+            // Branch details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  /// اسم الفرع + إذا كان رئيسي
+                  // Branch name + main badge
                   Row(
                     children: [
                       Expanded(
@@ -268,7 +266,7 @@ class BranchSelectionPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
 
-                  /// العنوان
+                  // Address
                   Row(
                     children: [
                       const Icon(
@@ -291,7 +289,7 @@ class BranchSelectionPage extends StatelessWidget {
                     ],
                   ),
 
-                  /// الهاتف (اختياري)
+                  // Phone (optional)
                   if (branch.phone?.isNotEmpty == true) ...[
                     const SizedBox(height: 4),
                     Row(
@@ -318,7 +316,7 @@ class BranchSelectionPage extends StatelessWidget {
 
             const SizedBox(width: 12),
 
-            /// أيقونة اختيار الفرع
+            // Selection icon
             Container(
               width: 40,
               height: 40,
@@ -344,7 +342,7 @@ class BranchSelectionPage extends StatelessWidget {
     });
   }
 
-  /// 🟦 حالة التحميل (Shimmer Effect)
+  /// Loading state (Shimmer effect)
   Widget _buildLoadingState() {
     return Shimmer.fromColors(
       baseColor: AppColors.lightGrey,
@@ -382,7 +380,7 @@ class BranchSelectionPage extends StatelessWidget {
     );
   }
 
-  /// 🟦 حالة عدم وجود فروع
+  /// Empty state
   Widget _buildEmptyState() {
     return const EmptyStateWidget(
       icon: Icons.store_outlined,
@@ -391,7 +389,7 @@ class BranchSelectionPage extends StatelessWidget {
     );
   }
 
-  /// 🟦 عناصر ديكور في الخلفية
+  /// Background decoration circles
   Widget _buildBackgroundDecor() {
     return Stack(
       children: [
@@ -403,7 +401,7 @@ class BranchSelectionPage extends StatelessWidget {
     );
   }
 
-  /// 🟦 مكوّن دائرة خلفية
+  /// Circle decoration component
   Widget _circle(double size, double opacity) {
     return Container(
       width: size,

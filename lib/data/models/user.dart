@@ -1,3 +1,4 @@
+// lib/data/models/user.dart
 import 'package:shamra_app/data/models/branch.dart';
 
 class User {
@@ -30,14 +31,12 @@ class User {
     required this.branchId,
     required this.selectedBranch,
     this.selectedBranchObject,
-    this.points = 0, // 🎯
-    this.totalPointsEarned = 0, // 🎯
-    this.totalPointsUsed = 0, // 🎯
-
+    this.points = 0,
+    this.totalPointsEarned = 0,
+    this.totalPointsUsed = 0,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
-    print("ٍِHHHHHHHHHHHHHHHHHHHHHHHHHHHHH${json['selectedBranchObject']}");
     return User(
       id: json['_id'] ?? json['id'] ?? '',
       firstName: json['firstName'] ?? '',
@@ -56,7 +55,6 @@ class User {
       points: json['points'] ?? 0,
       totalPointsEarned: json['totalPointsEarned'] ?? 0,
       totalPointsUsed: json['totalPointsUsed'] ?? 0,
-
     );
   }
 
@@ -73,15 +71,18 @@ class User {
       'updatedAt': updatedAt.toIso8601String(),
       'branchId': branchId,
       'selectedBranchId': selectedBranch,
-      "selectedBranchObject": selectedBranchObject?.toJson(),
+      'selectedBranchObject': selectedBranchObject?.toJson(),
       'points': points,
       'totalPointsEarned': totalPointsEarned,
       'totalPointsUsed': totalPointsUsed,
-
     };
   }
 
   String get fullName => '$firstName $lastName';
+
+  /// Check if user has a selected branch.
+  bool get hasSelectedBranch =>
+      selectedBranch.isNotEmpty || selectedBranchObject != null;
 
   User copyWith({
     String? id,
@@ -95,10 +96,10 @@ class User {
     DateTime? updatedAt,
     String? branchId,
     String? selectedBranch,
-    int? points, // 🎯
-    int? totalPointsEarned, // 🎯
-    int? totalPointsUsed, // 🎯
-
+    Branch? selectedBranchObject,
+    int? points,
+    int? totalPointsEarned,
+    int? totalPointsUsed,
   }) {
     return User(
       id: id ?? this.id,
@@ -116,7 +117,6 @@ class User {
       points: points ?? this.points,
       totalPointsEarned: totalPointsEarned ?? this.totalPointsEarned,
       totalPointsUsed: totalPointsUsed ?? this.totalPointsUsed,
-
     );
   }
 }

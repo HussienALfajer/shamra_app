@@ -1,29 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
+
 import '../../../core/constants/colors.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../../data/utils/phone_utils.dart';
 import '../../../routes/app_routes.dart';
 import '../../widgets/common_widgets.dart';
 
-/// Forgot Password
-/// - يجمع رقم الهاتف
-/// - يستدعي /auth/forgot-password لإرسال OTP
-/// - ثم يوجّه لصفحة OTP مع flow=reset
-class ForgotPasswordPage extends StatelessWidget {
-  ForgotPasswordPage({super.key});
+/// Forgot Password Page (UI only)
+class ForgotPasswordPage extends StatefulWidget {
+  const ForgotPasswordPage({super.key});
 
+  @override
+  State<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
+}
+
+class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _formKey = GlobalKey<FormState>();
-  final _phoneController = TextEditingController();
+  String? _phoneE164;
+  String _initialCountryCode = 'SY';
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final args = Get.arguments as Map<String, dynamic>?;
+    final prefill = (args?['phone'] ?? '').toString();
+    if (prefill.isNotEmpty) {
+      _phoneE164 = prefill;
+      if (prefill.startsWith('+963')) _initialCountryCode = 'SY';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // تعبئة مسبقة من شاشة تسجيل الدخول إن تم تمرير الرقم
-    final args = Get.arguments as Map<String, dynamic>?;
-    final prefill = (args?['phone'] ?? '').toString();
-    if (prefill.isNotEmpty && _phoneController.text.isEmpty) {
-      _phoneController.text = prefill;
-    }
-
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -63,49 +74,51 @@ class ForgotPasswordPage extends StatelessWidget {
                     style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
                   ),
                   const SizedBox(height: 40),
-                  ShamraTextField(
-                    hintText: 'أدخل رقم هاتفك',
-                    icon: Icons.phone_outlined,
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'يرجى إدخال رقم الهاتف';
-                      }
-                      if (value.length < 8) {
-                        return 'يرجى إدخال رقم هاتف صحيح';
-                      }
-                      return null;
-                    },
+
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: IntlPhoneField(
+                      decoration: const InputDecoration(
+                        labelText: 'رقم الهاتف ',
+                        border: OutlineInputBorder(),
+                      ),
+                      initialCountryCode: _initialCountryCode,
+                      showCountryFlag: true,
+                      showDropdownIcon: true,
+                      dropdownIconPosition: IconPosition.trailing,
+                      disableLengthCheck: true,
+                      onChanged: (phone) {
+                        final normalized = PhoneUtils.normalizeIntlParts(
+                          countryDialCode: phone.countryCode,   // e.g. "+49"
+                          national: phone.number,                // typed NSN
+                          countryIso2: phone.countryISOCode,     // e.g. "DE"
+                        );
+                        _phoneE164 = normalized.isNotEmpty ? normalized : null;
+                      },
+                      onCountryChanged: (c) => _initialCountryCode = c.code,
+                      validator: (phone) {
+                        if (phone == null || phone.number.isEmpty) {
+                          return 'يرجى إدخال رقم الهاتف';
+                        }
+                        final normalized = PhoneUtils.normalizeIntlParts(
+                          countryDialCode: phone.countryCode,
+                          national: phone.number,
+                          countryIso2: phone.countryISOCode,
+                        );
+                        if (!PhoneUtils.isValidE164(normalized)) {
+                          return 'يرجى إدخال رقم دولي صحيح بصيغة +XXXXXXXX';
+                        }
+                        return null;
+                      },
+                    ),
                   ),
+
                   const SizedBox(height: 32),
                   ShamraButton(
                     text: 'إرسال رمز التحقق',
                     icon: Icons.send,
-                    onPressed: () async {
-                      if (_formKey.currentState!.validate()) {
-                        final phone = _phoneController.text.trim();
-                        try {
-                          final repo = AuthRepository();
-                          await repo.requestPasswordReset(phoneNumber: phone); // ✅ يرسل OTP
-                          ShamraSnackBar.show(
-                            context: context,
-                            message: 'تم إرسال رمز التحقق إلى رقمك',
-                            type: SnackBarType.success,
-                          );
-                          Get.toNamed(
-                            Routes.otp,
-                            arguments: {'phone': phone, 'flow': 'reset'},
-                          );
-                        } catch (e) {
-                          ShamraSnackBar.show(
-                            context: context,
-                            message: e.toString(),
-                            type: SnackBarType.error,
-                          );
-                        }
-                      }
-                    },
+                    isLoading: _isLoading,
+                    onPressed: _isLoading ? null : _handleSendOtp,
                   ),
                 ],
               ),
@@ -114,5 +127,44 @@ class ForgotPasswordPage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _handleSendOtp() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final normalized = PhoneUtils.normalizeToE164(
+      _phoneE164?.trim() ?? '',
+      defaultIso2: _initialCountryCode,
+    );
+    if (normalized.isEmpty) {
+      ShamraSnackBar.show(
+        context: context,
+        message: 'يرجى إدخال رقم الهاتف',
+        type: SnackBarType.warning,
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final repo = AuthRepository();
+      await repo.requestPasswordReset(phoneNumber: normalized);
+
+      ShamraSnackBar.show(
+        context: context,
+        message: 'تم إرسال رمز التحقق إلى رقمك',
+        type: SnackBarType.success,
+      );
+
+      Get.toNamed(Routes.otp, arguments: {'phone': normalized, 'flow': 'reset'});
+    } catch (e) {
+      ShamraSnackBar.show(
+        context: context,
+        message: e.toString(),
+        type: SnackBarType.error,
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 }

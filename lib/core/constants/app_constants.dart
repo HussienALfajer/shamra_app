@@ -2,16 +2,16 @@
 
 /// API endpoints and base URLs used by the app.
 class ApiConstants {
-  static const String baseUrl = 'http://192.168.1.104:3000/api/v1';
-  static const String storageUrl = 'http://192.168.1.104:3000';
+  static const String baseUrl = 'http://192.168.1.109:3000/api/v1';
+  static const String storageUrl = 'http://192.168.1.109:3000';
 
-  // Auth
+  // Auth endpoints
   static const String login = '/auth/login';
   static const String register = '/auth/register';
   static const String logout = '/auth/logout';
   static const String profile = '/users/profile/me';
   static const String selectBranch = '/auth/select-branch';
-  static const String refresh = '/auth/refresh'; // Added for token refresh
+  static const String refresh = '/auth/refresh';
 
   // Core resources
   static const String products = '/products';
@@ -50,7 +50,7 @@ class AppConstants {
   static const String userKey = 'user_data';
   static const String branchIdKey = 'branch_id';
   static const String languageKey = 'app_language';
-  static const String themeKey = 'app_theme'; // kept for compatibility
+  static const String themeKey = 'app_theme';
 
   // Pagination
   static const int defaultPageSize = 20;

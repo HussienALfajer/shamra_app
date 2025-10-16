@@ -26,7 +26,7 @@ import 'package:shamra_app/presentation/pages/splash/splash.dart';
 // Routes
 import 'app_routes.dart';
 
-// Bindings (dedicated files)
+// Dedicated bindings (from core/bindings/)
 import 'package:shamra_app/core/bindings/initial_binding.dart';
 import 'package:shamra_app/core/bindings/auth_binding.dart';
 import 'package:shamra_app/core/bindings/category_binding.dart';
@@ -34,7 +34,7 @@ import 'package:shamra_app/core/bindings/cart_binding.dart';
 import 'package:shamra_app/core/bindings/order_binding.dart';
 import 'package:shamra_app/core/bindings/product_binding.dart';
 
-// Local bindings (not yet split into dedicated files in this batch)
+// Controllers for local bindings (will be migrated to dedicated binding files in later waves)
 import 'package:shamra_app/presentation/controllers/app_controller.dart';
 import 'package:shamra_app/presentation/controllers/banner_controller.dart';
 import 'package:shamra_app/presentation/controllers/sub_category_controller.dart';
@@ -51,12 +51,25 @@ class AppPages {
   static const String initial = Routes.splash;
 
   static final routes = [
+    // Notifications
     GetPage(name: Routes.notifications, page: () => const NotificationsPage()),
 
     // Auth support pages
-    GetPage(name: Routes.otp, page: () => const OtpPage(), binding: AuthBinding()),
-    GetPage(name: Routes.forgotPassword, page: () => ForgotPasswordPage(), binding: AuthBinding()),
-    GetPage(name: Routes.resetPassword, page: () => const ResetPasswordPage(), binding: AuthBinding()),
+    GetPage(
+      name: Routes.otp,
+      page: () => const OtpPage(),
+      binding: AuthBinding(),
+    ),
+    GetPage(
+      name: Routes.forgotPassword,
+      page: () => ForgotPasswordPage(),
+      binding: AuthBinding(),
+    ),
+    GetPage(
+      name: Routes.resetPassword,
+      page: () => const ResetPasswordPage(),
+      binding: AuthBinding(),
+    ),
 
     // Location
     GetPage(
@@ -67,30 +80,70 @@ class AppPages {
     ),
 
     // Profile
-    GetPage(name: Routes.editProfile, page: () => const EditProfilePage(), binding: AuthBinding()),
+    GetPage(
+      name: Routes.editProfile,
+      page: () => const EditProfilePage(),
+      binding: AuthBinding(),
+    ),
 
     // Splash & Welcome
-    GetPage(name: Routes.splash, page: () => const SplashPage(), binding: InitialBinding()),
-    GetPage(name: Routes.welcome, page: () => const WelcomePage(), binding: InitialBinding()),
+    GetPage(
+      name: Routes.splash,
+      page: () => const SplashPage(),
+      binding: InitialBinding(),
+    ),
+    GetPage(
+      name: Routes.welcome,
+      page: () => const WelcomePage(),
+      binding: InitialBinding(),
+    ),
 
     // Authentication
-    GetPage(name: Routes.login, page: () => LoginPage(), binding: AuthBinding()),
-    GetPage(name: Routes.register, page: () => RegisterPage(), binding: AuthBinding()),
+    GetPage(
+      name: Routes.login,
+      page: () => LoginPage(),
+      binding: AuthBinding(),
+    ),
+    GetPage(
+      name: Routes.register,
+      page: () => RegisterPage(),
+      binding: AuthBinding(),
+    ),
 
     // Branch Selection
-    GetPage(name: Routes.branchSelection, page: () => const BranchSelectionPage(), binding: BranchBinding()),
+    GetPage(
+      name: Routes.branchSelection,
+      page: () => const BranchSelectionPage(),
+      binding: BranchBinding(),
+    ),
 
     // Main
-    GetPage(name: Routes.main, page: () => const MainPage(), binding: MainBinding()),
+    GetPage(
+      name: Routes.main,
+      page: () => const MainPage(),
+      binding: MainBinding(),
+    ),
 
     // Favorites
-    GetPage(name: Routes.favorites, page: () => const FavoritesPage(), binding: FavoriteBinding()),
+    GetPage(
+      name: Routes.favorites,
+      page: () => const FavoritesPage(),
+      binding: FavoriteBinding(),
+    ),
 
     // Category Details
-    GetPage(name: Routes.categoryDetails, page: () => CategoryDetailsPage(), binding: ProductBinding()),
+    GetPage(
+      name: Routes.categoryDetails,
+      page: () => CategoryDetailsPage(),
+      binding: ProductBinding(),
+    ),
 
     // Products
-    GetPage(name: Routes.products, page: () => const ProductsPage(), binding: ProductBinding()),
+    GetPage(
+      name: Routes.products,
+      page: () => const ProductsPage(),
+      binding: ProductBinding(),
+    ),
     GetPage(
       name: Routes.featuredProducts,
       page: () => const ProductsPage(),
@@ -105,34 +158,83 @@ class AppPages {
     ),
     GetPage(
       name: Routes.productsByCategory,
-      page: () => const Scaffold(body: Center(child: Text('Products By Category Page'))),
+      page: () => const Scaffold(
+        body: Center(child: Text('Products By Category Page')),
+      ),
+      binding: ProductBinding(),
+    ),
+    // Product Details
+    GetPage(
+      name: Routes.productDetails,
+      page: () => const ProductDetailsPage(),
       binding: ProductBinding(),
     ),
 
     // Categories
-    GetPage(name: Routes.categories, page: () => const CategoriesPage(), binding: CategoryBinding()),
+    GetPage(
+      name: Routes.categories,
+      page: () => const CategoriesPage(),
+      binding: CategoryBinding(),
+    ),
 
     // Cart & Checkout
-    GetPage(name: Routes.cart, page: () => const Scaffold(body: Center(child: Text('Cart Page'))), binding: CartBinding()),
-    GetPage(name: Routes.checkout, page: () => const Scaffold(body: Center(child: Text('Checkout Page'))), binding: OrderBinding()),
+    GetPage(
+      name: Routes.cart,
+      page: () => const Scaffold(body: Center(child: Text('Cart Page'))),
+      binding: CartBinding(),
+    ),
+    GetPage(
+      name: Routes.checkout,
+      page: () => const Scaffold(body: Center(child: Text('Checkout Page'))),
+      binding: OrderBinding(),
+    ),
 
     // Orders
-    GetPage(name: Routes.orders, page: () => const OrdersPage(), binding: OrderBinding()),
-    GetPage(name: Routes.orderDetails, page: () => OrderDetailsPage(), binding: OrderBinding()),
+    GetPage(
+      name: Routes.orders,
+      page: () => const OrdersPage(),
+      binding: OrderBinding(),
+    ),
+    GetPage(
+      name: Routes.orderDetails,
+      page: () => OrderDetailsPage(),
+      binding: OrderBinding(),
+    ),
 
     // Profile & Settings
-    GetPage(name: Routes.profile, page: () => const Scaffold(body: Center(child: Text('Profile Page'))), binding: AuthBinding()),
-    GetPage(name: Routes.changePassword, page: () => const Scaffold(body: Center(child: Text('Change Password Page'))), binding: AuthBinding()),
-    GetPage(name: Routes.settings, page: () => const Scaffold(body: Center(child: Text('Settings Page'))), binding: InitialBinding()),
+    GetPage(
+      name: Routes.profile,
+      page: () => const Scaffold(body: Center(child: Text('Profile Page'))),
+      binding: AuthBinding(),
+    ),
+    GetPage(
+      name: Routes.changePassword,
+      page: () =>
+          const Scaffold(body: Center(child: Text('Change Password Page'))),
+      binding: AuthBinding(),
+    ),
+    GetPage(
+      name: Routes.settings,
+      page: () => const Scaffold(body: Center(child: Text('Settings Page'))),
+      binding: InitialBinding(),
+    ),
 
-    // Misc
-    GetPage(name: Routes.about, page: () => const Scaffold(body: Center(child: Text('About Page')))),
-    GetPage(name: Routes.contactUs, page: () => const Scaffold(body: Center(child: Text('Contact Us Page')))),
+    // Miscellaneous
+    GetPage(
+      name: Routes.about,
+      page: () => const Scaffold(body: Center(child: Text('About Page'))),
+    ),
+    GetPage(
+      name: Routes.contactUs,
+      page: () => const Scaffold(body: Center(child: Text('Contact Us Page'))),
+    ),
   ];
 }
 
-// ===== Local bindings kept here temporarily (to be split in later waves) =====
+// ===== Local bindings (temporary, will be split in later waves) =====
 
+/// Local binding for authentication-related pages.
+/// TODO: Migrate to dedicated file if additional logic is needed.
 class AuthBinding extends Bindings {
   @override
   void dependencies() {
@@ -140,6 +242,7 @@ class AuthBinding extends Bindings {
   }
 }
 
+/// Local binding for main navigation page.
 class MainBinding extends Bindings {
   @override
   void dependencies() {
@@ -150,6 +253,7 @@ class MainBinding extends Bindings {
   }
 }
 
+/// Local binding for branch selection page.
 class BranchBinding extends Bindings {
   @override
   void dependencies() {
@@ -158,6 +262,7 @@ class BranchBinding extends Bindings {
   }
 }
 
+/// Local binding for favorites page.
 class FavoriteBinding extends Bindings {
   @override
   void dependencies() {
@@ -166,6 +271,7 @@ class FavoriteBinding extends Bindings {
   }
 }
 
+/// Local binding for location selection page.
 class LocationBinding extends Bindings {
   @override
   void dependencies() {

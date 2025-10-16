@@ -1,9 +1,10 @@
+// lib/data/services/branch_service.dart
 import '../models/branch.dart';
 import '../../core/services/dio_service.dart';
 import '../../core/constants/app_constants.dart';
 
 class BranchService {
-  // Get active branches only (for customer selection)
+  /// Get all active branches (for customer selection).
   static Future<List<Branch>> getActiveBranches() async {
     try {
       final response = await DioService.get('${ApiConstants.branches}/active');
@@ -19,7 +20,7 @@ class BranchService {
     }
   }
 
-  // Get branch by ID
+  /// Get branch by ID.
   static Future<Branch> getBranchById(String branchId) async {
     try {
       final response = await DioService.get(
