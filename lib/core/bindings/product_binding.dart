@@ -8,6 +8,8 @@ import 'package:shamra_app/presentation/controllers/cart_controller.dart';
 // Temporary: UI controller lives in the page file for now (kept for compatibility).
 import 'package:shamra_app/presentation/pages/product/product_page.dart';
 
+import '../../presentation/controllers/products_uI_controller.dart';
+
 /// Binding for product-related pages.
 class ProductBinding extends Bindings {
   @override

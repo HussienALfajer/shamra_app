@@ -1,14 +1,18 @@
 // lib/presentation/controllers/search_controller.dart
+// Search controller with filters, suggestions, pagination and local filtering.
+// EN comments only.
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../core/services/storage_service.dart';
-import '../../data/models/product.dart';
-import '../../data/models/category.dart';
-import '../../data/models/sub_category.dart';
-import '../../data/repositories/product_repository.dart';
-import '../../data/repositories/category_repository.dart';
-import '../../data/repositories/sub_category_repository.dart';
-import '../widgets/common_widgets.dart';
+import 'package:collection/collection.dart';
+import 'package:shamra_app/core/services/storage_service.dart';
+import 'package:shamra_app/data/models/product.dart';
+import 'package:shamra_app/data/models/category.dart';
+import 'package:shamra_app/data/models/sub_category.dart';
+import 'package:shamra_app/data/repositories/product_repository.dart';
+import 'package:shamra_app/data/repositories/category_repository.dart';
+import 'package:shamra_app/data/repositories/sub_category_repository.dart';
+import 'package:shamra_app/presentation/widgets/common_widgets.dart';
 
 class SearchController extends GetxController {
   final ProductRepository _productRepository = ProductRepository();
@@ -54,37 +58,65 @@ class SearchController extends GetxController {
   final RxInt _currentPage = 1.obs;
   final RxBool _hasNextPage = true.obs;
 
+  // NEW: track if a real search has been triggered (button/enter/filters)
+  final RxBool _hasSearched = false.obs;
+
   List<Product> get searchResults => _searchResults;
+
   List<Product> get filteredResults => _filteredResults;
+
   List<Category> get categories => _categories;
+
   List<SubCategory> get subCategories => _subCategories;
+
   List<String> get brands => _brands;
+
   List<String> get searchHistory => _searchHistory;
+
   List<String> get searchSuggestions => _searchSuggestions;
+
   List<String> get popularSearches => _popularSearches;
 
   bool get isSearching => _isSearching.value;
+
   bool get isLoadingMore => _isLoadingMore.value;
+
   bool get showFilters => _showFilters.value;
+
   bool get isAdvancedSearch => _isAdvancedSearch.value;
+
   bool get hasActiveFilters => _hasActiveFilters();
+
   bool get hasNextPage => _hasNextPage.value;
 
+  bool get hasSearched => _hasSearched.value; // NEW
+
   String get searchQuery => _searchQuery.value;
+
   String get selectedCategoryId => _selectedCategoryId.value;
+
   String get selectedSubCategoryId => _selectedSubCategoryId.value;
+
   String get selectedBrand => _selectedBrand.value;
+
   String get sortBy => _sortBy.value;
+
   String get errorMessage => _errorMessage.value;
 
   bool get showOnlyInStock => _showOnlyInStock.value;
+
   bool get showOnlyOnSale => _showOnlyOnSale.value;
+
   bool get showOnlyFeatured => _showOnlyFeatured.value;
 
   double get minPrice => _minPrice.value;
+
   double get maxPrice => _maxPrice.value;
+
   double get currentMinPrice => _currentMinPrice.value;
+
   double get currentMaxPrice => _currentMaxPrice.value;
+
   double get minRating => _minRating.value;
 
   int get resultsCount => _filteredResults.length;
@@ -142,13 +174,19 @@ class SearchController extends GetxController {
         _filteredResults.clear();
       }
       _isSearching.value = true;
+      _hasSearched.value = true; // NEW: mark as searched only when performing
       _errorMessage.value = '';
+
       final result = await _productRepository.getProducts(
         page: _currentPage.value,
         limit: 20,
         search: query.isNotEmpty ? query : null,
-        categoryId: _selectedCategoryId.value.isNotEmpty ? _selectedCategoryId.value : null,
-        subCategoryId: _selectedSubCategoryId.value.isNotEmpty ? _selectedSubCategoryId.value : null,
+        categoryId: _selectedCategoryId.value.isNotEmpty
+            ? _selectedCategoryId.value
+            : null,
+        subCategoryId: _selectedSubCategoryId.value.isNotEmpty
+            ? _selectedSubCategoryId.value
+            : null,
         sort: _getSortParameter(),
       );
       final products = result['products'] as List<Product>;
@@ -159,6 +197,7 @@ class SearchController extends GetxController {
       }
       _hasNextPage.value = result['hasNextPage'] ?? false;
       _applyLocalFilters();
+
       if (reset && query.isNotEmpty) {
         _addToSearchHistory(query);
       }
@@ -176,14 +215,20 @@ class SearchController extends GetxController {
   }
 
   Future<void> loadMore() async {
-    if (_isLoadingMore.value || !_hasNextPage.value || (_searchQuery.isEmpty && !_hasActiveFilters())) return;
+    if (_isLoadingMore.value ||
+        !_hasNextPage.value ||
+        (_searchQuery.isEmpty && !_hasActiveFilters()))
+      return;
     try {
       _isLoadingMore.value = true;
       _currentPage.value++;
-      await _performSearch(_searchQuery.value.isNotEmpty ? _searchQuery.value : '', reset: false);
+      await _performSearch(
+        _searchQuery.value.isNotEmpty ? _searchQuery.value : '',
+        reset: false,
+      );
     } catch (e) {
       _currentPage.value--;
-      print('خطأ في تحميل المزيد: $e');
+      debugPrint('Error loading more search results: $e');
     } finally {
       _isLoadingMore.value = false;
     }
@@ -191,27 +236,39 @@ class SearchController extends GetxController {
 
   void _applyLocalFilters() {
     List<Product> filtered = List.from(_searchResults);
+
     if (_selectedBrand.value.isNotEmpty) {
-      filtered = filtered.where((product) =>
-      product.brand?.toLowerCase() == _selectedBrand.value.toLowerCase()
-      ).toList();
+      filtered = filtered
+          .where(
+            (p) => p.brand?.toLowerCase() == _selectedBrand.value.toLowerCase(),
+          )
+          .toList();
     }
-    filtered = filtered.where((product) =>
-    product.displayPrice >= _currentMinPrice.value &&
-        product.displayPrice <= _currentMaxPrice.value
-    ).toList();
+
+    filtered = filtered
+        .where(
+          (p) =>
+              p.displayPrice >= _currentMinPrice.value &&
+              p.displayPrice <= _currentMaxPrice.value,
+        )
+        .toList();
+
     if (_showOnlyInStock.value) {
-      filtered = filtered.where((product) => product.inStock).toList();
+      filtered = filtered.where((p) => p.inStock).toList();
     }
     if (_showOnlyOnSale.value) {
-      filtered = filtered.where((product) => product.hasDiscount).toList();
+      filtered = filtered.where((p) => p.hasDiscount).toList();
     }
     if (_showOnlyFeatured.value) {
-      filtered = filtered.where((product) => product.isFeatured).toList();
+      filtered = filtered.where((p) => p.isFeatured).toList();
     }
-    if (_minRating.value > 0) {}
+    if (_minRating.value > 0) {
+      // apply rating if available
+    }
+
     _sortResults(filtered);
     _filteredResults.value = filtered;
+    _extractBrands();
   }
 
   void _sortResults(List<Product> products) {
@@ -226,9 +283,12 @@ class SearchController extends GetxController {
         products.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         break;
       case 'rating':
+        // if rating exists, sort by rating
         break;
       case 'popularity':
-        products.sort((a, b) => (b.isFeatured ? 1 : 0).compareTo(a.isFeatured ? 1 : 0));
+        products.sort(
+          (a, b) => (b.isFeatured ? 1 : 0).compareTo(a.isFeatured ? 1 : 0),
+        );
         break;
       case 'name_asc':
         products.sort((a, b) => a.name.compareTo(b.name));
@@ -263,6 +323,7 @@ class SearchController extends GetxController {
     searchTextController.clear();
     _searchQuery.value = '';
     _clearResults();
+    _hasSearched.value = false; // NEW: reset flag on clear
     searchFocusNode.unfocus();
   }
 
@@ -272,6 +333,7 @@ class SearchController extends GetxController {
     _errorMessage.value = '';
     _currentPage.value = 1;
     _hasNextPage.value = true;
+    _hasSearched.value = false; // NEW: reset when results are cleared
   }
 
   void toggleFilters() {
@@ -332,7 +394,10 @@ class SearchController extends GetxController {
 
   void _applyFiltersAndSearch() {
     if (_searchQuery.value.isNotEmpty || _hasActiveFilters()) {
-      _performSearch(_searchQuery.value.isNotEmpty ? _searchQuery.value : '', reset: true);
+      _performSearch(
+        _searchQuery.value.isNotEmpty ? _searchQuery.value : '',
+        reset: true,
+      );
     } else {
       _clearResults();
     }
@@ -350,6 +415,7 @@ class SearchController extends GetxController {
     _showOnlyFeatured.value = false;
     _sortBy.value = 'relevance';
     _subCategories.clear();
+
     if (_searchQuery.value.isNotEmpty) {
       _performSearch(_searchQuery.value);
     } else {
@@ -374,16 +440,17 @@ class SearchController extends GetxController {
       final categories = await _categoryRepository.getCategories();
       _categories.value = categories;
     } catch (e) {
-      print('خطأ في تحميل الفئات: $e');
+      debugPrint('Error loading categories: $e');
     }
   }
 
   Future<void> _loadSubCategories(String categoryId) async {
     try {
-      final subCategories = await _subCategoryRepository.getSubCategoriesByCategory(categoryId);
+      final subCategories = await _subCategoryRepository
+          .getSubCategoriesByCategory(categoryId);
       _subCategories.value = subCategories;
     } catch (e) {
-      print('خطأ في تحميل الفئات الفرعية: $e');
+      debugPrint('Error loading subcategories: $e');
     }
   }
 
@@ -399,7 +466,9 @@ class SearchController extends GetxController {
 
   void _updateMaxPriceFromProducts() {
     if (_searchResults.isNotEmpty) {
-      final currentMax = _searchResults.map((p) => p.displayPrice).reduce((a, b) => a > b ? a : b);
+      final currentMax = _searchResults
+          .map((p) => p.displayPrice)
+          .reduce((a, b) => a > b ? a : b);
       if (currentMax > _maxPrice.value) {
         _maxPrice.value = (currentMax * 1.1).ceilToDouble();
         if (_currentMaxPrice.value > _maxPrice.value) {
@@ -414,7 +483,9 @@ class SearchController extends GetxController {
 
   void _addToSearchHistory(String query) {
     if (query.trim().isEmpty) return;
-    _searchHistory.removeWhere((item) => item.toLowerCase() == query.toLowerCase());
+    _searchHistory.removeWhere(
+      (item) => item.toLowerCase() == query.toLowerCase(),
+    );
     _searchHistory.insert(0, query);
     if (_searchHistory.length > 20) {
       _searchHistory.removeRange(20, _searchHistory.length);
@@ -431,7 +502,7 @@ class SearchController extends GetxController {
       final history = StorageService.storage.read<List>('search_history') ?? [];
       _searchHistory.value = history.cast<String>();
     } catch (e) {
-      print('خطأ في تحميل تاريخ البحث: $e');
+      debugPrint('Error loading search history: $e');
     }
   }
 
@@ -447,20 +518,21 @@ class SearchController extends GetxController {
 
   Future<void> _loadPopularSearches() async {
     _popularSearches.value = [
-      'آيفون',
+      'ايفون',
       'سامسونج',
       'لابتوب',
       'سماعات',
       'شاحن',
       'غطاء هاتف',
       'ساعة ذكية',
-      'تابلت'
+      'تابلت',
     ];
   }
 
   void _generateSearchSuggestions(String query) {
     final suggestions = <String>{};
     final lowerQuery = query.toLowerCase();
+
     for (final historyItem in _searchHistory) {
       if (historyItem.toLowerCase().contains(lowerQuery)) {
         suggestions.add(historyItem);
@@ -506,13 +578,17 @@ class SearchController extends GetxController {
   String getActiveFiltersDescription() {
     final filters = <String>[];
     if (_selectedCategoryId.value.isNotEmpty) {
-      final category = _categories.firstWhereOrNull((c) => c.id == _selectedCategoryId.value);
+      final category = _categories.firstWhereOrNull(
+        (c) => c.id == _selectedCategoryId.value,
+      );
       if (category != null) {
         filters.add('الفئة: ${category.displayName}');
       }
     }
     if (_selectedSubCategoryId.value.isNotEmpty) {
-      final subCategory = _subCategories.firstWhereOrNull((s) => s.id == _selectedSubCategoryId.value);
+      final subCategory = _subCategories.firstWhereOrNull(
+        (s) => s.id == _selectedSubCategoryId.value,
+      );
       if (subCategory != null) {
         filters.add('الفئة الفرعية: ${subCategory.displayName}');
       }
@@ -520,8 +596,11 @@ class SearchController extends GetxController {
     if (_selectedBrand.value.isNotEmpty) {
       filters.add('العلامة: ${_selectedBrand.value}');
     }
-    if (_currentMinPrice.value > _minPrice.value || _currentMaxPrice.value < _maxPrice.value) {
-      filters.add('السعر: ${_currentMinPrice.value.toStringAsFixed(0)} - ${_currentMaxPrice.value.toStringAsFixed(0)}');
+    if (_currentMinPrice.value > _minPrice.value ||
+        _currentMaxPrice.value < _maxPrice.value) {
+      filters.add(
+        'السعر: ${_currentMinPrice.value.toStringAsFixed(0)} - ${_currentMaxPrice.value.toStringAsFixed(0)}',
+      );
     }
     if (_showOnlyInStock.value) filters.add('متوفر');
     if (_showOnlyOnSale.value) filters.add('عروض');

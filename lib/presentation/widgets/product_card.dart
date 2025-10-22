@@ -1,10 +1,14 @@
+// lib/presentation/widgets/product_card.dart
+// Compact product card used in lists & grids.
+// EN comments only.
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../data/models/product.dart';
-import '../../core/constants/colors.dart';
-import '../../data/utils/helpers.dart';
-import '../controllers/cart_controller.dart';
+import 'package:shamra_app/data/models/product.dart';
+import 'package:shamra_app/presentation/controllers/cart_controller.dart';
+import 'package:shamra_app/core/constants/colors.dart';
+import 'package:shamra_app/data/utils/helpers.dart';
 
 class ProductCard extends StatelessWidget {
   final Product product;
@@ -13,7 +17,6 @@ class ProductCard extends StatelessWidget {
   final double? width;
   final double? height;
   final bool isGridView;
-
   final int? matchPercent;
   final int matchThreshold;
 
@@ -34,12 +37,11 @@ class ProductCard extends StatelessWidget {
     return GetBuilder<CartController>(
       builder: (cartController) {
         return Container(
-          // جعل العرض ديناميكي مع حد أدنى وأقصى
           width: width ?? (isGridView ? null : 160),
           constraints: BoxConstraints(
             minWidth: 140,
             maxWidth: isGridView ? double.infinity : 200,
-            minHeight: 200, // حد أدنى للارتفاع
+            minHeight: 200,
           ),
           margin: const EdgeInsets.only(left: 12, bottom: 12),
           child: Material(
@@ -52,12 +54,12 @@ class ProductCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min, // مهم جداً لجعل Column ديناميكي
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 🔹 صورة المنتج - ارتفاع ثابت
+                  // Product image area
                   Container(
                     width: double.infinity,
-                    height: 150, // ارتفاع ثابت للصورة
+                    height: 150,
                     decoration: const BoxDecoration(
                       color: AppColors.background,
                       borderRadius: BorderRadius.only(
@@ -73,9 +75,7 @@ class ProductCard extends StatelessWidget {
                             topRight: Radius.circular(16),
                           ),
                           child: CachedNetworkImage(
-                            imageUrl: HelperMethod.getImageUrl(
-                              product.mainImage,
-                            ),
+                            imageUrl: HelperMethod.getImageUrl(product.mainImage),
                             fit: BoxFit.contain,
                             width: double.infinity,
                             height: double.infinity,
@@ -84,9 +84,7 @@ class ProductCard extends StatelessWidget {
                               child: const Center(
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    AppColors.primary,
-                                  ),
+                                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                                 ),
                               ),
                             ),
@@ -103,16 +101,13 @@ class ProductCard extends StatelessWidget {
                           ),
                         ),
 
-                        // شارة الخصم
+                        // Discount badge
                         if (product.hasDiscount)
                           Positioned(
                             top: 8,
                             right: 8,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [Colors.red, Colors.red.shade700],
@@ -124,11 +119,7 @@ class ProductCard extends StatelessWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(
-                                    Icons.local_offer_rounded,
-                                    color: AppColors.white,
-                                    size: 12,
-                                  ),
+                                  const Icon(Icons.local_offer_rounded, color: AppColors.white, size: 12),
                                   const SizedBox(width: 2),
                                   Text(
                                     'خصم ${product.discountPercentage?.toStringAsFixed(0)}%',
@@ -143,16 +134,13 @@ class ProductCard extends StatelessWidget {
                             ),
                           ),
 
-                        // شارة المميز (تظهر بدلاً من شارة الخصم إذا لم يكن هناك خصم)
+                        // Featured badge
                         if (product.isFeatured)
                           Positioned(
                             top: 8,
                             left: 8,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: AppColors.secondaryGradient,
@@ -171,11 +159,7 @@ class ProductCard extends StatelessWidget {
                               child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
-                                    Icons.star_rounded,
-                                    color: AppColors.white,
-                                    size: 12,
-                                  ),
+                                  Icon(Icons.star_rounded, color: AppColors.white, size: 12),
                                   SizedBox(width: 2),
                                   Text(
                                     'مميز',
@@ -190,6 +174,7 @@ class ProductCard extends StatelessWidget {
                             ),
                           ),
 
+                        // Match percent badge (optional)
                         if (matchPercent != null && matchPercent! >= matchThreshold)
                           Positioned(
                             bottom: 8,
@@ -223,7 +208,7 @@ class ProductCard extends StatelessWidget {
 
                   Flexible(
                     child: Padding(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(10),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
@@ -239,7 +224,6 @@ class ProductCard extends StatelessWidget {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
-
                           const SizedBox(height: 6),
                           Wrap(
                             children: [
@@ -251,7 +235,6 @@ class ProductCard extends StatelessWidget {
                                   color: AppColors.primary,
                                 ),
                               ),
-
                               if (product.hasDiscount) ...[
                                 const SizedBox(width: 6),
                                 Text(

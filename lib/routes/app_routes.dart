@@ -14,6 +14,8 @@ class Routes {
   static const String forgotPassword = '/forgot-password';
   static const String otp = '/otp';
   static const String resetPassword = '/reset-password';
+  static const terms = '/terms';
+  static const privacy = '/privacy';
 
   // Branch & location selection
   static const String branchSelection = '/branch-selection';

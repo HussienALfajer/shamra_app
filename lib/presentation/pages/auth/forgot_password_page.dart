@@ -6,6 +6,7 @@ import '../../../core/constants/colors.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/utils/phone_utils.dart';
 import '../../../routes/app_routes.dart';
+import '../../controllers/auth_controller.dart';
 import '../../widgets/common_widgets.dart';
 
 /// Forgot Password Page (UI only)
@@ -19,6 +20,7 @@ class ForgotPasswordPage extends StatefulWidget {
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _formKey = GlobalKey<FormState>();
   String? _phoneE164;
+  final _auth = Get.find<AuthController>();
   String _initialCountryCode = 'SY';
   bool _isLoading = false;
 
@@ -147,22 +149,13 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
     setState(() => _isLoading = true);
     try {
-      final repo = AuthRepository();
-      await repo.requestPasswordReset(phoneNumber: normalized);
-
-      ShamraSnackBar.show(
-        context: context,
-        message: 'تم إرسال رمز التحقق إلى رقمك',
-        type: SnackBarType.success,
-      );
-
-      Get.toNamed(Routes.otp, arguments: {'phone': normalized, 'flow': 'reset'});
-    } catch (e) {
-      ShamraSnackBar.show(
-        context: context,
-        message: e.toString(),
-        type: SnackBarType.error,
-      );
+      final ok = await _auth.requestPasswordReset(normalized);
+      if (ok) {
+        Get.toNamed(
+          Routes.otp,
+          arguments: {'phone': normalized, 'flow': 'reset'},
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

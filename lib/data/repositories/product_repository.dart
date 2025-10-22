@@ -1,8 +1,10 @@
+/////////////////////////////////
+// lib/data/repositories/product_repository.dart  (updated)
 import '../models/product.dart';
 import '../services/product_service.dart';
 
 class ProductRepository {
-  // Get products with pagination and filters
+  /// Fetch products with pagination and optional filters.
   Future<Map<String, dynamic>> getProducts({
     int page = 1,
     int limit = 20,
@@ -25,26 +27,26 @@ class ProductRepository {
     }
   }
 
-  // ✅ إصلاح: Get products by category يجب أن يعيد Map وليس List
+  /// Products by category (returns pagination map)
   Future<Map<String, dynamic>> getProductsByCategory({
     required String categoryId,
     int page = 1,
     int limit = 20,
-    String? search
+    String? search,
   }) async {
     try {
       return await ProductService.getProductsByCategory(
-          categoryId: categoryId,
-          page: page,
-          limit: limit,
-          search: search
+        categoryId: categoryId,
+        page: page,
+        limit: limit,
+        search: search,
       );
     } catch (e) {
       rethrow;
     }
   }
 
-  // ✅ إضافة: Get products by subcategory
+  /// Products by subcategory (returns pagination map)
   Future<Map<String, dynamic>> getProductsBySubCategory({
     required String subCategoryId,
     int page = 1,
@@ -63,41 +65,49 @@ class ProductRepository {
     }
   }
 
-  // Get featured products
+  /// Featured products (paginated map) — supports category/subCategory filters
   Future<Map<String, dynamic>> getFeaturedProducts({
     int limit = 20,
     int page = 1,
     String? search,
+    String? categoryId,
+    String? subCategoryId,
   }) async {
     try {
       return await ProductService.getFeaturedProducts(
         limit: limit,
         page: page,
         search: search,
+        categoryId: categoryId,
+        subCategoryId: subCategoryId,
       );
     } catch (e) {
       rethrow;
     }
   }
 
-  // Get products on sale (directly from API)
+  /// On-sale products (paginated map) — supports category/subCategory filters
   Future<Map<String, dynamic>> getOnSaleProducts({
     int limit = 20,
     int page = 1,
     String? search,
+    String? categoryId,
+    String? subCategoryId,
   }) async {
     try {
       return await ProductService.getOnSaleProducts(
         limit: limit,
         page: page,
         search: search,
+        categoryId: categoryId,
+        subCategoryId: subCategoryId,
       );
     } catch (e) {
       rethrow;
     }
   }
 
-  // Get product by ID
+  /// Single product by id
   Future<Product> getProductById(String productId) async {
     try {
       return await ProductService.getProductById(productId);
@@ -106,7 +116,7 @@ class ProductRepository {
     }
   }
 
-  // Search products
+  /// Simple search (returns list of Product)
   Future<List<Product>> searchProducts({
     required String query,
     int page = 1,

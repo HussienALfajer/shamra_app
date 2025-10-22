@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shamra_app/data/services/product_service.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../data/models/product.dart';
 import '../../../../data/utils/helpers.dart';
@@ -14,6 +13,9 @@ import '../../controllers/product_controller.dart';
 import '../../widgets/common_widgets.dart';
 import '../../widgets/product_card.dart';
 
+// NEW: Fullscreen zoomable image viewer
+import '../../widgets/fullscreen_image_viewer.dart';
+
 class ProductDetailsPage extends StatefulWidget {
   const ProductDetailsPage({super.key});
 
@@ -23,7 +25,7 @@ class ProductDetailsPage extends StatefulWidget {
 
 class _ProductDetailsPageState extends State<ProductDetailsPage>
     with TickerProviderStateMixin {
-  // Repositories and Services
+  // Repository
   final ProductRepository _productRepository = ProductRepository();
 
   // Animation Controllers
@@ -33,7 +35,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
   late Animation<double> _slideAnimation;
   late Animation<double> _fabScaleAnimation;
 
-  // Page Controllers
+  // Page/Scroll Controllers
   final ScrollController _scrollController = ScrollController();
   final PageController _pageController = PageController();
 
@@ -74,7 +76,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
     super.dispose();
   }
 
-  /// Initialize animations
+  /// Initialize animations (fade-in, slide-up, FAB scale)
   void _initializeAnimations() {
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1200),
@@ -163,7 +165,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         }
       }
     } catch (e) {
-      print('خطأ في تحميل بيانات المنتج: $e');
+      debugPrint('Error loading product data: $e');
       if (mounted) {
         setState(() {
           isLoadingProduct = false;
@@ -195,7 +197,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
     }
   }
 
-  /// Load similar products based on similarity algorithm
+  /// Load similar products (staged approach: subcategory -> category -> price range)
   Future<void> _loadSimilarProducts() async {
     if (product == null) return;
 
@@ -207,7 +209,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
 
       List<Product> allProducts = [];
 
-      // Stage 1: Get products from same subcategory
+      // Stage 1: same subcategory
       if (product!.subCategoryId?.isNotEmpty == true) {
         final subCategoryResult = await _productRepository.getProducts(
           categoryId: product!.categoryId,
@@ -217,15 +219,15 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
             (subCategoryResult['products'] as List<Product>?)
                 ?.where(
                   (p) =>
-              p.subCategoryId == product!.subCategoryId &&
-                  p.id != product!.id,
-            )
+                      p.subCategoryId == product!.subCategoryId &&
+                      p.id != product!.id,
+                )
                 .toList() ??
-                [];
+            [];
         allProducts.addAll(subCategoryProducts);
       }
 
-      // Stage 2: Add products from same main category if needed
+      // Stage 2: same category if still lacking
       if (allProducts.length < 20) {
         final categoryResult = await _productRepository.getProducts(
           categoryId: product!.categoryId,
@@ -235,25 +237,25 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
             (categoryResult['products'] as List<Product>?)
                 ?.where(
                   (p) =>
-              p.id != product!.id &&
-                  !allProducts.any((existing) => existing.id == p.id),
-            )
+                      p.id != product!.id &&
+                      !allProducts.any((existing) => existing.id == p.id),
+                )
                 .toList() ??
-                [];
+            [];
         allProducts.addAll(categoryProducts);
       }
 
-      // Stage 3: Add products from similar price range if needed
+      // Stage 3: price-range based
       if (allProducts.length < 20) {
         final priceRangeProducts = await _getSimilarPriceProducts();
         allProducts.addAll(
           priceRangeProducts.where(
-                (p) => !allProducts.any((existing) => existing.id == p.id),
+            (p) => !allProducts.any((existing) => existing.id == p.id),
           ),
         );
       }
 
-      // Sort products by similarity score
+      // Sort by similarity score
       final sortedProducts = _sortProductsBySimilarity(allProducts);
 
       if (mounted) {
@@ -263,7 +265,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         });
       }
     } catch (e) {
-      print('خطأ في تحميل المنتجات المشابهة: $e');
+      debugPrint('Error loading similar products: $e');
       if (mounted) {
         setState(() {
           isLoadingSimilar = false;
@@ -274,10 +276,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
     }
   }
 
-  /// Get products with similar price range
+  /// Get products within ±30% price range
   Future<List<Product>> _getSimilarPriceProducts() async {
     final currentPrice = product!.displayPrice;
-    final priceRange = currentPrice * 0.3; // 30% price range
+    final priceRange = currentPrice * 0.3;
     final minPrice = currentPrice - priceRange;
     final maxPrice = currentPrice + priceRange;
 
@@ -288,64 +290,63 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
       return products
           .where(
             (p) =>
-        p.id != product!.id &&
-            p.displayPrice >= minPrice &&
-            p.displayPrice <= maxPrice,
-      )
+                p.id != product!.id &&
+                p.displayPrice >= minPrice &&
+                p.displayPrice <= maxPrice,
+          )
           .toList();
     } catch (e) {
       return [];
     }
   }
 
-  /// Sort products by similarity score
+  /// Sort products by similarity score (descending)
   List<Product> _sortProductsBySimilarity(List<Product> products) {
     return products..sort((a, b) {
       int scoreA = _calculateSimilarityScore(a);
       int scoreB = _calculateSimilarityScore(b);
-      return scoreB.compareTo(scoreA); // Descending order
+      return scoreB.compareTo(scoreA);
     });
   }
 
-  /// Calculate similarity score between products
+  /// Similarity scoring heuristic
   int _calculateSimilarityScore(Product compareProduct) {
     int score = 0;
 
-    // Same subcategory (highest priority)
-    if (compareProduct.subCategoryId == product!.subCategoryId) {
-      score += 50;
-    }
-
-    // Same main category
-    if (compareProduct.categoryId == product!.categoryId) {
-      score += 30;
-    }
-
-    // Same brand
+    if (compareProduct.subCategoryId == product!.subCategoryId) score += 50;
+    if (compareProduct.categoryId == product!.categoryId) score += 30;
     if (compareProduct.brand == product!.brand &&
         product!.brand?.isNotEmpty == true) {
       score += 25;
     }
 
-    // Similar price range (±30%)
     final priceDifference =
-    (compareProduct.displayPrice - product!.displayPrice).abs();
+        (compareProduct.displayPrice - product!.displayPrice).abs();
     final priceThreshold = product!.displayPrice * 0.3;
-    if (priceDifference <= priceThreshold) {
-      score += 20;
-    }
+    if (priceDifference <= priceThreshold) score += 20;
 
-    // Same featured status
-    if (compareProduct.isFeatured == product!.isFeatured) {
-      score += 10;
-    }
-
-    // Same discount status
-    if (compareProduct.hasDiscount == product!.hasDiscount) {
-      score += 10;
-    }
+    if (compareProduct.isFeatured == product!.isFeatured) score += 10;
+    if (compareProduct.hasDiscount == product!.hasDiscount) score += 10;
 
     return score;
+  }
+
+  /// Open full-screen, zoomable gallery starting from tapped index
+  void _openImageViewer(int startIndex) {
+    final imgs =
+        (product!.images.isNotEmpty ? product!.images : [product!.mainImage])
+            .map((e) => HelperMethod.getImageUrl(e))
+            .toList();
+
+    Get.to(
+      () => FullscreenImageViewer(
+        images: imgs,
+        initialIndex: startIndex,
+        heroPrefix: 'product-${product!.id}-img-',
+      ),
+      transition: Transition.fadeIn,
+      duration: const Duration(milliseconds: 200),
+    );
   }
 
   @override
@@ -534,7 +535,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
             ],
           ),
           child: Obx(
-                () => IconButton(
+            () => IconButton(
               icon: Icon(
                 favController.isFavorite(product!.id)
                     ? Icons.favorite
@@ -582,7 +583,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
           ),
           child: Stack(
             children: [
-              // Product Images
+              // Product Images (tap to open viewer, with Hero transition)
               if (images.isNotEmpty)
                 SizedBox(
                   height: 400,
@@ -595,42 +596,52 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                       });
                     },
                     itemBuilder: (context, index) {
+                      final imageUrl = HelperMethod.getImageUrl(images[index]);
+                      final heroTag =
+                          'product-${product!.id}-img-$index'; // MUST match viewer prefix
+
                       return Container(
                         width: double.infinity,
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(16),
-                          child: CachedNetworkImage(
-                            imageUrl: HelperMethod.getImageUrl(images[index]),
-                            fit: BoxFit.contain,
-                            placeholder: (context, url) => Container(
-                              color: AppColors.lightGrey.withOpacity(0.3),
-                              child: const Center(
-                                child: CircularProgressIndicator(
-                                  color: AppColors.primary,
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            ),
-                            errorWidget: (context, url, error) => Container(
-                              color: AppColors.lightGrey.withOpacity(0.3),
-                              child: const Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.broken_image_outlined,
-                                    size: 64,
-                                    color: AppColors.grey,
-                                  ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    'صورة غير متاحة',
-                                    style: TextStyle(
-                                      color: AppColors.textSecondary,
-                                      fontSize: 14,
+                          child: GestureDetector(
+                            onTap: () => _openImageViewer(index),
+                            child: Hero(
+                              tag: heroTag,
+                              child: CachedNetworkImage(
+                                imageUrl: imageUrl,
+                                fit: BoxFit.contain,
+                                placeholder: (context, url) => Container(
+                                  color: AppColors.lightGrey.withOpacity(0.3),
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                      color: AppColors.primary,
+                                      strokeWidth: 2,
                                     ),
                                   ),
-                                ],
+                                ),
+                                errorWidget: (context, url, error) => Container(
+                                  color: AppColors.lightGrey.withOpacity(0.3),
+                                  child: const Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.broken_image_outlined,
+                                        size: 64,
+                                        color: AppColors.grey,
+                                      ),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        'صورة غير متاحة',
+                                        style: TextStyle(
+                                          color: AppColors.textSecondary,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -657,7 +668,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                           shape: BoxShape.circle,
                           color: _currentImageIndex == entry.key
                               ? AppColors.primary
-                              : AppColors.white.withOpacity(0.5),
+                              : AppColors.primary.withOpacity(0.3),
                         ),
                       );
                     }).toList(),
@@ -783,7 +794,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Product Name
           Text(
             product!.displayName,
             style: const TextStyle(
@@ -793,10 +803,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
               height: 1.3,
             ),
           ),
-
           const SizedBox(height: 8),
-
-          // Brand and Model
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -820,7 +827,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                     ),
                   ),
                 ),
-
               if (product!.model != null)
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -867,14 +873,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: [
-              const Icon(
+            children: const [
+              Icon(
                 Icons.price_change_rounded,
                 color: AppColors.primary,
                 size: 24,
               ),
-              const SizedBox(width: 8),
-              const Text(
+              SizedBox(width: 8),
+              Text(
                 'السعر',
                 style: TextStyle(
                   fontSize: 18,
@@ -884,13 +890,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
               ),
             ],
           ),
-
           const SizedBox(height: 16),
-
           Wrap(
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              // Current Price
               Text(
                 product!.formattedPrice,
                 style: const TextStyle(
@@ -899,10 +902,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                   color: AppColors.primary,
                 ),
               ),
-
               const SizedBox(width: 12),
-
-              // Original Price (if discounted)
               if (product!.hasDiscount) ...[
                 Text(
                   product!.formattedOriginalPrice,
@@ -914,9 +914,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                     decorationColor: AppColors.textSecondary,
                   ),
                 ),
-
                 const SizedBox(width: 10),
-
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -927,7 +925,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    'توفر ${(product!.price - product!.displayPrice).toStringAsFixed(0)} ${product?.currencySymbol} ',
+                    'وفر ${(product!.price - product!.displayPrice).toStringAsFixed(0)} ${product?.currencySymbol}',
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -964,14 +962,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: [
-              const Icon(
+            children: const [
+              Icon(
                 Icons.description_rounded,
                 color: AppColors.primary,
                 size: 20,
               ),
-              const SizedBox(width: 8),
-              const Text(
+              SizedBox(width: 8),
+              Text(
                 'وصف المنتج',
                 style: TextStyle(
                   fontSize: 16,
@@ -981,9 +979,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
               ),
             ],
           ),
-
           const SizedBox(height: 12),
-
           Text(
             product!.displayDescription,
             style: const TextStyle(
@@ -1019,107 +1015,403 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header Section
           Row(
             children: [
-              const Icon(
-                Icons.tune_rounded,
-                color: AppColors.primary,
-                size: 20,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.tune_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               const Text(
                 'المواصفات والتفاصيل',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 18,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 20),
 
-          const SizedBox(height: 16),
-
-          ...product!.specifications!.entries.map(
-                (entry) => Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      _getIconForSpecification(entry.key),
-                      color: AppColors.primary,
-                      size: 16,
-                    ),
+          // Specifications List
+          ...product!.specifications!.entries.map((entry) {
+            final isLast = entry == product!.specifications!.entries.last;
+            return Column(
+              children: [
+                _buildSpecificationItem(
+                  icon: _getIconForSpecification(entry.key),
+                  label: _formatSpecificationKey(entry.key),
+                  value: entry.value.toString(),
+                ),
+                if (!isLast) ...[
+                  const SizedBox(height: 12),
+                  Divider(
+                    color: AppColors.textSecondary.withOpacity(0.1),
+                    height: 1,
+                    thickness: 1,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      _formatSpecificationKey(entry.key),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 3,
-                    child: Text(
-                      entry.value.toString(),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
-                      ),
-                      textAlign: TextAlign.end,
-                    ),
-                  ),
+                  const SizedBox(height: 12),
                 ],
-              ),
-            ),
-          ),
+              ],
+            );
+          }),
         ],
       ),
     );
   }
 
+  Widget _buildSpecificationItem({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Icon Container
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: AppColors.primary, size: 18),
+        ),
+        const SizedBox(width: 14),
+
+        // Content
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textSecondary,
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   IconData _getIconForSpecification(String key) {
     final keyLower = key.toLowerCase();
+
+    // Display & Screen
     if (keyLower.contains('screen') ||
         keyLower.contains('display') ||
-        keyLower.contains('شاشة')) {
-      return Icons.tv_rounded;
-    } else if (keyLower.contains('camera') || keyLower.contains('كاميرا')) {
+        keyLower.contains('شاشة') ||
+        keyLower.contains('عرض')) {
+      return Icons.monitor_rounded;
+    }
+    // Camera
+    else if (keyLower.contains('camera') ||
+        keyLower.contains('كاميرا') ||
+        keyLower.contains('تصوير')) {
       return Icons.camera_alt_rounded;
-    } else if (keyLower.contains('battery') || keyLower.contains('بطارية')) {
-      return Icons.battery_full_rounded;
-    } else if (keyLower.contains('storage') ||
+    }
+    // Battery & Power
+    else if (keyLower.contains('battery') ||
+        keyLower.contains('بطارية') ||
+        keyLower.contains('طاقة') ||
+        keyLower.contains('شحن')) {
+      return Icons.battery_charging_full_rounded;
+    }
+    // Storage & Memory
+    else if (keyLower.contains('storage') ||
         keyLower.contains('memory') ||
-        keyLower.contains('ذاكرة')) {
-      return Icons.memory_rounded;
-    } else if (keyLower.contains('processor') ||
+        keyLower.contains('rom') ||
+        keyLower.contains('ذاكرة') ||
+        keyLower.contains('تخزين')) {
+      return Icons.sd_storage_rounded;
+    } else if (
+        keyLower.contains('ram') ||
+        keyLower.contains('الرام') ||
+        keyLower.contains('رام')
+    )
+    {
+      return Icons.developer_board;
+    }
+    // Processor & CPU
+    else if (keyLower.contains('processor') ||
         keyLower.contains('cpu') ||
+        keyLower.contains('chipset') ||
         keyLower.contains('معالج')) {
       return Icons.memory_rounded;
-    } else if (keyLower.contains('weight') || keyLower.contains('وزن')) {
+    }
+    // Weight
+    else if (keyLower.contains('weight') || keyLower.contains('وزن')) {
       return Icons.fitness_center_rounded;
-    } else if (keyLower.contains('dimensions') || keyLower.contains('أبعاد')) {
+    }
+    // Dimensions & Size
+    else if (keyLower.contains('dimensions') ||
+        keyLower.contains('size') ||
+        keyLower.contains('height') ||
+        keyLower.contains('width') ||
+        keyLower.contains('thickness') ||
+        keyLower.contains('أبعاد') ||
+        keyLower.contains('حجم') ||
+        keyLower.contains('سماكة')) {
       return Icons.straighten_rounded;
-    } else if (keyLower.contains('color') || keyLower.contains('الالوان')) {
+    }
+    // Color
+    else if (keyLower.contains('color') ||
+        keyLower.contains('colour') ||
+        keyLower.contains('اللون') ||
+        keyLower.contains('الالوان')) {
       return Icons.palette_rounded;
-    } else if (keyLower.contains('warranty') || keyLower.contains('ضمان')) {
+    }
+    // Warranty & Guarantee
+    else if (keyLower.contains('warranty') ||
+        keyLower.contains('guarantee') ||
+        keyLower.contains('ضمان') ||
+        keyLower.contains('كفالة')) {
+      return Icons.verified_user_rounded;
+    }
+    // Operating System
+    else if (keyLower.contains('os') ||
+        keyLower.contains('operating system') ||
+        keyLower.contains('android') ||
+        keyLower.contains('ios') ||
+        keyLower.contains('نظام') ||
+        keyLower.contains('تشغيل')) {
+      return Icons.phonelink_setup_rounded;
+    }
+    // Connectivity & Network
+    else if (keyLower.contains('wifi') ||
+        keyLower.contains('bluetooth') ||
+        keyLower.contains('5g') ||
+        keyLower.contains('4g') ||
+        keyLower.contains('lte') ||
+        keyLower.contains('network') ||
+        keyLower.contains('connectivity') ||
+        keyLower.contains('اتصال') ||
+        keyLower.contains('شبكة')) {
+      return Icons.wifi_rounded;
+    }
+    // Resolution
+    else if (keyLower.contains('resolution') ||
+        keyLower.contains('pixel') ||
+        keyLower.contains('دقة') ||
+        keyLower.contains('بكسل')) {
+      return Icons.high_quality_rounded;
+    }
+    // Speed & Performance
+    else if (keyLower.contains('speed') ||
+        keyLower.contains('ghz') ||
+        keyLower.contains('performance') ||
+        keyLower.contains('سرعة') ||
+        keyLower.contains('أداء')) {
+      return Icons.speed_rounded;
+    }
+    // Ports & Connectivity
+    else if (keyLower.contains('port') ||
+        keyLower.contains('usb') ||
+        keyLower.contains('hdmi') ||
+        keyLower.contains('audio jack') ||
+        keyLower.contains('منفذ')) {
+      return Icons.usb_rounded;
+    }
+    // Material & Build
+    else if (keyLower.contains('material') ||
+        keyLower.contains('build') ||
+        keyLower.contains('body') ||
+        keyLower.contains('مادة') ||
+        keyLower.contains('هيكل')) {
+      return Icons.layers_rounded;
+    }
+    // Water Resistance
+    else if (keyLower.contains('water') ||
+        keyLower.contains('waterproof') ||
+        keyLower.contains('ip rating') ||
+        keyLower.contains('مقاوم') ||
+        keyLower.contains('ماء')) {
+      return Icons.water_drop_rounded;
+    }
+    // Sound & Audio
+    else if (keyLower.contains('audio') ||
+        keyLower.contains('sound') ||
+        keyLower.contains('speaker') ||
+        keyLower.contains('صوت') ||
+        keyLower.contains('سماعة')) {
+      return Icons.volume_up_rounded;
+    }
+    // Sensors
+    else if (keyLower.contains('sensor') ||
+        keyLower.contains('fingerprint') ||
+        keyLower.contains('face') ||
+        keyLower.contains('حساس') ||
+        keyLower.contains('بصمة')) {
+      return Icons.fingerprint_rounded;
+    }
+    // GPU & Graphics
+    else if (keyLower.contains('gpu') ||
+        keyLower.contains('graphics') ||
+        keyLower.contains('الرسومات')) {
+      return Icons.videogame_asset_rounded;
+    }
+    // Refresh Rate
+    else if (keyLower.contains('refresh') ||
+        keyLower.contains('hz') ||
+        keyLower.contains('معدل') ||
+        keyLower.contains('تحديث')) {
+      return Icons.refresh_rounded;
+    }
+    // Brand
+    else if (keyLower.contains('brand') ||
+        keyLower.contains('manufacturer') ||
+        keyLower.contains('علامة') ||
+        keyLower.contains('صانع')) {
+      return Icons.branding_watermark_rounded;
+    }
+    // Model
+    else if (keyLower.contains('model') ||
+        keyLower.contains('موديل') ||
+        keyLower.contains('طراز')) {
+      return Icons.category_rounded;
+    }
+    // Price
+    else if (keyLower.contains('price') ||
+        keyLower.contains('cost') ||
+        keyLower.contains('سعر')) {
+      return Icons.attach_money_rounded;
+    }
+    // Year & Release Date
+    else if (keyLower.contains('year') ||
+        keyLower.contains('date') ||
+        keyLower.contains('release') ||
+        keyLower.contains('سنة') ||
+        keyLower.contains('تاريخ')) {
+      return Icons.calendar_today_rounded;
+    }
+    // SIM Card
+    else if (keyLower.contains('sim') ||
+        keyLower.contains('dual') ||
+        keyLower.contains('شريحة')) {
+      return Icons.sim_card_rounded;
+    }
+    // NFC
+    else if (keyLower.contains('nfc')) {
+      return Icons.nfc_rounded;
+    }
+    // Charging
+    else if (keyLower.contains('charging') ||
+        keyLower.contains('fast charge') ||
+        keyLower.contains('wireless') ||
+        keyLower.contains('شاحن')) {
+      return Icons.bolt_rounded;
+    }
+    // Capacity & Volume
+    else if (keyLower.contains('capacity') ||
+        keyLower.contains('volume') ||
+        keyLower.contains('liter') ||
+        keyLower.contains('سعة') ||
+        keyLower.contains('حجم')) {
+      return Icons.inventory_2_rounded;
+    }
+    // Temperature
+    else if (keyLower.contains('temperature') ||
+        keyLower.contains('cooling') ||
+        keyLower.contains('heat') ||
+        keyLower.contains('حرارة') ||
+        keyLower.contains('تبريد')) {
+      return Icons.thermostat_rounded;
+    }
+    // Power Consumption
+    else if (keyLower.contains('power') ||
+        keyLower.contains('watt') ||
+        keyLower.contains('consumption') ||
+        keyLower.contains('استهلاك')) {
+      return Icons.power_rounded;
+    }
+    // Lens & Optics
+    else if (keyLower.contains('lens') ||
+        keyLower.contains('aperture') ||
+        keyLower.contains('focal') ||
+        keyLower.contains('عدسة')) {
+      return Icons.lens_rounded;
+    }
+    // Video
+    else if (keyLower.contains('video') ||
+        keyLower.contains('recording') ||
+        keyLower.contains('فيديو') ||
+        keyLower.contains('تسجيل')) {
+      return Icons.videocam_rounded;
+    }
+    // Flash
+    else if (keyLower.contains('flash') ||
+        keyLower.contains('led') ||
+        keyLower.contains('فلاش')) {
+      return Icons.flash_on_rounded;
+    }
+    // Zoom
+    else if (keyLower.contains('zoom') || keyLower.contains('تقريب')) {
+      return Icons.zoom_in_rounded;
+    }
+    // Keyboard
+    else if (keyLower.contains('keyboard') ||
+        keyLower.contains('keys') ||
+        keyLower.contains('لوحة مفاتيح')) {
+      return Icons.keyboard_rounded;
+    }
+    // Rating & Reviews
+    else if (keyLower.contains('rating') ||
+        keyLower.contains('review') ||
+        keyLower.contains('star') ||
+        keyLower.contains('تقييم')) {
+      return Icons.star_rounded;
+    }
+    // Stock & Availability
+    else if (keyLower.contains('stock') ||
+        keyLower.contains('availability') ||
+        keyLower.contains('available') ||
+        keyLower.contains('متوفر') ||
+        keyLower.contains('مخزون')) {
+      return Icons.inventory_rounded;
+    }
+    // Origin & Country
+    else if (keyLower.contains('origin') ||
+        keyLower.contains('country') ||
+        keyLower.contains('made in') ||
+        keyLower.contains('منشأ') ||
+        keyLower.contains('بلد')) {
+      return Icons.public_rounded;
+    }
+    // Certification
+    else if (keyLower.contains('certification') ||
+        keyLower.contains('certified') ||
+        keyLower.contains('شهادة')) {
       return Icons.verified_rounded;
-    } else {
+    }
+    // Default fallback icon
+    else {
       return Icons.info_outline_rounded;
     }
   }
@@ -1161,9 +1453,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
               size: 20,
             ),
           ),
-
           const SizedBox(width: 12),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1178,7 +1468,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                         : AppColors.error,
                   ),
                 ),
-
                 if (product!.inStock) ...[
                   const SizedBox(height: 4),
                   Text(
@@ -1196,7 +1485,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
               ],
             ),
           ),
-
           if (product!.inStock && product!.stockQuantity <= 5)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1225,14 +1513,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: [
-              const Icon(
-                Icons.recommend_rounded,
-                color: AppColors.primary,
-                size: 24,
-              ),
-              const SizedBox(width: 8),
-              const Text(
+            children: const [
+              Icon(Icons.recommend_rounded, color: AppColors.primary, size: 24),
+              SizedBox(width: 8),
+              Text(
                 'منتجات مشابهة',
                 style: TextStyle(
                   fontSize: 20,
@@ -1240,39 +1524,17 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                   color: AppColors.textPrimary,
                 ),
               ),
-              const Spacer(),
-              if (similarProducts.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${similarProducts.length} منتج',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
             ],
           ),
-
           const SizedBox(height: 16),
-
           if (isLoadingSimilar)
             _buildSimilarProductsLoading()
           else if (similarProductsError.isNotEmpty)
             _buildSimilarProductsError()
           else if (similarProducts.isEmpty)
-              _buildNoSimilarProducts()
-            else
-              _buildSimilarProductsList(),
+            _buildNoSimilarProducts()
+          else
+            _buildSimilarProductsList(),
         ],
       ),
     );
@@ -1382,9 +1644,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
             ],
           ),
         ),
-
         const SizedBox(height: 16),
-
         SizedBox(
           height: 240,
           child: ListView.builder(
@@ -1414,6 +1674,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
     );
   }
 
+  /// Bottom bar — with quantity controls if already in cart
   Widget _buildBottomBar() {
     return Obx(() {
       final cartController = Get.find<CartController>();
@@ -1435,15 +1696,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         child: SafeArea(
           child: Row(
             children: [
-              if (isInCart) ...[
+              if (isInCart)
                 Container(
-                  padding: const EdgeInsets.only(right: 100, left: 100),
+                  padding: const EdgeInsets.symmetric(horizontal: 5),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16),
+                    color: AppColors.primary.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
-                    mainAxisSize: MainAxisSize.max,
                     children: [
                       IconButton(
                         onPressed: () =>
@@ -1453,8 +1713,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                           color: AppColors.primary,
                         ),
                       ),
-                      Container(
-                        constraints: const BoxConstraints(minWidth: 40),
+                      SizedBox(
+                        width: 27,
                         child: Text(
                           quantity.toString(),
                           textAlign: TextAlign.center,
@@ -1476,31 +1736,23 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                     ],
                   ),
                 ),
-              ],
-
+              const SizedBox(width: 12),
               Expanded(
-                child: Row(
-                  children: [
-                    if (!isInCart) ...[
-                      Expanded(
-                        child: ShamraButton(
-                          text: 'إضافة للسلة',
-                          onPressed: product!.inStock
-                              ? () => cartController.addToCart(product!)
-                              : () => ShamraSnackBar.show(
+                child: ShamraButton(
+                  text: isInCart ? 'تمت إضافته للسلة' : 'إضافة للسلة',
+                  onPressed: product!.inStock
+                      ? () => cartController.addToCart(product!)
+                      : () {
+                          ShamraSnackBar.show(
                             context: Get.context!,
                             message:
-                            'المنتج ${product!.name} غير متوفر حاليًا، ولا يمكن إضافته إلى السلة.',
-                            type: SnackBarType
-                                .error, // الأفضل يكون error بدلاً من success
-                          ),
-                          isOutlined: true,
-                          icon: Icons.add_shopping_cart_rounded,
-                          height: 56,
-                        ),
-                      ),
-                    ],
-                  ],
+                                'المنتج ${product!.name} غير متوفر حاليًا.',
+                            type: SnackBarType.error,
+                          );
+                        },
+                  isOutlined: !product!.inStock,
+                  icon: Icons.add_shopping_cart_rounded,
+                  height: 56,
                 ),
               ),
             ],

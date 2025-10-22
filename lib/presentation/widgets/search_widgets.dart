@@ -1,9 +1,13 @@
+// lib/presentation/widgets/search_widgets.dart
+// Reusable widgets used on search / filter screens.
+// EN comments only.
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../core/constants/colors.dart';
-import 'common_widgets.dart';
+import 'package:shamra_app/core/constants/colors.dart';
+import 'package:shamra_app/presentation/widgets/common_widgets.dart';
 
-/// Advanced Search Filter Chip
+/// Advanced Filter Chip widget
 class AdvancedFilterChip extends StatelessWidget {
   final String label;
   final bool isSelected;
@@ -60,11 +64,7 @@ class AdvancedFilterChip extends StatelessWidget {
                 ),
                 if (showRemove && isSelected) ...[
                   const SizedBox(width: 6),
-                  Icon(
-                    Icons.close,
-                    size: 14,
-                    color: color,
-                  ),
+                  Icon(Icons.close, size: 14, color: color),
                 ],
               ],
             ),
@@ -79,10 +79,7 @@ class AdvancedFilterChip extends StatelessWidget {
                   color: AppColors.error,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                constraints: const BoxConstraints(
-                  minWidth: 18,
-                  minHeight: 18,
-                ),
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
                 child: Text(
                   badge!,
                   style: const TextStyle(
@@ -100,7 +97,7 @@ class AdvancedFilterChip extends StatelessWidget {
   }
 }
 
-/// Interactive Price Range Slider
+/// Interactive price range slider with quick options
 class InteractivePriceRangeSlider extends StatefulWidget {
   final double minValue;
   final double maxValue;
@@ -120,10 +117,12 @@ class InteractivePriceRangeSlider extends StatefulWidget {
   });
 
   @override
-  State<InteractivePriceRangeSlider> createState() => _InteractivePriceRangeSliderState();
+  State<InteractivePriceRangeSlider> createState() =>
+      _InteractivePriceRangeSliderState();
 }
 
-class _InteractivePriceRangeSliderState extends State<InteractivePriceRangeSlider> {
+class _InteractivePriceRangeSliderState
+    extends State<InteractivePriceRangeSlider> {
   late RangeValues _currentRange;
 
   @override
@@ -145,14 +144,17 @@ class _InteractivePriceRangeSliderState extends State<InteractivePriceRangeSlide
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Price display
+        // Price display row
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -175,7 +177,10 @@ class _InteractivePriceRangeSliderState extends State<InteractivePriceRangeSlide
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -204,7 +209,9 @@ class _InteractivePriceRangeSliderState extends State<InteractivePriceRangeSlide
             overlayColor: AppColors.primary.withOpacity(0.2),
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 12),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 20),
-            rangeThumbShape: const RoundRangeSliderThumbShape(enabledThumbRadius: 12),
+            rangeThumbShape: const RoundRangeSliderThumbShape(
+              enabledThumbRadius: 12,
+            ),
             rangeTrackShape: const RoundedRectRangeSliderTrackShape(),
           ),
           child: RangeSlider(
@@ -221,8 +228,9 @@ class _InteractivePriceRangeSliderState extends State<InteractivePriceRangeSlide
           ),
         ),
 
-        // Quick price options
         const SizedBox(height: 16),
+
+        // Quick options
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -272,7 +280,7 @@ class _InteractivePriceRangeSliderState extends State<InteractivePriceRangeSlide
   }
 }
 
-/// Search History Item Widget
+/// Search history item widget
 class SearchHistoryItem extends StatelessWidget {
   final String query;
   final DateTime timestamp;
@@ -325,13 +333,15 @@ class SearchHistoryItem extends StatelessWidget {
             color: AppColors.textPrimary,
           ),
         ),
-        subtitle: showTime ? Text(
-          _formatTimestamp(timestamp),
-          style: TextStyle(
-            fontSize: 12,
-            color: AppColors.textSecondary.withOpacity(0.7),
-          ),
-        ) : null,
+        subtitle: showTime
+            ? Text(
+                _formatTimestamp(timestamp),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary.withOpacity(0.7),
+                ),
+              )
+            : null,
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -352,9 +362,7 @@ class SearchHistoryItem extends StatelessWidget {
           ],
         ),
         onTap: onTap,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -375,7 +383,7 @@ class SearchHistoryItem extends StatelessWidget {
   }
 }
 
-/// Search Suggestion Item
+/// Search suggestion item which highlights matched text
 class SearchSuggestionItem extends StatelessWidget {
   final String suggestion;
   final String query;
@@ -393,17 +401,10 @@ class SearchSuggestionItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(
-        leadingIcon,
-        color: AppColors.primary,
-        size: 20,
-      ),
+      leading: Icon(leadingIcon, color: AppColors.primary, size: 20),
       title: RichText(
         text: TextSpan(
-          style: const TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 16,
-          ),
+          style: const TextStyle(color: AppColors.textPrimary, fontSize: 16),
           children: _highlightQuery(suggestion, query),
         ),
       ),
@@ -431,25 +432,24 @@ class SearchSuggestionItem extends StatelessWidget {
     int index = lowerText.indexOf(lowerQuery);
 
     while (index != -1) {
-      // Add text before match
       if (index > start) {
         spans.add(TextSpan(text: text.substring(start, index)));
       }
 
-      // Add highlighted match
-      spans.add(TextSpan(
-        text: text.substring(index, index + query.length),
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-          color: AppColors.primary,
+      spans.add(
+        TextSpan(
+          text: text.substring(index, index + query.length),
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            color: AppColors.primary,
+          ),
         ),
-      ));
+      );
 
       start = index + query.length;
       index = lowerText.indexOf(lowerQuery, start);
     }
 
-    // Add remaining text
     if (start < text.length) {
       spans.add(TextSpan(text: text.substring(start)));
     }
@@ -458,7 +458,7 @@ class SearchSuggestionItem extends StatelessWidget {
   }
 }
 
-/// Filter Section Header
+/// Filter section header widget
 class FilterSectionHeader extends StatelessWidget {
   final String title;
   final IconData? icon;
@@ -484,11 +484,7 @@ class FilterSectionHeader extends StatelessWidget {
       child: Row(
         children: [
           if (icon != null) ...[
-            Icon(
-              icon,
-              color: AppColors.primary,
-              size: 20,
-            ),
+            Icon(icon, color: AppColors.primary, size: 20),
             const SizedBox(width: 8),
           ],
           Expanded(
@@ -534,7 +530,7 @@ class FilterSectionHeader extends StatelessWidget {
   }
 }
 
-/// Active Filters Summary
+/// Active filters summary widget
 class ActiveFiltersSummary extends StatelessWidget {
   final List<String> activeFilters;
   final VoidCallback onClearAll;
@@ -549,18 +545,14 @@ class ActiveFiltersSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (activeFilters.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    if (activeFilters.isEmpty) return const SizedBox.shrink();
 
     return Container(
       margin: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppColors.primary.withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.primary.withOpacity(0.2),
-        ),
+        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -587,24 +579,23 @@ class ActiveFiltersSummary extends StatelessWidget {
                   foregroundColor: AppColors.error,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                 ),
-                child: const Text(
-                  'مسح الكل',
-                  style: TextStyle(fontSize: 14),
-                ),
+                child: const Text('مسح الكل', style: TextStyle(fontSize: 14)),
               ),
             ],
           ),
           Wrap(
             spacing: 1,
             runSpacing: 2,
-            children: activeFilters.map((filter) =>
-                AdvancedFilterChip(
-                  label: filter,
-                  isSelected: true,
-                  showRemove: true,
-                  onTap: () => onRemoveFilter(filter),
-                ),
-            ).toList(),
+            children: activeFilters
+                .map(
+                  (filter) => AdvancedFilterChip(
+                    label: filter,
+                    isSelected: true,
+                    showRemove: true,
+                    onTap: () => onRemoveFilter(filter),
+                  ),
+                )
+                .toList(),
           ),
         ],
       ),
@@ -612,7 +603,7 @@ class ActiveFiltersSummary extends StatelessWidget {
   }
 }
 
-/// Search Results Header
+/// Search results header widget
 class SearchResultsHeader extends StatelessWidget {
   final int totalResults;
   final String query;
@@ -634,9 +625,7 @@ class SearchResultsHeader extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         border: Border(
-          bottom: BorderSide(
-            color: AppColors.divider.withOpacity(0.5),
-          ),
+          bottom: BorderSide(color: AppColors.divider.withOpacity(0.5)),
         ),
       ),
       child: Column(
@@ -689,7 +678,9 @@ class SearchResultsHeader extends StatelessWidget {
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppColors.primary,
+                    ),
                   ),
                 ),
             ],
@@ -710,7 +701,7 @@ class SearchResultsHeader extends StatelessWidget {
   }
 }
 
-/// Empty Search State with Suggestions
+/// Empty search state widget with suggestions
 class EmptySearchState extends StatelessWidget {
   final String query;
   final List<String> suggestions;
@@ -733,7 +724,6 @@ class EmptySearchState extends StatelessWidget {
       padding: const EdgeInsets.all(30),
       child: Column(
         children: [
-          // Empty state icon and message
           Container(
             width: 100,
             height: 100,
@@ -747,9 +737,7 @@ class EmptySearchState extends StatelessWidget {
               color: AppColors.primary.withOpacity(0.7),
             ),
           ),
-
           const SizedBox(height: 24),
-
           Text(
             'لا توجد نتائج',
             style: const TextStyle(
@@ -758,9 +746,7 @@ class EmptySearchState extends StatelessWidget {
               color: AppColors.textPrimary,
             ),
           ),
-
           const SizedBox(height: 8),
-
           RichText(
             textAlign: TextAlign.center,
             text: TextSpan(
@@ -781,7 +767,6 @@ class EmptySearchState extends StatelessWidget {
               ],
             ),
           ),
-
           if (hasActiveFilters) ...[
             const SizedBox(height: 24),
             ShamraButton(
@@ -792,7 +777,6 @@ class EmptySearchState extends StatelessWidget {
               icon: Icons.filter_alt_off_rounded,
             ),
           ],
-
           if (suggestions.isNotEmpty) ...[
             const SizedBox(height: 32),
             Text(
@@ -807,18 +791,18 @@ class EmptySearchState extends StatelessWidget {
             Wrap(
               spacing: 12,
               runSpacing: 12,
-              children: suggestions.map((suggestion) =>
-                  ShamraChip(
-                    label: suggestion,
-                    onTap: () => onSuggestionTap(suggestion),
-                    icon: Icons.lightbulb_outline_rounded,
-                  ),
-              ).toList(),
+              children: suggestions
+                  .map(
+                    (suggestion) => ShamraChip(
+                      label: suggestion,
+                      onTap: () => onSuggestionTap(suggestion),
+                      icon: Icons.lightbulb_outline_rounded,
+                    ),
+                  )
+                  .toList(),
             ),
           ],
-
           const SizedBox(height: 32),
-
           Text(
             'نصائح للبحث:',
             style: const TextStyle(
@@ -827,36 +811,42 @@ class EmptySearchState extends StatelessWidget {
               color: AppColors.textPrimary,
             ),
           ),
-
           const SizedBox(height: 16),
-
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: [
-              'جرب كلمات أخرى',
-              'استخدم أسماء أعم',
-              'تحقق من التهجئة',
-              'ابحث بالإنجليزية',
-              'قلل من الفلاتر',
-            ].map((tip) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.info.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: AppColors.info.withOpacity(0.3),
-                ),
-              ),
-              child: Text(
-                tip,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.info,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            )).toList(),
+            children:
+                [
+                      'جرب كلمات أخرى',
+                      'استخدم أسماء أعم',
+                      'تحقق من التهجئة',
+                      'ابحث بالإنجليزية',
+                      'قلل من الفلاتر',
+                    ]
+                    .map(
+                      (tip) => Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.info.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppColors.info.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Text(
+                          tip,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.info,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
           ),
         ],
       ),

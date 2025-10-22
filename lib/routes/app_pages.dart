@@ -10,12 +10,15 @@ import 'package:shamra_app/presentation/pages/order/order_details.dart';
 import 'package:shamra_app/presentation/pages/order/order_page.dart';
 import 'package:shamra_app/presentation/pages/splash/welcome_page.dart';
 import 'package:shamra_app/presentation/pages/branch/branch_selection_page.dart';
+import '../presentation/controllers/products_uI_controller.dart';
 import '../presentation/pages/auth/forgot_password_page.dart';
 import '../presentation/pages/auth/otp_page.dart';
 import '../presentation/pages/auth/reset_password_page.dart';
 import '../presentation/pages/category/categories_page.dart';
 import '../presentation/pages/category/category_details_page.dart';
 import '../presentation/pages/favorite/favorites_page.dart';
+import '../presentation/pages/legal/privacy_policy_page.dart';
+import '../presentation/pages/legal/terms_of_service_page.dart';
 import '../presentation/pages/product/product_page.dart';
 import '../presentation/pages/product/product_details_page.dart';
 import '../presentation/pages/profile/edit_profile_page.dart';
@@ -39,6 +42,9 @@ class AppPages {
   static final routes = [
     GetPage(name: Routes.notifications, page: () => const NotificationsPage()),
     GetPage(name: Routes.otp, page: () => const OtpPage()),
+
+    GetPage(name: Routes.terms, page: () => const TermsOfServicePage()),
+    GetPage(name: Routes.privacy, page: () => const PrivacyPolicyPage()),
 
     GetPage(
       name: Routes.selectLocation,

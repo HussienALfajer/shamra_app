@@ -17,14 +17,25 @@ class AuthController extends GetxController {
   final RxBool _isLoggedIn = false.obs;
   final RxString _errorMessage = ''.obs;
   final RxBool isPasswordVisible = false.obs;
-  final Rx<Map<String, dynamic>?> _merchantRequest = Rx<Map<String, dynamic>?>(null);
+  final RxString _registrationToken = ''.obs;
+
+  final Rx<Map<String, dynamic>?> _merchantRequest = Rx<Map<String, dynamic>?>(
+    null,
+  );
 
   // Getters
   Rx<User?> get currentUserRx => _currentUser;
+
   User? get currentUser => _currentUser.value;
+
   bool get isLoading => _isLoading.value;
+
   bool get isLoggedIn => _isLoggedIn.value;
+
   String get errorMessage => _errorMessage.value;
+
+  String get registrationToken => _registrationToken.value;
+
   Map<String, dynamic>? get merchantRequest => _merchantRequest.value;
 
   @override
@@ -104,39 +115,85 @@ class AuthController extends GetxController {
     }
   }
 
-  /// Register new user without email; phoneNumber is REQUIRED.
-  Future<bool> register({
-    required String firstName,
-    required String lastName,
-    required String password,
+  Future<bool> sendOtpForRegistration(String phoneNumber) async {
+    try {
+      _isLoading.value = true;
+      _errorMessage.value = '';
+      await _authRepository.sendOtpForRegistration(phoneNumber: phoneNumber);
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'تم إرسال رمز التحقق',
+        type: SnackBarType.success,
+      );
+      return true;
+    } catch (e) {
+      _errorMessage.value = e.toString();
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: e.toString(),
+        type: SnackBarType.error,
+      );
+      return false;
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  Future<bool> verifyOtpForRegistration({
     required String phoneNumber,
-    required dynamic branch,
+    required String otp,
   }) async {
     try {
       _isLoading.value = true;
       _errorMessage.value = '';
+      final token = await _authRepository.verifyOtpForRegistration(
+        phoneNumber: phoneNumber,
+        otp: otp,
+      );
+      if (token.isEmpty) throw Exception('فشل استلام رمز التسجيل');
+      _registrationToken.value = token;
+      return true;
+    } catch (e) {
+      _errorMessage.value = e.toString();
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'فشل التحقق: ${e.toString()}',
+        type: SnackBarType.error,
+      );
+      return false;
+    } finally {
+      _isLoading.value = false;
+    }
+  }
 
-      final response = await _authRepository.register(
+  Future<bool> registerAfterOtp({
+    required String firstName,
+    required String lastName,
+    required String password,
+    required String phoneNumber,
+    required String branchId,
+  }) async {
+    try {
+      _isLoading.value = true;
+      _errorMessage.value = '';
+      final response = await _authRepository.registerAfterOtp(
         firstName: firstName,
         lastName: lastName,
         password: password,
         phoneNumber: phoneNumber,
-        branchId: branch.id,
+        branchId: branchId,
+        registrationToken: _registrationToken.value,
+
       );
-
-      if (response.data.user != null) {
-        _currentUser.value = User.fromJson(response.data.user.toJson());
-        _isLoggedIn.value = true;
-
-        ShamraSnackBar.show(
-          context: Get.context!,
-          message: 'تم إنشاء الحساب بنجاح 🎉',
-          type: SnackBarType.success,
-        );
-        return true;
-      }
-
-      return false;
+      _currentUser.value = response.data.user;
+      _isLoggedIn.value = true;
+      await selectBranchSilent(branchId);
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'تم إنشاء الحساب بنجاح 🎉',
+        type: SnackBarType.success,
+      );
+      return true;
     } catch (e) {
       _errorMessage.value = e.toString();
       ShamraSnackBar.show(
@@ -400,6 +457,99 @@ class AuthController extends GetxController {
       _merchantRequest.value = request;
     } catch (e) {
       _errorMessage.value = e.toString();
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  /// Request password reset OTP (forgot-password).
+  Future<bool> requestPasswordReset(String phoneNumber) async {
+    try {
+      _isLoading.value = true;
+      _errorMessage.value = '';
+      await _authRepository.requestPasswordReset(phoneNumber: phoneNumber);
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'تم إرسال رمز التحقق إلى رقمك',
+        type: SnackBarType.success,
+      );
+      return true;
+    } catch (e) {
+      _errorMessage.value = e.toString();
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: e.toString(),
+        type: SnackBarType.error,
+      );
+      return false;
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  /// Reset password (consumes OTP on server).
+  Future<bool> resetPassword({
+    required String phoneNumber,
+    required String newPassword,
+    required String otp,
+  }) async {
+    try {
+      _isLoading.value = true;
+      _errorMessage.value = '';
+      await _authRepository.resetPassword(
+        phoneNumber: phoneNumber,
+        newPassword: newPassword,
+        otp: otp,
+      );
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'تم تغيير كلمة المرور بنجاح',
+        type: SnackBarType.success,
+      );
+      return true;
+    } catch (e) {
+      _errorMessage.value = e.toString();
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'فشل تغيير كلمة المرور: ${e.toString()}',
+        type: SnackBarType.error,
+      );
+      return false;
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  /// Verify OTP specifically for reset flow (no tokens saved, no login state changes).
+  Future<bool> verifyOtpForReset({
+    required String phoneNumber,
+    required String otp,
+  }) async {
+    try {
+      _isLoading.value = true;
+      _errorMessage.value = '';
+      final ok = await _authRepository.verifyResetOtp(
+        phoneNumber: phoneNumber,
+        otp: otp,
+      );
+      if (ok) {
+        ShamraSnackBar.show(
+          context: Get.context!,
+          message: 'تم التحقق من الرمز ✅',
+          type: SnackBarType.success,
+        );
+        return true;
+      }
+      _errorMessage.value = 'رمز التحقق غير صحيح';
+      return false;
+    } catch (e) {
+      _errorMessage.value = e.toString();
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'فشل التحقق: ${e.toString()}',
+        type: SnackBarType.error,
+      );
+      return false;
     } finally {
       _isLoading.value = false;
     }

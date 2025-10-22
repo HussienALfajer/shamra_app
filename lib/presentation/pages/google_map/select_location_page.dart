@@ -25,44 +25,87 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
   String? _address;
   bool _locating = false;
 
+  // NEW: reflect whether we actually have runtime location permission
+  bool _hasLocationPermission = false; // NEW
+
   @override
   void initState() {
     super.initState();
-    _goToMyLocationIfPermitted();
+    _prepareAndFocusOnUser(); // NEW
   }
 
-  Future<void> _goToMyLocationIfPermitted() async {
+  // NEW: High-level orchestrator to ensure service+permission, then drop a pin.
+  Future<void> _prepareAndFocusOnUser() async {
     setState(() => _locating = true);
     try {
-      bool svc = await Geolocator.isLocationServiceEnabled();
-      if (!svc) {
-        setState(() => _locating = false);
-        return;
+      final ready = await _ensureLocationReady(); // service + permission
+      if (ready) {
+        await _goToMyLocationAndDropPin();
       }
-
-      LocationPermission perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.denied) {
-        perm = await Geolocator.requestPermission();
-      }
-      if (perm == LocationPermission.deniedForever) {
-        setState(() => _locating = false);
-        return;
-      }
-
-      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
-      final controller = await _mapCtrl.future;
-      final target = LatLng(pos.latitude, pos.longitude);
-      _initialCamera = CameraPosition(target: target, zoom: 15);
-      await controller.animateCamera(CameraUpdate.newCameraPosition(_initialCamera));
     } catch (_) {
+      // swallow errors, UI already shows default view
     } finally {
       if (mounted) setState(() => _locating = false);
     }
   }
 
+  // NEW: Make sure GPS is on and permission is granted (or guide user to settings)
+  Future<bool> _ensureLocationReady() async {
+    // Check service (GPS)
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      final proceed = await _askEnableLocationService(); // dialog + open settings
+      if (!proceed) return false;
+
+      // Wait/poll until user turns GPS on or timeout
+      serviceEnabled = await _waitFor(() => Geolocator.isLocationServiceEnabled());
+      if (!serviceEnabled) return false;
+    }
+
+    // Check permission
+    LocationPermission perm = await Geolocator.checkPermission();
+    if (perm == LocationPermission.denied) {
+      perm = await Geolocator.requestPermission();
+    }
+
+    if (perm == LocationPermission.deniedForever) {
+      final opened = await _askOpenAppSettings(); // dialog + open app settings
+      if (!opened) {
+        _hasLocationPermission = false;
+        return false;
+      }
+      // After returning from settings, check again
+      perm = await Geolocator.checkPermission();
+    }
+
+    _hasLocationPermission = perm == LocationPermission.always || perm == LocationPermission.whileInUse;
+    return _hasLocationPermission;
+  }
+
+  // NEW: Actually get user's position, move camera, place marker, reverse geocode
+  Future<void> _goToMyLocationAndDropPin() async {
+    try {
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.best,
+      );
+      final target = LatLng(pos.latitude, pos.longitude);
+
+      // Update camera first time map is ready
+      final controller = await _mapCtrl.future;
+      _initialCamera = CameraPosition(target: target, zoom: 15);
+      await controller.animateCamera(CameraUpdate.newCameraPosition(_initialCamera));
+
+      // Drop/Update marker + reverse geocode
+      setState(() => _selected = target);
+      await _reverseGeocode(target);
+    } catch (e) {
+      // If fetching precise location fails, we keep the map at default center
+    }
+  }
+
+  // CHANGED: onTap now just sets & reverse geocodes (removed stray "geocoding:" label)
   void _onTap(LatLng p) {
     setState(() => _selected = p);
-    geocoding:
     _reverseGeocode(p);
   }
 
@@ -117,8 +160,8 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
               onMapCreated: (c) {
                 if (!_mapCtrl.isCompleted) _mapCtrl.complete(c);
               },
-              myLocationEnabled: true,
-              myLocationButtonEnabled: true,
+              myLocationEnabled: _hasLocationPermission,       // CHANGED
+              myLocationButtonEnabled: _hasLocationPermission,  // CHANGED
               compassEnabled: true,
               zoomControlsEnabled: false,
               onTap: _onTap,
@@ -211,5 +254,67 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
         ),
       ),
     );
+  }
+
+  // =========================
+  // Helpers (dialogs + waits)
+  // =========================
+
+  // NEW: Ask user to enable device location (GPS) and open system settings
+  Future<bool> _askEnableLocationService() async {
+    final res = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text('تشغيل الموقع'),
+        content: const Text('خدمة تحديد الموقع غير مفعّلة. هل تريد فتح الإعدادات لتفعيلها؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('إلغاء')),
+          TextButton(
+            onPressed: () async {
+              await Geolocator.openLocationSettings();
+              if (context.mounted) Navigator.of(context).pop(true);
+            },
+            child: const Text('فتح الإعدادات'),
+          ),
+        ],
+      ),
+    );
+    return res ?? false;
+  }
+
+  // NEW: Ask user to open app settings when permission is permanently denied
+  Future<bool> _askOpenAppSettings() async {
+    final res = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text('السماح بالوصول للموقع'),
+        content: const Text('صلاحية الموقع مرفوضة دائماً. افتح إعدادات التطبيق لمنح الصلاحية.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('إلغاء')),
+          TextButton(
+            onPressed: () async {
+              await Geolocator.openAppSettings();
+              if (context.mounted) Navigator.of(context).pop(true);
+            },
+            child: const Text('فتح الإعدادات'),
+          ),
+        ],
+      ),
+    );
+    return res ?? false;
+  }
+
+  // NEW: Polling helper to wait until a condition becomes true (or times out)
+  Future<bool> _waitFor(Future<bool> Function() check, {int timeoutSec = 25, int intervalMs = 500}) async {
+    final end = DateTime.now().add(Duration(seconds: timeoutSec));
+    while (DateTime.now().isBefore(end)) {
+      try {
+        if (await check()) return true;
+      } catch (_) {}
+      await Future.delayed(Duration(milliseconds: intervalMs));
+    }
+    return false;
   }
 }

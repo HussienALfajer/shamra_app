@@ -174,7 +174,7 @@ class OrderController extends GetxController {
     double? discountAmount,
     int? pointsToRedeem, // 🎯 إضافة
     String? currency, // 🎯 إضافة
-
+    Map<String, double>? location,
   }) async {
     try {
       final auth = Get.find<AuthController>();
@@ -200,7 +200,7 @@ class OrderController extends GetxController {
         notes: notes,
         pointsToRedeem: pointsToRedeem, // 🎯 إضافة
         currency: currency ?? 'USD', // 🎯 إضافة
-
+        location: location,
       );
 
       _orders.insert(0, order);
@@ -304,33 +304,27 @@ class OrderController extends GetxController {
     required double lng,
     String? address,
     String? extraNotes,
-    int? pointsToRedeem, // 🎯 إضافة
-    String? currency, // 🎯 إضافة
-
+    int? pointsToRedeem,
+    String? currency,
   }) async {
-    final locJson =
-        '{"lat":${lat.toStringAsFixed(6)},"lng":${lng.toStringAsFixed(6)}'
-        '${address != null ? ',"address":"${_sanitizeForNotes(address)}"' : ''}}';
-    final locationBlock = '[LOC] $locJson [/LOC]';
+    // build location map ONLY
+    final Map<String, double> locationData = {'lat': lat, 'lng': lng};
 
-    String mergedNotes;
-    if (extraNotes != null && extraNotes.trim().isNotEmpty) {
-      mergedNotes = '${extraNotes.trim()} | $locationBlock';
-    } else {
-      mergedNotes = locationBlock;
-    }
-    if (mergedNotes.length > 480) mergedNotes = mergedNotes.substring(0, 480);
+    // keep user's note only (ignore injecting location into notes)
+    final String? cleanedNotes =
+    (extraNotes != null && extraNotes.trim().isNotEmpty)
+        ? extraNotes.trim()
+        : null;
 
-    // ✅ اطبع ملخص ما سيتم تمريره (بما فيه notes)
     debugPrint('🗺️ Checkout location: lat=$lat, lng=$lng, address=${address ?? '-'}');
-    debugPrint('🏪 Using branchId: $branchId');
-    debugPrint('📝 Notes (merged) [len=${mergedNotes.length}]: $mergedNotes');
+    debugPrint('📝 Notes (user only): ${cleanedNotes ?? '-'}');
 
     await createOrderFromCart(
       branchId: branchId,
-      notes: mergedNotes,
-      pointsToRedeem: pointsToRedeem, // 🎯 إضافة
-      currency: currency, // 🎯 إضافة
+      notes: cleanedNotes,        // ← send user's note only
+      pointsToRedeem: pointsToRedeem,
+      currency: currency,
+      location: locationData,     // ← send coordinates separately
     );
   }
 

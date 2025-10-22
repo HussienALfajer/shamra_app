@@ -2,9 +2,8 @@
 
 /// API endpoints and base URLs used by the app.
 class ApiConstants {
-  static const String baseUrl = 'http://192.168.1.109:3000/api/v1';
-  static const String storageUrl = 'http://192.168.1.109:3000';
-
+  static const String baseUrl = 'http://62.171.153.198:3399/api/v1';
+  static const String storageUrl = 'http://62.171.153.198:3399';
   // Auth endpoints
   static const String login = '/auth/login';
   static const String register = '/auth/register';
@@ -42,7 +41,7 @@ class ApiConstants {
 class AppConstants {
   static const String appName = 'Shamra Electronics';
   static const String appVersion = '1.0.0';
-  static const String currency = 'SYP';
+  static const String currency = '\$';
 
   // Storage Keys
   static const String tokenKey = 'jwt_token';

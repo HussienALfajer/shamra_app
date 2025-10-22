@@ -16,6 +16,7 @@ import '../../controllers/category_controller.dart';
 import '../../controllers/product_controller.dart';
 import '../../controllers/banner_controller.dart';
 
+import '../../controllers/products_uI_controller.dart';
 import '../../widgets/banner_widget.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/common_widgets.dart';
@@ -25,6 +26,11 @@ import '../order/order_page.dart';
 import '../product/product_page.dart';
 import '../profile/profile_page.dart';
 import '../search/search_page.dart';
+
+// === Unified spacing tokens ===
+const double kSpace = 0.0; // primary vertical spacing between blocks
+const double kPad = 16.0; // primary horizontal padding
+const double kEndSpacer = 64; // end-of-page spacer (reduced from 100)
 
 class MainPage extends StatelessWidget {
   const MainPage({super.key});
@@ -44,7 +50,9 @@ class MainPage extends StatelessWidget {
           final mainController = Get.find<MainController>();
           final shouldExit = !mainController.backToPreviousTab();
 
-          debugPrint('[MainPage] onPopInvoked | shouldExit=$shouldExit | currentIndex=${mainController.currentIndex.value}');
+          debugPrint(
+            '[MainPage] onPopInvoked | shouldExit=$shouldExit | currentIndex=${mainController.currentIndex.value}',
+          );
 
           if (shouldExit) {
             // نحن في الصفحة الرئيسية، اخرج من التطبيق
@@ -82,8 +90,10 @@ class MainPage extends StatelessWidget {
               child: SafeArea(
                 child: Container(
                   height: 60,
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 1,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
@@ -157,7 +167,8 @@ class MainPage extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          // tighter vertical padding for consistency
+          padding: const EdgeInsets.symmetric(vertical: 4), // was 6
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -217,7 +228,8 @@ class MainPage extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          // tighter vertical padding for consistency
+          padding: const EdgeInsets.symmetric(vertical: 4), // was 6
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -253,7 +265,9 @@ class MainPage extends StatelessWidget {
                         scale: 1.0,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.error,
                             borderRadius: BorderRadius.circular(10),
@@ -316,23 +330,24 @@ class CustomerHomePage extends StatelessWidget {
           controller: controller.homeScrollController,
           slivers: [
             _buildSliverAppBar(),
+
+            // Banners block with unified vertical spacing
             SliverToBoxAdapter(
-              child: GetBuilder<BannerController>(
-                init: BannerController(),
-                builder: (bannerController) => Column(
-                  children: const [
-                    SizedBox(height: 16),
-                    BannerCarousel(
-                      height: 200,
-                      autoPlay: true,
-                      autoPlayInterval: Duration(seconds: 4),
-                      showDots: true,
-                    ),
-                    SizedBox(height: 16),
-                  ],
-                ),
+              child: Column(
+                children: const [
+                  SizedBox(height: kSpace),
+                  BannerCarousel(
+                    height: 200,
+                    autoPlay: true,
+                    autoPlayInterval: Duration(seconds: 3),
+                    showDots: true,
+                  ),
+                  SizedBox(height: kSpace),
+                ],
               ),
             ),
+
+            // Categories section
             SliverToBoxAdapter(
               child: GetBuilder<CategoryController>(
                 init: CategoryController(),
@@ -351,6 +366,8 @@ class CustomerHomePage extends StatelessWidget {
                 }),
               ),
             ),
+
+            // Featured products
             SliverToBoxAdapter(
               child: Obx(() {
                 if (controller.isLoading) {
@@ -364,6 +381,8 @@ class CustomerHomePage extends StatelessWidget {
                 );
               }),
             ),
+
+            // On sale
             SliverToBoxAdapter(
               child: Obx(() {
                 if (controller.isLoading) {
@@ -377,6 +396,8 @@ class CustomerHomePage extends StatelessWidget {
                 );
               }),
             ),
+
+            // Recent products
             SliverToBoxAdapter(
               child: Obx(() {
                 if (controller.isLoading) {
@@ -390,7 +411,9 @@ class CustomerHomePage extends StatelessWidget {
                 );
               }),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+
+            // Reduced end spacer
+            const SliverToBoxAdapter(child: SizedBox(height: kEndSpacer)),
           ],
         ),
       ),
@@ -456,7 +479,7 @@ class CustomerHomePage extends StatelessWidget {
       title: Row(
         children: [
           Image.asset(AppConstants.logoPath, width: 40, height: 40),
-          const SizedBox(width: 8),
+          const SizedBox(height: 0, width: 8),
           const Text(
             'Shamra',
             style: TextStyle(
@@ -476,13 +499,6 @@ class CustomerHomePage extends StatelessWidget {
           icon: const Icon(Icons.favorite_border, color: AppColors.textPrimary),
           onPressed: () => Get.toNamed(Routes.favorites),
         ),
-        IconButton(
-          icon: const Icon(
-            Icons.notifications_outlined,
-            color: AppColors.textPrimary,
-          ),
-          onPressed: () => Get.toNamed(Routes.notifications),
-        ),
       ],
     );
   }
@@ -492,7 +508,8 @@ class CustomerHomePage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          // unified horizontal padding
+          padding: const EdgeInsets.symmetric(horizontal: kPad),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -511,12 +528,13 @@ class CustomerHomePage extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: kSpace),
         SizedBox(
           height: 120,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            // unified horizontal padding
+            padding: const EdgeInsets.symmetric(horizontal: kPad),
             itemCount: categories.length,
             itemBuilder: (context, index) {
               final category = categories[index];
@@ -530,7 +548,8 @@ class CustomerHomePage extends StatelessWidget {
                 ),
                 child: Container(
                   width: 80,
-                  margin: const EdgeInsets.only(left: 12),
+                  // unify item spacing between tiles
+                  margin: const EdgeInsets.only(left: kSpace), // was 12
                   child: Column(
                     children: [
                       Container(
@@ -546,31 +565,33 @@ class CustomerHomePage extends StatelessWidget {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: (category.image != null &&
-                              category.image!.isNotEmpty)
+                          child:
+                              (category.image != null &&
+                                  category.image!.isNotEmpty)
                               ? CachedNetworkImage(
-                            imageUrl:
-                            HelperMethod.getImageUrl(category.image!),
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) => const Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                AlwaysStoppedAnimation<Color>(
-                                    AppColors.primary),
-                              ),
-                            ),
-                            errorWidget: (context, url, error) =>
-                            const Icon(
-                              Icons.broken_image,
-                              color: AppColors.grey,
-                            ),
-                          )
+                                  imageUrl: HelperMethod.getImageUrl(
+                                    category.image!,
+                                  ),
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) => const Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
+                                  errorWidget: (context, url, error) =>
+                                      const Icon(
+                                        Icons.broken_image,
+                                        color: AppColors.grey,
+                                      ),
+                                )
                               : const Icon(
-                            Icons.category,
-                            color: AppColors.white,
-                            size: 28,
-                          ),
+                                  Icons.category,
+                                  color: AppColors.white,
+                                  size: 28,
+                                ),
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -605,12 +626,14 @@ class CustomerHomePage extends StatelessWidget {
     if (products.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 16),
+      // unified and slightly reduced vertical margin
+      margin: const EdgeInsets.symmetric(vertical: kSpace), // was 16
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            // unified horizontal padding
+            padding: const EdgeInsets.symmetric(horizontal: kPad), // was 20
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -632,12 +655,14 @@ class CustomerHomePage extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: kSpace), // was 12
           SizedBox(
-            height: 300,
+            height: 260,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              // unified horizontal padding
+              padding: const EdgeInsets.symmetric(horizontal: kPad),
+              // was 16
               itemExtent: 182,
               itemCount: products.length,
               itemBuilder: (context, index) {
@@ -670,11 +695,13 @@ class CustomerHomePage extends StatelessWidget {
         height: 120,
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          // unified horizontal padding
+          padding: const EdgeInsets.symmetric(horizontal: kPad),
           itemCount: 6,
           itemBuilder: (context, index) => Container(
             width: 80,
-            margin: const EdgeInsets.only(left: 12),
+            // unified inter-item spacing
+            margin: const EdgeInsets.only(left: kSpace), // was 12
             decoration: BoxDecoration(
               color: AppColors.white,
               borderRadius: BorderRadius.circular(12),
@@ -693,11 +720,13 @@ class CustomerHomePage extends StatelessWidget {
         height: 250,
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          // unified horizontal padding
+          padding: const EdgeInsets.symmetric(horizontal: kPad),
           itemCount: 4,
           itemBuilder: (context, index) => Container(
             width: 170,
-            margin: const EdgeInsets.only(left: 12),
+            // unified inter-item spacing
+            margin: const EdgeInsets.only(left: kSpace), // was 12
             decoration: BoxDecoration(
               color: AppColors.white,
               borderRadius: BorderRadius.circular(16),

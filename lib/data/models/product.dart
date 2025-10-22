@@ -1,18 +1,31 @@
+///////////////////////////////////////////////
+// lib/data/models/product.dart
+// Product model + Branch pricing helpers.
+// EN comments only.
+
 import 'package:get/get.dart';
+import 'package:collection/collection.dart';
 import '../../core/services/storage_service.dart';
 import '../../presentation/controllers/auth_controller.dart';
+import '../utils/currency_helper.dart';
 
-enum ProductStatus {
-  ACTIVE,
-  INACTIVE,
-  DRAFT,
-  ARCHIVED,
+enum ProductStatus { ACTIVE, INACTIVE, DRAFT, ARCHIVED }
+
+enum Currency { USD, SYP, EUR }
+
+/// Helper: convert dynamic to double safely
+double _toDouble(dynamic v) {
+  if (v == null) return 0.0;
+  if (v is num) return v.toDouble();
+  return double.tryParse(v.toString()) ?? 0.0;
 }
 
-enum Currency {
-  USD,
-  SYP,
-  EUR,
+/// Helper: convert dynamic to int safely
+int _toInt(dynamic v) {
+  if (v == null) return 0;
+  if (v is int) return v;
+  if (v is double) return v.toInt();
+  return int.tryParse(v.toString()) ?? 0;
 }
 
 class BranchPrice {
@@ -44,12 +57,14 @@ class BranchPrice {
     return BranchPrice(
       branchId: json['branchId'] ?? '',
       sku: json['sku'] ?? '',
-      price: (json['price'] ?? 0).toDouble(),
-      costPrice: (json['costPrice'] ?? 0).toDouble(),
-      wholeSalePrice: (json['wholeSalePrice'] ?? 0).toDouble(),
-      salePrice: json['salePrice'] != null ? (json['salePrice']).toDouble() : null,
+      price: _toDouble(json['price']),
+      costPrice: _toDouble(json['costPrice']),
+      wholeSalePrice: _toDouble(json['wholeSalePrice']),
+      salePrice: json['salePrice'] != null
+          ? _toDouble(json['salePrice'])
+          : null,
       currency: json['currency'],
-      stockQuantity: (json['stockQuantity'] ?? 0).toInt(),
+      stockQuantity: _toInt(json['stockQuantity']),
       isOnSale: json['isOnSale'] ?? false,
       isActive: json['isActive'] ?? true,
     );
@@ -70,33 +85,11 @@ class BranchPrice {
     };
   }
 
-  /// الحصول على رمز العملة المناسب
-  String get currencySymbol {
-    switch (currency?.toUpperCase()) {
-      case 'USD':
-        return '\$';
-      case 'SYP':
-        return 'SYP';
-      case 'EUR':
-        return '€';
-      default:
-        return '\$'; // افتراضي
-    }
-  }
+  /// Currency symbol for display (dynamic)
+  String get currencySymbol => CurrencyHelper.symbol(currency);
 
-  /// الحصول على اسم العملة
-  String get currencyName {
-    switch (currency?.toUpperCase()) {
-      case 'USD':
-        return 'دولار';
-      case 'SYP':
-        return 'ليرة سورية';
-      case 'EUR':
-        return 'يورو';
-      default:
-        return 'دولار';
-    }
-  }
+  /// Currency name (Arabic, can localize later).
+  String get currencyName => CurrencyHelper.nameAr(currency);
 }
 
 class Product {
@@ -153,7 +146,7 @@ class Product {
       subCategoryId: json['subCategoryId'],
       branchesId: List<String>.from(json['branches'] ?? []),
       branchPricing: (json['branchPricing'] as List? ?? [])
-          .map((e) => BranchPrice.fromJson(e))
+          .map((e) => BranchPrice.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
       brand: json['brand'],
       model: json['model'],
@@ -163,7 +156,9 @@ class Product {
       keywords: List<String>.from(json['keywords'] ?? []),
       status: _mapStatus(json['status']),
       sortOrder: json['sortOrder'] ?? 0,
-      specifications: json['specifications'],
+      specifications: json['specifications'] != null
+          ? Map<String, dynamic>.from(json['specifications'])
+          : null,
       images: List<String>.from(json['images'] ?? []),
       mainImage: json['mainImage'] ?? '',
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
@@ -196,19 +191,23 @@ class Product {
     };
   }
 
+  /// Get branch-specific price based on currently selected branch.
   BranchPrice? get currentBranchPrice {
-    String? branchId = Get.find<AuthController>().currentUser?.selectedBranch;
-
-    if (branchId == null || branchId.isEmpty) {
-      branchId = StorageService.getBranchId();
+    String? branchId;
+    try {
+      branchId = Get.find<AuthController>().currentUser?.selectedBranch;
+    } catch (_) {
+      // AuthController may not be available in some contexts; fall back to storage.
     }
+
+    branchId = branchId ?? StorageService.getBranchId();
 
     if (branchId == null || branchId.isEmpty) return null;
 
     return branchPricing.firstWhereOrNull((bp) => bp.branchId == branchId);
   }
 
-  /// التحقق من نوع المستخدم الحالي
+  /// Check if current user is a merchant (merchant pricing).
   bool get _isCurrentUserMerchant {
     try {
       final authController = Get.find<AuthController>();
@@ -218,7 +217,7 @@ class Product {
     }
   }
 
-  /// الحصول على السعر المناسب حسب نوع المستخدم
+  /// Base price (depends on user role).
   double get price {
     if (currentBranchPrice == null) return 0;
     return _isCurrentUserMerchant
@@ -226,27 +225,26 @@ class Product {
         : currentBranchPrice!.price;
   }
 
-  /// سعر البيع (خصم) - يطبق على كلا النوعين من المستخدمين
+  /// Sale price if exists.
   double? get salePrice => currentBranchPrice?.salePrice;
 
+  /// Stock available in selected branch.
   int get stockQuantity => currentBranchPrice?.stockQuantity ?? 0;
 
-  /// السعر المعروض (مع مراعاة الخصم ونوع المستخدم)
+  /// Display price (considers sale and user role).
   double get displayPrice {
     if (currentBranchPrice == null) return 0;
 
-    // إذا كان هناك خصم، اعرض سعر الخصم
     if (currentBranchPrice!.isOnSale && currentBranchPrice!.salePrice != null) {
       return currentBranchPrice!.salePrice!;
     }
 
-    // وإلا اعرض السعر المناسب لنوع المستخدم
     return _isCurrentUserMerchant
         ? currentBranchPrice!.wholeSalePrice
         : currentBranchPrice!.price;
   }
 
-  /// التحقق من وجود خصم
+  /// Whether product currently has discount
   bool get hasDiscount {
     if (currentBranchPrice == null) return false;
 
@@ -259,7 +257,7 @@ class Product {
         currentBranchPrice!.salePrice! < basePrice;
   }
 
-  /// نسبة الخصم
+  /// Discount percentage (if any)
   double? get discountPercentage {
     if (!hasDiscount) return null;
 
@@ -270,67 +268,47 @@ class Product {
     return ((basePrice - currentBranchPrice!.salePrice!) / basePrice) * 100;
   }
 
-  /// الحصول على رمز العملة
-  String get currencySymbol => currentBranchPrice?.currencySymbol ?? '\$';
+  /// Currency symbol for display
+  String get currencySymbol =>
+      CurrencyHelper.symbol(currentBranchPrice?.currency);
 
-  /// الحصول على اسم العملة
-  String get currencyName => currentBranchPrice?.currencyName ?? 'دولار';
+  /// Currency name for display (Arabic)
+  String get currencyName =>
+      CurrencyHelper.nameAr(currentBranchPrice?.currency);
 
-  /// تنسيق الرقم لإزالة الكسور العشرية غير الضرورية
+  /// Format numbers: drop unnecessary decimals. (kept for compatibility)
   String _formatNumber(double number) {
     if (number == number.roundToDouble()) {
-      // إذا كان الرقم صحيح (مثل 50.0)، اعرضه بدون كسور عشرية
       return number.toStringAsFixed(0);
     } else {
-      // إذا كان هناك كسور عشرية، اعرض حتى منزلتين عشريتين مع حذف الأصفار غير الضرورية
-      return number.toStringAsFixed(2).replaceAll(RegExp(r'0*$'), '').replaceAll(RegExp(r'\.$'), '');
+      return number
+          .toStringAsFixed(2)
+          .replaceAll(RegExp(r'0*$'), '')
+          .replaceAll(RegExp(r'\.$'), '');
     }
   }
 
-  /// تنسيق السعر المعروض مع العملة
+  /// Formatted price string for UI (via helper)
   String get formattedPrice {
     if (currentBranchPrice == null) return '0';
-
-    final currency = currentBranchPrice!.currency?.toUpperCase() ?? 'USD';
-    final priceValue = _formatNumber(displayPrice);
-
-    switch (currency) {
-      case 'USD':
-        return '$priceValue \$';
-      case 'SYP':
-        return '$priceValue SYP';
-      case 'EUR':
-        return '$priceValue €';
-      default:
-        return '$priceValue \$';
-    }
+    final code = currentBranchPrice!.currency;
+    return CurrencyHelper.formatAmount(displayPrice, code: code);
   }
 
-  /// تنسيق السعر الأصلي (قبل الخصم) مع العملة
+  /// Formatted original (base) price (via helper)
   String get formattedOriginalPrice {
     if (currentBranchPrice == null) return '0';
-
-    final currency = currentBranchPrice!.currency?.toUpperCase() ?? 'USD';
-    // استخدام السعر الأساسي حسب نوع المستخدم
     final basePrice = _isCurrentUserMerchant
         ? currentBranchPrice!.wholeSalePrice
         : currentBranchPrice!.price;
-    final priceValue = _formatNumber(basePrice);
-
-    switch (currency) {
-      case 'USD':
-        return '$priceValue \$';
-      case 'SYP':
-        return '$priceValue SYP';
-      case 'EUR':
-        return '$priceValue €';
-      default:
-        return '$priceValue \$';
-    }
+    return CurrencyHelper.formatAmount(basePrice,
+        code: currentBranchPrice!.currency);
   }
 
   String get displayName => name;
+
   String get displayDescription => description ?? '';
+
   bool get inStock => stockQuantity > 0;
 
   static ProductStatus? _mapStatus(dynamic value) {

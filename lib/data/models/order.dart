@@ -75,6 +75,8 @@ class OrderItem {
 
 }
 
+
+
 class Order {
   final String id;
   final String orderNumber;
@@ -87,6 +89,7 @@ class Order {
   final String status;
   final bool isPaid;
   final String? notes;
+  final Map<String, double>? location;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -102,11 +105,25 @@ class Order {
     required this.status,
     required this.isPaid,
     this.notes,
+    this.location,
     required this.createdAt,
     required this.updatedAt,
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
+    Map<String, double>? locationData;
+    if (json['location'] is Map) {
+      final Map<String, dynamic> rawLocation = json['location'];
+      final lat = rawLocation['lat'];
+      final lon = rawLocation['lng'];
+      if (lat is num && lon is num) {
+        locationData = {
+          'lat': lat.toDouble(),
+          'lng': lon.toDouble(),
+        };
+      }
+    }
+
     return Order(
       id: json['_id'] ?? json['id'] ?? '',
       orderNumber: json['orderNumber'] ?? '',
@@ -121,6 +138,7 @@ class Order {
       status: json['status'] ?? 'pending',
       isPaid: json['isPaid'] ?? false,
       notes: json['notes'],
+      location: locationData,
       createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()).toLocal(),
       updatedAt: DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()).toLocal(),
     );
@@ -139,6 +157,7 @@ class Order {
       'status': status,
       'isPaid': isPaid,
       'notes': notes,
+      'location': location,
       'createdAt': createdAt.toUtc().toIso8601String(),
       'updatedAt': updatedAt.toUtc().toIso8601String(),
     };

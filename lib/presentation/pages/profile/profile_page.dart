@@ -129,7 +129,7 @@ class _ProfilePageState extends State<ProfilePage> {
               const SizedBox(height: 24),
               _buildPointsCard(user), // 🎯 الآن سيتحدث
               const SizedBox(height: 24),
-              _buildBranchInfo(authController),
+              // _buildBranchInfo(authController),
               const SizedBox(height: 24),
               _buildMerchantRequest(authController),
               const SizedBox(height: 24),
@@ -141,6 +141,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
+
   Widget _buildPointsCard(dynamic user) {
     return ShamraCard(
       child: Column(
@@ -150,9 +151,7 @@ class _ProfilePageState extends State<ProfilePage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: AppColors.primaryGradient,
-                  ),
+                  gradient: LinearGradient(colors: AppColors.primaryGradient),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
@@ -208,10 +207,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 4),
                 const Text(
                   'نقطة',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.white,
-                  ),
+                  style: TextStyle(fontSize: 14, color: AppColors.white),
                 ),
               ],
             ),
@@ -324,7 +320,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             child: Center(
               child: Text(
-                user.firstName.substring(0,1).toUpperCase(),
+                user.firstName.substring(0, 1).toUpperCase(),
                 style: const TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.w900,
@@ -377,90 +373,90 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildBranchInfo(AuthController authController) {
-    final user = authController.currentUser!;
-
-    return ShamraCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.location_on_rounded,
-                color: AppColors.primary,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                'الفرع المحدد',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        user.selectedBranchObject?.name ?? 'لم يتم اختيار فرع',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      if (user.selectedBranchObject?.address != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          user.selectedBranchObject!.address!.street,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                IconButton(
-                  onPressed: () async {
-                    await Get.toNamed(Routes.branchSelection);
-                    // ✅ بعد الرجوع من اختيار الفرع: حدّث المستخدم محلياً لتنعكس التغييرات فوراً
-                    final auth = Get.find<AuthController>();
-                    await auth.reloadFromStorage();
-
-                    // (اختياري) إن رغبت بتطبيق توكن الفرع من المحلي مباشرة:
-                    // final bid = StorageService.getBranchId();
-                    // if (bid != null) await auth.applyBranchAuthFromLocal(bid);
-                  },
-                  icon: const Icon(
-                    Icons.edit_outlined,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Widget _buildBranchInfo(AuthController authController) {
+  //   final user = authController.currentUser!;
+  //
+  //   return ShamraCard(
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         Row(
+  //           children: [
+  //             const Icon(
+  //               Icons.location_on_rounded,
+  //               color: AppColors.primary,
+  //               size: 20,
+  //             ),
+  //             const SizedBox(width: 8),
+  //             const Text(
+  //               'الفرع المحدد',
+  //               style: TextStyle(
+  //                 fontSize: 16,
+  //                 fontWeight: FontWeight.w600,
+  //                 color: AppColors.textPrimary,
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //         const SizedBox(height: 12),
+  //         Container(
+  //           width: double.infinity,
+  //           padding: const EdgeInsets.all(16),
+  //           decoration: BoxDecoration(
+  //             color: AppColors.primary.withOpacity(0.1),
+  //             borderRadius: BorderRadius.circular(12),
+  //             border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+  //           ),
+  //           child: Row(
+  //             children: [
+  //               Expanded(
+  //                 child: Column(
+  //                   crossAxisAlignment: CrossAxisAlignment.start,
+  //                   children: [
+  //                     Text(
+  //                       user.selectedBranchObject?.name ?? 'لم يتم اختيار فرع',
+  //                       style: const TextStyle(
+  //                         fontSize: 16,
+  //                         fontWeight: FontWeight.w600,
+  //                         color: AppColors.textPrimary,
+  //                       ),
+  //                     ),
+  //                     if (user.selectedBranchObject?.address != null) ...[
+  //                       const SizedBox(height: 4),
+  //                       Text(
+  //                         user.selectedBranchObject!.address!.street,
+  //                         style: const TextStyle(
+  //                           fontSize: 14,
+  //                           color: AppColors.textSecondary,
+  //                         ),
+  //                       ),
+  //                     ],
+  //                   ],
+  //                 ),
+  //               ),
+  //               IconButton(
+  //                 onPressed: () async {
+  //                   await Get.toNamed(Routes.branchSelection);
+  //                   // ✅ بعد الرجوع من اختيار الفرع: حدّث المستخدم محلياً لتنعكس التغييرات فوراً
+  //                   final auth = Get.find<AuthController>();
+  //                   await auth.reloadFromStorage();
+  //
+  //                   // (اختياري) إن رغبت بتطبيق توكن الفرع من المحلي مباشرة:
+  //                   // final bid = StorageService.getBranchId();
+  //                   // if (bid != null) await auth.applyBranchAuthFromLocal(bid);
+  //                 },
+  //                 icon: const Icon(
+  //                   Icons.edit_outlined,
+  //                   color: AppColors.primary,
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildMerchantRequest(AuthController authController) {
     final merchantRequest = authController.merchantRequest;
@@ -495,9 +491,9 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildMerchantStatus(
-      Map<String, dynamic> request,
-      AuthController authController,
-      ) {
+    Map<String, dynamic> request,
+    AuthController authController,
+  ) {
     Color _getStatusColor(String status) {
       switch (status) {
         case 'pending':
@@ -622,13 +618,8 @@ class _ProfilePageState extends State<ProfilePage> {
       children: [
         ShamraButton(
           text: 'تغيير كلمة المرور',
-          onPressed: () => Get.toNamed(
-            Routes.otp,
-            arguments: {
-              'phone': '+963 9X XXX XXXX',
-              'flow': 'reset',
-            },
-          ),
+          onPressed: () => _handleChangePassword(authController),
+          // ✅ بدل التنقل المباشر
           icon: Icons.lock_outlined,
           isOutlined: true,
           width: double.infinity,
@@ -643,6 +634,26 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ],
     );
+  }
+
+  Future<void> _handleChangePassword(AuthController auth) async {
+    final phone = auth.currentUser?.phoneNumber?.trim() ?? '';
+
+    if (phone.isEmpty) {
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'رقم الهاتف غير متوفر. يرجى إضافته من "تعديل الملف الشخصي".',
+        type: SnackBarType.warning,
+      );
+      return;
+    }
+
+    // 1) إرسال رمز التحقق لرقم المستخدم
+    final sent = await auth.requestPasswordReset(phone);
+    if (!sent) return; // الدالة نفسها تعرض رسائل الخطأ
+
+    // 2) فتح صفحة OTP بوضع إعادة التعيين (reset)
+    Get.toNamed(Routes.otp, arguments: {'phone': phone, 'flow': 'reset'});
   }
 
   void _showMerchantRequestDialog(AuthController authController) {

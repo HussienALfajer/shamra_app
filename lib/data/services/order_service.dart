@@ -16,6 +16,7 @@ class OrderService {
     String? notes,
     int? pointsToRedeem, // 🎯 إضافة
     String? currency, // 🎯 إضافة
+    Map<String, double>? location,
 
   }) async {
     try {
@@ -24,11 +25,12 @@ class OrderService {
         'branchId': branchId,
         'items': items.map((item) => item.toJson()).toList(),
         'discountAmount': discountAmount,
-        if (notes != null) 'notes': notes,
-        if (pointsToRedeem != null) 'pointsToRedeem': pointsToRedeem, // 🎯 إضافة
-        if (currency != null) 'currency': currency, // 🎯 إضافة
-
+        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+        if (pointsToRedeem != null) 'pointsToRedeem': pointsToRedeem,
+        if (currency != null) 'currency': currency,
+        if (location != null) 'location': location,
       };
+
 
       // ✅ اطبع الـ payload كـ JSON منسق
       try {

@@ -2,30 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/constants/colors.dart';
 import '../../../routes/app_routes.dart';
-import '../../../data/models/product.dart';
 import '../../controllers/favorite_controller.dart';
 import '../../controllers/product_controller.dart';
 import '../../widgets/common_widgets.dart';
 import '../../widgets/product_card.dart';
+import '../../../data/models/product.dart';
 
-/// 📌 صفحة المنتجات المفضلة
-/// - تعرض جميع المنتجات اللي اختارها المستخدم كمفضلة.
-/// - تستخدم [FavoriteController] للحصول على قائمة الـ IDs.
-/// - ثم تجيب تفاصيل كل منتج من [ProductController].
+/// Favorites page - shows user's favorite products.
+/// Updated: load favorites in parallel using Future.wait for better performance.
 class FavoritesPage extends StatelessWidget {
   const FavoritesPage({super.key});
 
-  /// ✅ تحميل المنتجات المفضلة (حسب الـ IDs)
+  /// Load favorites in parallel to speed up fetching.
   Future<List<Product>> _loadFavorites(
       FavoriteController favController,
       ProductController productController,
       ) async {
-    final products = <Product>[];
-    for (final id in favController.favorites) {
-      final product = await productController.getProductById(id);
-      if (product != null) products.add(product);
-    }
-    return products;
+    final ids = favController.favorites.toList();
+    if (ids.isEmpty) return [];
+
+    // Load all products in parallel and keep non-null results
+    final futures = ids.map((id) => productController.getProductById(id));
+    final results = await Future.wait(futures);
+    return results.whereType<Product>().toList();
   }
 
   @override
@@ -36,8 +35,6 @@ class FavoritesPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const CustomAppBar(title: "المفضلة"),
-
-      /// ✅ نستخدم FutureBuilder مع Obx للتعامل مع الحالة
       body: Obx(() {
         if (favController.favorites.isEmpty) {
           return const EmptyStateWidget(

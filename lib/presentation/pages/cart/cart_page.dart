@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../data/utils/helpers.dart';
 import '../../../data/models/cart.dart';
 import '../../../routes/app_routes.dart';
+
 import '../../controllers/branch_controller.dart';
 import '../../controllers/cart_controller.dart';
 import '../../controllers/auth_controller.dart';
@@ -41,11 +43,9 @@ class CartPage extends StatelessWidget {
               if (cartController.isLoading) {
                 return const LoadingWidget(message: "جاري تحميل السلة...");
               }
-
               if (cartController.isEmpty) {
                 return _buildEmptyCart();
               }
-
               final main = Get.find<MainController>();
               return Column(
                 children: [
@@ -75,8 +75,7 @@ class CartPage extends StatelessWidget {
   // Single cart item card
   Widget _buildCartItemCard(CartItem cartItem, CartController cartController) {
     return ShamraCard(
-      onTap: () =>
-          Get.toNamed(Routes.productDetails, arguments: cartItem.product.id),
+      onTap: () => Get.toNamed(Routes.productDetails, arguments: cartItem.product.id),
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       child: Row(
@@ -89,8 +88,7 @@ class CartPage extends StatelessWidget {
               width: 90,
               height: 90,
               fit: BoxFit.cover,
-              placeholder: (context, url) =>
-              const Center(child: CircularProgressIndicator()),
+              placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
               errorWidget: (context, url, error) => const Icon(
                 Icons.image_outlined,
                 size: 40,
@@ -130,8 +128,7 @@ class CartPage extends StatelessWidget {
                 Row(
                   children: [
                     IconButton(
-                      onPressed: () =>
-                          cartController.decrementQuantity(cartItem.product.id),
+                      onPressed: () => cartController.decrementQuantity(cartItem.product.id),
                       icon: const Icon(
                         Icons.remove_circle_outline,
                         color: AppColors.primary,
@@ -145,8 +142,7 @@ class CartPage extends StatelessWidget {
                       ),
                     ),
                     IconButton(
-                      onPressed: () =>
-                          cartController.incrementQuantity(cartItem.product.id),
+                      onPressed: () => cartController.incrementQuantity(cartItem.product.id),
                       icon: const Icon(
                         Icons.add_circle_outline,
                         color: AppColors.primary,
@@ -320,14 +316,11 @@ class CartPage extends StatelessWidget {
     );
   }
 
-  // Checkout flow with map selection and notes
-  // في cart_page.dart - تحديث _handleCheckout
   void _handleCheckout(
       CartController cartController,
       BuildContext context,
       ) async {
     final authController = Get.find<AuthController>();
-
     if (!authController.isLoggedIn) {
       ShamraSnackBar.show(
         context: context,
@@ -338,6 +331,7 @@ class CartPage extends StatelessWidget {
       );
       return;
     }
+
     if (cartController.isEmpty) {
       ShamraSnackBar.show(
         context: context,
@@ -347,13 +341,15 @@ class CartPage extends StatelessWidget {
       return;
     }
 
-    // 🎯 عرض dialog لاختيار النقاط
     final pointsData = await _showPointsDialog(
       context,
       authController,
       cartController,
     );
-    if (pointsData == null) return; // المستخدم ألغى
+    if (pointsData == null) return;
+
+    final notes = await _showNotesDialog(context);
+    if (notes == null) return;
 
     final result = await Get.toNamed(Routes.selectLocation);
     if (result is! Map) return;
@@ -395,13 +391,39 @@ class CartPage extends StatelessWidget {
       lat: lat,
       lng: lng,
       address: address,
+      extraNotes: notes,
       pointsToRedeem: pointsData['points'] as int?,
-      // 🎯 إضافة
-      currency: 'USD', // 🎯 يمكن جعلها dynamic
+      currency: 'USD',
     );
   }
 
-  // 🎯 Dialog جديد لاختيار النقاط
+  Future<String?> _showNotesDialog(BuildContext context) async {
+    final notesController = TextEditingController();
+    return await Get.dialog<String>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('إضافة ملاحظات'),
+        content: TextField(
+          controller: notesController,
+          decoration: const InputDecoration(
+            hintText: 'مثلاً: اترك الطلب عند الباب...',
+          ),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: ''),
+            child: const Text('تخطي'),
+          ),
+          ElevatedButton(
+            onPressed: () => Get.back(result: notesController.text),
+            child: const Text('حفظ'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<Map<String, dynamic>?> _showPointsDialog(
       BuildContext context,
       AuthController authController,
@@ -409,7 +431,6 @@ class CartPage extends StatelessWidget {
       ) async {
     final user = authController.currentUser;
     if (user == null || user.points <= 0) {
-      // لا توجد نقاط - متابعة مباشرة
       return {'points': null, 'discount': 0.0};
     }
 
@@ -465,7 +486,6 @@ class CartPage extends StatelessWidget {
                   } else {
                     selectedPoints.value = points;
                   }
-                  // حساب الخصم (مثال: 1 نقطة = 0.1$)
                   discount.value = selectedPoints.value * 0.1;
                 },
               ),
@@ -483,7 +503,7 @@ class CartPage extends StatelessWidget {
                     children: [
                       const Text('الخصم المتوقع:'),
                       Text(
-                        '${discount.value.toStringAsFixed(2)} \$',
+                        '${discount.value.toStringAsFixed(2)} ${AppConstants.currency}',
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           color: AppColors.success,
@@ -506,9 +526,7 @@ class CartPage extends StatelessWidget {
           ElevatedButton(
             onPressed: () => Get.back(
               result: {
-                'points': selectedPoints.value > 0
-                    ? selectedPoints.value
-                    : null,
+                'points': selectedPoints.value > 0 ? selectedPoints.value : null,
                 'discount': discount.value,
               },
             ),
@@ -519,7 +537,6 @@ class CartPage extends StatelessWidget {
     );
   }
 
-  // 🎯 تحديث confirmation dialog
   Future<bool> _showOrderConfirmationDialog(
       BuildContext context,
       CartController cartController,
@@ -533,7 +550,7 @@ class CartPage extends StatelessWidget {
         ),
         title: Row(
           children: [
-            Icon(Icons.shopping_cart_checkout, color: AppColors.primary),
+            const Icon(Icons.shopping_cart_checkout, color: AppColors.primary),
             const SizedBox(width: 8),
             const Text('تأكيد الطلب'),
           ],
@@ -572,7 +589,7 @@ class CartPage extends StatelessWidget {
                       children: [
                         const Text('الخصم:'),
                         Text(
-                          '-${discount?.toStringAsFixed(2) ?? 0} \$',
+                          '-${discount?.toStringAsFixed(2) ?? 0} ${AppConstants.currency}',
                           style: const TextStyle(color: AppColors.success),
                         ),
                       ],
@@ -584,7 +601,7 @@ class CartPage extends StatelessWidget {
                     children: [
                       const Text('المجموع النهائي:'),
                       Text(
-                        '${(cartController.total - (discount ?? 0)).toStringAsFixed(0)} \$',
+                        '${(cartController.total - (discount ?? 0)).toStringAsFixed(0)} ${AppConstants.currency}',
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           color: AppColors.primary,
@@ -612,7 +629,6 @@ class CartPage extends StatelessWidget {
         false;
   }
 
-  // Determine branchId from Auth, storage, controller, or by asking user
   Future<String> _resolveBranchId() async {
     try {
       final auth = Get.find<AuthController>();
@@ -635,12 +651,14 @@ class CartPage extends StatelessWidget {
       Routes.branchSelection,
       arguments: {'returnId': true},
     );
+
     if (picked is String && picked.isNotEmpty) {
       try {
         await StorageService.saveBranchId(picked);
       } catch (_) {}
       return picked;
     }
+
     if (picked is Map &&
         picked['branchId'] is String &&
         (picked['branchId'] as String).isNotEmpty) {

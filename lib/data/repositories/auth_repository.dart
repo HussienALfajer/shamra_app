@@ -62,30 +62,37 @@ class AuthRepository {
     return response;
   }
 
-  /// Register new user account.
-  Future<AuthResponseApi> register({
+  Future<void> sendOtpForRegistration({required String phoneNumber}) async {
+    await AuthService.sendOtpForRegistration(phoneNumber: phoneNumber);
+  }
+
+  Future<String> verifyOtpForRegistration({
+    required String phoneNumber,
+    required String otp,
+  }) async {
+    return await AuthService.verifyOtpForRegistration(phoneNumber: phoneNumber, otp: otp);
+  }
+
+  Future<AuthResponseApi> registerAfterOtp({
     required String firstName,
     required String lastName,
     required String password,
     required String phoneNumber,
     required String branchId,
+    required String registrationToken,
   }) async {
-    final fcmToken = await NotificationService.getToken();
-
-    final response = await AuthService.register(
+    final res = await AuthService.register(
       firstName: firstName,
       lastName: lastName,
       password: password,
       phoneNumber: phoneNumber,
       branchId: branchId,
-      fcmToken: fcmToken,
+      registrationToken: registrationToken,
     );
-
-    await StorageService.saveToken(response.data.token);
-    await StorageService.saveRefreshToken(response.data.refreshToken);
-    await StorageService.saveUserData(response.data.user.toJson());
-
-    return response;
+    await StorageService.saveToken(res.data.token);
+    await StorageService.saveRefreshToken(res.data.refreshToken);
+    await StorageService.saveUserData(res.data.user.toJson());
+    return res;
   }
 
   /// Select branch for authenticated user.
@@ -137,6 +144,28 @@ class AuthRepository {
       oldPassword: oldPassword,
       newPassword: newPassword,
     );
+  }
+
+  /// Verify OTP for password reset flow only (no auth state side-effects).
+  Future<bool> verifyOtpForReset({
+    required String phoneNumber,
+    required String otp,
+  }) async {
+    // We call the same verify endpoint but intentionally do NOT persist tokens.
+    await AuthService.verifyPhoneNumber(phoneNumber: phoneNumber, otp: otp);
+    return true;
+  }
+
+  /// Verify OTP for password reset flow only (no auth state side-effects).
+  Future<bool> verifyResetOtp({
+    required String phoneNumber,
+    required String otp,
+  }) async {
+    await AuthService.verifyResetOtp(
+      phoneNumber: phoneNumber,
+      otp: otp,
+    );
+    return true;
   }
 
   /// Submit merchant request.

@@ -62,7 +62,7 @@ class CategoriesPage extends StatelessWidget {
             // Search section
             Container(
               color: AppColors.white,
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
               child:  TextField(
                 controller: searchController,
                 onChanged: onSearchChanged,

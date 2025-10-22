@@ -1,3 +1,6 @@
+////////////////////////////////////////
+// presentation/pages/product/products_page.dart
+// (file header and imports kept as in your original file)
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/constants/colors.dart';
@@ -5,6 +8,7 @@ import '../../../routes/app_routes.dart';
 import '../../controllers/main_controller.dart';
 import '../../controllers/product_controller.dart';
 import '../../controllers/category_controller.dart';
+import '../../controllers/products_uI_controller.dart';
 import '../../controllers/sub_category_controller.dart';
 import '../../widgets/common_widgets.dart';
 import '../../widgets/product_card.dart';
@@ -15,33 +19,49 @@ class ProductsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // تهيئة الـ Controllers
+    // initialize controllers (kept, safe-guarded)
     _initializeControllers();
 
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: WillPopScope(
-        onWillPop: _onWillPopProducts,
-        child: Scaffold(
-          backgroundColor: AppColors.background,
-          body: SafeArea(
-            child: Column(
-              children: [
-                /// شريط التطبيق المخصص
-                _buildCustomAppBar(),
+      child: DefaultTabController(
+        length: 3,
+        child: Builder(
+          builder: (ctx) {
+            // Attach a one-time listener to sync data loading with tab changes
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              final ui = Get.find<ProductsUIController>();
+              final tc = DefaultTabController.of(ctx);
+              if (tc != null) {
+                ui.attachTabControllerListenerOnce(tc, onIndexChanged: (i) {
+                  ui.changeTab(i);
+                  _switchToTabByIndex(i);
+                });
+              }
+            });
 
-                /// محتوى التبويبات (الآن يدعم السحب)
-                Expanded(child: _buildTabContent()),
-              ],
-            ),
-          ),
+            return WillPopScope(
+              onWillPop: _onWillPopProducts,
+              child: Scaffold(
+                backgroundColor: AppColors.background,
+                body: SafeArea(
+                  child: Column(
+                    children: [
+                      _buildCustomAppBar(), // now contains a TabBar matching OrdersPage style
+                      Expanded(child: _buildTabContent()), // TabBarView
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
   }
 
-  /// تهيئة الـ Controllers
   void _initializeControllers() {
+    // ensure all controllers used in this page are registered
     if (!Get.isRegistered<ProductController>()) {
       Get.put(ProductController());
     }
@@ -49,7 +69,17 @@ class ProductsPage extends StatelessWidget {
       Get.put(ProductsUIController());
     }
 
-    // تهيئة البيانات الأولية
+    // keep compatibility: register other controllers that GetBuilder expects
+    if (!Get.isRegistered<MainController>()) {
+      Get.put(MainController());
+    }
+    if (!Get.isRegistered<CategoryController>()) {
+      Get.put(CategoryController());
+    }
+    if (!Get.isRegistered<SubCategoryController>()) {
+      Get.put(SubCategoryController());
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final uiController = Get.find<ProductsUIController>();
       final args = Get.arguments as Map<String, dynamic>?;
@@ -59,10 +89,18 @@ class ProductsPage extends StatelessWidget {
 
       uiController.initializePageController(initialTab);
       _switchToTabByIndex(initialTab);
+
+      // Also sync DefaultTabController initial index if present
+      final ctx = Get.context;
+      if (ctx != null) {
+        final tc = DefaultTabController.of(ctx);
+        if (tc != null && tc.index != initialTab) {
+          tc.animateTo(initialTab);
+        }
+      }
     });
   }
 
-  /// التبديل إلى تبويبة بالرقم مع استدعاء الدالة المناسبة (منطق فقط؛ بدون تحريك الصفحة)
   void _switchToTabByIndex(int index) {
     try {
       final uiController = Get.find<ProductsUIController>();
@@ -79,46 +117,26 @@ class ProductsPage extends StatelessWidget {
           tab = ProductTab.all;
       }
 
-      // تحديث مؤشر الواجهة
       uiController.changeTab(index);
 
-      // تحميل بيانات التبويب المناسب
+      // Load data for the selected tab (single, clean call)
       _switchToTabAndLoadData(tab);
     } catch (e) {
-      // ignore: avoid_print
-      print('خطأ في تبديل التبويبة: $e');
+      debugPrint('Error switching tab: $e');
     }
   }
 
-  /// التبديل إلى التبويبة وتحميل البيانات المناسبة
   Future<void> _switchToTabAndLoadData(ProductTab tab) async {
     final controller = Get.find<ProductController>();
     try {
-      switch (tab) {
-        case ProductTab.featured:
-          await controller.switchToTab(ProductTab.featured);
-          if (!controller.isCurrentTabLoaded) {
-            await _loadFeaturedProducts();
-          }
-          break;
-        case ProductTab.onSale:
-          await controller.switchToTab(ProductTab.onSale);
-          if (!controller.isCurrentTabLoaded) {
-            await _loadOnSaleProducts();
-          }
-          break;
-        default:
-          await controller.switchToTab(ProductTab.all);
-          if (!controller.isCurrentTabLoaded) {
-            await _loadAllProducts();
-          }
-      }
+      // Single call – switchToTab loads if needed, shows shimmer immediately
+      await controller.switchToTab(tab);
     } catch (e) {
-      // ignore: avoid_print
-      print('خطأ في تحميل بيانات التبويبة: $e');
+      debugPrint('Error loading tab data: $e');
     }
   }
 
+  // kept for compatibility (not used directly after TabBar refactor)
   Future<void> _loadAllProducts() async {
     final controller = Get.find<ProductController>();
     await controller.switchToTab(ProductTab.all);
@@ -136,19 +154,25 @@ class ProductsPage extends StatelessWidget {
 
   Future<bool> _onWillPopProducts() async {
     final ui = Get.find<ProductsUIController>();
+
+    // Use TabController-like back behavior (go to previous tab if > 0)
+    final ctx = Get.context;
     if (ui.currentTabIndex > 0) {
-      final scrollController = Get.find<MainController>().productsScrollController;
+      final scrollController =
+          Get.find<MainController>().productsScrollController;
       if (scrollController.hasClients) {
-        scrollController.animateTo(0,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut);
+        scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
       }
-      // الانتقال للتبويب السابق بالسحب العكسي
-      ui.pageController.animateToPage(
-        ui.currentTabIndex - 1,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOutCubic,
-      );
+
+      // Animate TabBar back if available
+      if (ctx != null) {
+        final tc = DefaultTabController.of(ctx);
+        tc?.animateTo(ui.currentTabIndex - 1);
+      }
       return false;
     }
 
@@ -161,7 +185,6 @@ class ProductsPage extends StatelessWidget {
     return true;
   }
 
-  /// شريط التطبيق المخصص
   Widget _buildCustomAppBar() {
     return Container(
       decoration: BoxDecoration(
@@ -176,20 +199,14 @@ class ProductsPage extends StatelessWidget {
       ),
       child: Column(
         children: [
-          /// عنوان الصفحة والأيقونات
           _buildAppBarHeader(),
-
-          /// شريط التبويبات
-          _buildTabBar(),
-
-          /// شريط البحث والفلاتر
+          _buildTabBar(), // now a real TabBar (orders-like)
           _buildSearchAndFilters(),
         ],
       ),
     );
   }
 
-  /// رأس شريط التطبيق
   Widget _buildAppBarHeader() {
     return GetBuilder<ProductsUIController>(
       builder: (uiController) => Container(
@@ -226,7 +243,6 @@ class ProductsPage extends StatelessWidget {
                 ),
                 GetBuilder<ProductController>(
                   builder: (controller) {
-                    // البحث متاح لكل التبويبات الآن
                     if (!controller.searchAvailableForCurrentTab) {
                       return const SizedBox.shrink();
                     }
@@ -294,34 +310,40 @@ class ProductsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildTabBar() {
-    return GetBuilder<ProductsUIController>(
-      builder: (uiController) => Container(
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: AppColors.lightGrey,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            _buildTabItem('الكل', 0, uiController),
-            _buildTabItem('المميزة', 1, uiController),
-            _buildTabItem('العروض', 2, uiController),
-          ],
-        ),
-      ),
+  // NEW: TabBar styled like OrdersPage
+  PreferredSizeWidget _buildTabBar() {
+    return TabBar(
+      onTap: (i) {
+        final ui = Get.find<ProductsUIController>();
+        ui.changeTab(i);
+        _switchToTabByIndex(i);
+      },
+      indicatorColor: AppColors.primary,
+      indicatorWeight: 2,
+      labelColor: AppColors.primary,
+      unselectedLabelColor: AppColors.textSecondary,
+      labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+      tabs: const [
+        Tab(text: 'الكل'),
+        Tab(text: 'المميزة'),
+        Tab(text: 'العروض'),
+      ],
     );
   }
 
+  // kept (legacy) tab item builder for compatibility (no longer used directly)
   Widget _buildTabItem(
-      String title, int index, ProductsUIController uiController) {
+      String title,
+      int index,
+      ProductsUIController uiController,
+      ) {
     final isSelected = uiController.currentTabIndex == index;
 
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          final scrollController = Get.find<MainController>().productsScrollController;
+          final scrollController =
+              Get.find<MainController>().productsScrollController;
           if (scrollController.hasClients) {
             scrollController.animateTo(
               0,
@@ -329,11 +351,13 @@ class ProductsPage extends StatelessWidget {
               curve: Curves.easeOut,
             );
           }
-          uiController.pageController.animateToPage(
-            index,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOutCubic,
-          );
+
+          // Also sync TabController if exists
+          final ctx = Get.context;
+          if (ctx != null) {
+            final tc = DefaultTabController.of(ctx);
+            tc?.animateTo(index);
+          }
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -357,9 +381,7 @@ class ProductsPage extends StatelessWidget {
             style: TextStyle(
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               fontSize: 14,
-              color: isSelected
-                  ? AppColors.primary
-                  : AppColors.textSecondary,
+              color: isSelected ? AppColors.primary : AppColors.textSecondary,
             ),
           ),
         ),
@@ -367,53 +389,67 @@ class ProductsPage extends StatelessWidget {
     );
   }
 
-  /// شريط البحث والفلاتر - محدث للبحث في كل التبويبات
   Widget _buildSearchAndFilters() {
     return GetBuilder<ProductsUIController>(
       builder: (uiController) => GetBuilder<ProductController>(
         builder: (controller) {
-          // البحث متاح لكل التبويبات، الفلاتر متاحة فقط للتبويب "الكل"
           if (!controller.searchAvailableForCurrentTab) {
             return const SizedBox.shrink();
           }
+
+          // compute a bounded height for the search area to avoid Column overflow
+          final double baseHeight = 56.0; // search field height approx
+          // show filters in ALL tabs now
+          final double filtersExtra =
+          controller.categoryFiltersAvailableForCurrentTab ? 72.0 : 0.0;
+          final double totalHeight =
+          uiController.showSearchField ? (baseHeight + filtersExtra) : 0.0;
+
           return AnimatedContainer(
             duration: const Duration(milliseconds: 300),
-            height: uiController.showSearchField ? null : 0,
-            child: uiController.showSearchField
-                ? Container(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 5),
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.shadowColor.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+            height: totalHeight,
+            child: ClipRect(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: uiController.showSearchField
+                    ? Container(
+                  padding: const EdgeInsets.fromLTRB(20, 5, 20, 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.shadowColor.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // حقل البحث متاح لكل التبويبات
-                  _buildSearchField(uiController),
-
-                  // الفلاتر (الفئات والفئات الفرعية) متاحة فقط للتبويب "الكل"
-                  if (controller.categoryFiltersAvailableForCurrentTab) ...[
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                            child: _buildCategoryFilter(uiController)),
-                        const SizedBox(width: 12),
-                        Expanded(
-                            child: _buildSubCategoryFilter(uiController)),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildSearchField(uiController),
+                      if (controller
+                          .categoryFiltersAvailableForCurrentTab) ...[
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildCategoryFilter(uiController),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildSubCategoryFilter(
+                                  uiController),
+                            ),
+                          ],
+                        ),
                       ],
-                    ),
-                  ],
-                ],
+                    ],
+                  ),
+                )
+                    : const SizedBox.shrink(),
               ),
-            )
-                : const SizedBox.shrink(),
+            ),
           );
         },
       ),
@@ -425,7 +461,6 @@ class ProductsPage extends StatelessWidget {
       builder: (controller) {
         String hintText = 'ابحث عن المنتجات...';
 
-        // تخصيص نص البحث حسب التبويب
         switch (controller.currentTab) {
           case ProductTab.featured:
             hintText = 'ابحث في المنتجات المميزة...';
@@ -466,14 +501,12 @@ class ProductsPage extends StatelessWidget {
     return GetBuilder<CategoryController>(
       builder: (categoryController) => _buildDropdownFilter(
         hint: 'اختر الفئة',
-        value: uiController.selectedCategoryId.isEmpty
-            ? null
-            : uiController.selectedCategoryId,
+        value:
+        uiController.selectedCategoryId.isEmpty ? null : uiController.selectedCategoryId,
         items: [
           _buildDropdownItem('', 'جميع الفئات'),
           ...categoryController.categories.map(
-                (category) =>
-                _buildDropdownItem(category.id, category.displayName),
+                (category) => _buildDropdownItem(category.id, category.displayName),
           ),
         ],
         onChanged: (value) => uiController.onCategoryChanged(value),
@@ -500,7 +533,6 @@ class ProductsPage extends StatelessWidget {
     );
   }
 
-  /// القائمة المنسدلة العامة
   Widget _buildDropdownFilter({
     required String hint,
     required String? value,
@@ -591,30 +623,21 @@ class ProductsPage extends StatelessWidget {
     }
   }
 
-  /// محتوى التبويبات مع دعم السحب
+  // NEW: TabBarView content
   Widget _buildTabContent() {
-    return GetBuilder<ProductsUIController>(
-      builder: (uiController) => PageView(
-        controller: uiController.pageController,
-        physics: const BouncingScrollPhysics(),
-        onPageChanged: (index) {
-          // تحديث التبويب وتحميل بياناته عند انتهاء السحب
-          _switchToTabByIndex(index);
-        },
-        children: [
-          _buildProductsBody(),
-          _buildProductsBody(),
-          _buildProductsBody(),
-        ],
-      ),
+    return TabBarView(
+      physics: const BouncingScrollPhysics(),
+      children: [
+        _buildProductsBody(),
+        _buildProductsBody(),
+        _buildProductsBody(),
+      ],
     );
   }
 
-  /// جسم صفحة المنتجات (يستخدم حالة التبويب الحالي داخل ProductController)
   Widget _buildProductsBody() {
     return GetBuilder<ProductController>(
       builder: (controller) {
-        // RefreshIndicator متاح في جميع الحالات
         return RefreshIndicator(
           onRefresh: () => controller.refreshCurrentTab(),
           color: AppColors.primary,
@@ -629,7 +652,11 @@ class ProductsPage extends StatelessWidget {
                 return _buildRefreshableEmptyState(controller);
               }
 
-              return _buildProductGrid(controller.currentProducts, controller, showRefreshIndicator: false);
+              return _buildProductGrid(
+                controller.currentProducts,
+                controller,
+                showRefreshIndicator: false,
+              );
             },
           ),
         );
@@ -696,12 +723,15 @@ class ProductsPage extends StatelessWidget {
 
   Widget _buildProductGrid(
       List<Product> products,
-      ProductController controller,
-      {bool showRefreshIndicator = true}) {
-    final scrollController = Get.find<MainController>().productsScrollController;
+      ProductController controller, {
+        bool showRefreshIndicator = true,
+      }) {
+    final scrollController =
+        Get.find<MainController>().productsScrollController;
 
     final gridView = GridView.builder(
       controller: scrollController,
+      physics: const AlwaysScrollableScrollPhysics(), // ensure pull-to-refresh
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
@@ -709,7 +739,8 @@ class ProductsPage extends StatelessWidget {
         crossAxisSpacing: 16,
         mainAxisSpacing: 20,
       ),
-      itemCount: products.length + (controller.hasMoreData && controller.isLoadingMore ? 1 : 0),
+      itemCount: products.length +
+          (controller.hasMoreData && controller.isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == products.length && controller.hasMoreData) {
           return const Center(
@@ -723,12 +754,12 @@ class ProductsPage extends StatelessWidget {
         final product = products[index];
         return ProductCard(
           product: product,
-          onTap: () => Get.toNamed(Routes.productDetails, arguments: product.id),
+          onTap: () =>
+              Get.toNamed(Routes.productDetails, arguments: product.id),
         );
       },
     );
 
-    // إذا كان RefreshIndicator مطلوب، نضعه، وإلا نعرض GridView مباشرة
     return showRefreshIndicator
         ? RefreshIndicator(
       onRefresh: () => controller.refreshCurrentTab(),
@@ -739,7 +770,6 @@ class ProductsPage extends StatelessWidget {
         : gridView;
   }
 
-  /// Shimmer قابل للتحديث
   Widget _buildRefreshableShimmer() {
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -765,19 +795,18 @@ class ProductsPage extends StatelessWidget {
               child: const Center(child: LoadingWidget(size: 30)),
             ),
           ),
-          const SizedBox(height: 100), // مساحة إضافية للتأكد من إمكانية السحب
+          const SizedBox(height: 100),
         ],
       ),
     );
   }
 
-  /// Empty state قابل للتحديث
   Widget _buildRefreshableEmptyState(ProductController controller) {
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       child: Container(
         constraints: BoxConstraints(
-          minHeight: MediaQuery.of(Get.context!).size.height - 300, // تقليل الارتفاع المطلوب
+          minHeight: MediaQuery.of(Get.context!).size.height - 300,
         ),
         child: Center(
           child: Column(
@@ -786,10 +815,12 @@ class ProductsPage extends StatelessWidget {
               EmptyStateWidget(
                 icon: _getEmptyStateIcon(controller.currentTab),
                 title: _getEmptyStateTitle(controller.currentTab),
-                message: _getEmptyStateMessage(controller.currentTab, controller),
+                message: _getEmptyStateMessage(
+                  controller.currentTab,
+                  controller,
+                ),
               ),
               const SizedBox(height: 20),
-              // زر تحديث إضافي للوضوح
               ElevatedButton.icon(
                 onPressed: () => controller.refreshCurrentTab(),
                 icon: const Icon(Icons.refresh_rounded),
@@ -797,7 +828,10 @@ class ProductsPage extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -808,181 +842,6 @@ class ProductsPage extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-/// Controller لمحاذاة واجهة المستخدم - محدث للبحث في كل التبويبات
-class ProductsUIController extends GetxController {
-  final searchController = TextEditingController();
-  late PageController _pageController;
-
-  final RxBool _showSearchField = false.obs;
-  final RxString _selectedCategoryId = ''.obs;
-  final RxString _selectedSubCategoryId = ''.obs;
-  final RxInt _currentTabIndex = 0.obs;
-
-  bool get showSearchField => _showSearchField.value;
-  String get selectedCategoryId => _selectedCategoryId.value;
-  String get selectedSubCategoryId => _selectedSubCategoryId.value;
-  int get currentTabIndex => _currentTabIndex.value;
-  PageController get pageController => _pageController;
-
-  @override
-  void onInit() {
-    super.onInit();
-    _pageController = PageController(initialPage: 0);
-    _setupScrollListener();
-  }
-
-  @override
-  void onClose() {
-    searchController.dispose();
-    _pageController.dispose();
-    _removeScrollListener();
-    super.onClose();
-  }
-
-  /// تهيئة PageController مع الصفحة الأولية
-  void initializePageController(int initialPage) {
-    if (_pageController.hasClients && initialPage != _currentTabIndex.value) {
-      _pageController.jumpToPage(initialPage);
-    }
-  }
-
-  /// إعداد مستمع التمرير
-  void _setupScrollListener() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      try {
-        final scrollController = Get.find<MainController>().productsScrollController;
-        scrollController.addListener(_onScroll);
-      } catch (e) {
-        print('خطأ في إعداد مستمع التمرير: $e');
-      }
-    });
-  }
-
-  /// إزالة مستمع التمرير
-  void _removeScrollListener() {
-    try {
-      final scrollController = Get.find<MainController>().productsScrollController;
-      scrollController.removeListener(_onScroll);
-    } catch (e) {
-      print('خطأ في إزالة مستمع التمرير: $e');
-    }
-  }
-
-  /// معالج أحداث التمرير
-  void _onScroll() {
-    try {
-      final scrollController = Get.find<MainController>().productsScrollController;
-      if (scrollController.position.pixels >=
-          scrollController.position.maxScrollExtent - 200) {
-        final productController = Get.find<ProductController>();
-        if (!productController.isLoadingMore && productController.hasMoreData) {
-          productController.loadMoreProducts();
-        }
-      }
-    } catch (e) {
-      print('خطأ في معالجة التمرير: $e');
-    }
-  }
-
-  void changeTab(int index) {
-    if (_currentTabIndex.value != index) {
-      _currentTabIndex.value = index;
-
-      // إخفاء البحث عند تغيير التبويب
-      if (_showSearchField.value) {
-        _showSearchField.value = false;
-      }
-
-      // مسح الفلاتر فقط إذا انتقلنا من/إلى التبويب "الكل"
-      if (index != 0 || _currentTabIndex.value == 0) {
-        clearFiltersOnly(); // مسح الفلاتر فقط وليس البحث
-      }
-
-      update();
-    }
-  }
-
-  void toggleSearch() {
-    _showSearchField.value = !_showSearchField.value;
-    if (!_showSearchField.value) {
-      clearSearch();
-    }
-    update();
-  }
-
-  void clearSearch() {
-    searchController.clear();
-    try {
-      final productController = Get.find<ProductController>();
-      productController.clearSearch();
-    } catch (_) {}
-  }
-
-  void onSearchChanged(String value) {
-    try {
-      final productController = Get.find<ProductController>();
-      productController.searchProducts(value);
-    } catch (_) {}
-  }
-
-  void onCategoryChanged(String? value) async {
-    _selectedCategoryId.value = value ?? '';
-    _selectedSubCategoryId.value = '';
-
-    try {
-      final productController = Get.find<ProductController>();
-      final subCategoryController = Get.find<SubCategoryController>();
-
-      if (value?.isNotEmpty == true) {
-        subCategoryController.clearFilters();
-        update();
-
-        await subCategoryController.loadSubCategoriesByCategory(value!);
-
-        await productController.getProductsByCategory(value!);
-      } else {
-        productController.clearCategoryFilter();
-        subCategoryController.clearFilters();
-      }
-    } catch (_) {}
-    update();
-  }
-
-  void onSubCategoryChanged(String? value) {
-    _selectedSubCategoryId.value = value ?? '';
-
-    try {
-      final productController = Get.find<ProductController>();
-
-      if (value?.isNotEmpty == true) {
-        productController.filterBySubCategory(value!);
-      } else {
-        if (_selectedCategoryId.isNotEmpty) {
-          productController.getProductsByCategory(_selectedCategoryId.value);
-        } else {
-          productController.clearSubCategoryFilter();
-        }
-      }
-    } catch (_) {}
-    update();
-  }
-
-  /// مسح الفلاتر فقط (الفئات والفئات الفرعية) وليس البحث
-  void clearFiltersOnly() {
-    _selectedCategoryId.value = '';
-    _selectedSubCategoryId.value = '';
-    update();
-  }
-
-  /// مسح كل شيء (البحث والفلاتر)
-  void clearAllFilters() {
-    _selectedCategoryId.value = '';
-    _selectedSubCategoryId.value = '';
-    searchController.clear();
-    update();
   }
 }
 

@@ -39,21 +39,28 @@ class CategoryDetailsPage extends StatelessWidget {
         appBar: CustomAppBar(
           title: categoryName,
           actions: [
-            Obx(() => IconButton(
-              icon: Icon(
-                categoryController.showSearch ? Icons.close : Icons.search,
-                color: AppColors.black,
+            Obx(
+              () => IconButton(
+                icon: Icon(
+                  categoryController.showSearch ? Icons.close : Icons.search,
+                  color: AppColors.black,
+                ),
+                onPressed: categoryController.toggleSearch,
               ),
-              onPressed: categoryController.toggleSearch,
-            )),
+            ),
           ],
         ),
         body: Column(
           children: [
             // Search bar
-            Obx(() => categoryController.showSearch
-                ? _SearchBar(categoryController: categoryController, categoryName: categoryName)
-                : const SizedBox.shrink()),
+            Obx(
+              () => categoryController.showSearch
+                  ? _SearchBar(
+                      categoryController: categoryController,
+                      categoryName: categoryName,
+                    )
+                  : const SizedBox.shrink(),
+            ),
 
             // Subcategory filters
             _SubCategoryFilters(
@@ -106,15 +113,17 @@ class _SearchBar extends StatelessWidget {
         decoration: InputDecoration(
           hintText: 'البحث في منتجات $categoryName...',
           prefixIcon: const Icon(Icons.search, color: AppColors.primary),
-          suffixIcon: Obx(() => categoryController.searchQuery.isNotEmpty
-              ? IconButton(
-            icon: const Icon(Icons.clear),
-            onPressed: () {
-              searchController.clear();
-              categoryController.clearSearch();
-            },
-          )
-              : const SizedBox.shrink()),
+          suffixIcon: Obx(
+            () => categoryController.searchQuery.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      searchController.clear();
+                      categoryController.clearSearch();
+                    },
+                  )
+                : const SizedBox.shrink(),
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(color: AppColors.outline),
@@ -174,21 +183,25 @@ class _SubCategoryFilters extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           children: [
             // "All" button
-            Obx(() => _CategoryChip(
-              title: "الكل",
-              isSelected: categoryController.selectedSubCategoryId.isEmpty,
-              onTap: () {
-                subCategoryController.clearSelectedSubCategory();
-                categoryController.clearSubCategoryFilter();
-              },
-            )),
+            Obx(
+              () => _CategoryChip(
+                title: "الكل",
+                isSelected: categoryController.selectedSubCategoryId.isEmpty,
+                onTap: () {
+                  subCategoryController.clearSelectedSubCategory();
+                  categoryController.clearSubCategoryFilter();
+                },
+              ),
+            ),
 
             // Subcategory chips
-            ...subCategories.map((sub) => _SubCategoryChip(
-              subCategory: sub,
-              categoryController: categoryController,
-              subCategoryController: subCategoryController,
-            )),
+            ...subCategories.map(
+              (sub) => _SubCategoryChip(
+                subCategory: sub,
+                categoryController: categoryController,
+                subCategoryController: subCategoryController,
+              ),
+            ),
           ],
         ),
       );
@@ -224,12 +237,14 @@ class _CategoryChip extends StatelessWidget {
               ? Border.all(color: AppColors.primary, width: 1.5)
               : null,
         ),
-        child: Text(
-          title,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: isSelected ? AppColors.primary : AppColors.textPrimary,
+        child: Center(
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              color: isSelected ? AppColors.primary : AppColors.textPrimary,
+            ),
           ),
         ),
       ),
@@ -252,11 +267,14 @@ class _SubCategoryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final isSelected = categoryController.selectedSubCategoryId == subCategory.id;
+      final isSelected =
+          categoryController.selectedSubCategoryId == subCategory.id;
 
       return GestureDetector(
         onTap: () {
-          print('🏷️ Subcategory tapped: ${subCategory.id} (${subCategory.displayName})');
+          print(
+            '🏷️ Subcategory tapped: ${subCategory.id} (${subCategory.displayName})',
+          );
           subCategoryController.selectSubCategory(subCategory);
           categoryController.filterBySubCategory(subCategory.id);
         },
@@ -273,12 +291,12 @@ class _SubCategoryChip extends StatelessWidget {
                 : null,
           ),
           child: Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 60,
+                  width: 70,
                   height: 40,
                   decoration: BoxDecoration(
                     color: isSelected
@@ -290,34 +308,42 @@ class _SubCategoryChip extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     child: subCategory.hasImage
                         ? CachedNetworkImage(
-                      imageUrl: HelperMethod.getImageUrl(subCategory.image!),
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Icon(
-                        Icons.category_outlined,
-                        color: AppColors.grey,
-                        size: 20,
-                      ),
-                      errorWidget: (context, url, error) => Icon(
-                        Icons.category_outlined,
-                        color: AppColors.grey,
-                        size: 20,
-                      ),
-                    )
+                            imageUrl: HelperMethod.getImageUrl(
+                              subCategory.image!,
+                            ),
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Icon(
+                              Icons.category_outlined,
+                              color: AppColors.grey,
+                              size: 20,
+                            ),
+                            errorWidget: (context, url, error) => Icon(
+                              Icons.category_outlined,
+                              color: AppColors.grey,
+                              size: 20,
+                            ),
+                          )
                         : Icon(
-                      Icons.category_outlined,
-                      color: isSelected ? AppColors.primary : AppColors.grey,
-                      size: 20,
-                    ),
+                            Icons.category_outlined,
+                            color: isSelected
+                                ? AppColors.primary
+                                : AppColors.grey,
+                            size: 20,
+                          ),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 0),
                 Flexible(
                   child: Text(
                     subCategory.displayName,
                     style: TextStyle(
                       fontSize: 10,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.w500,
+                      color: isSelected
+                          ? AppColors.primary
+                          : AppColors.textPrimary,
                     ),
                     textAlign: TextAlign.center,
                     maxLines: 2,
@@ -345,14 +371,16 @@ class _ProductsGrid extends StatelessWidget {
       builder: (controller) => NotificationListener<ScrollNotification>(
         onNotification: (ScrollNotification scrollInfo) {
           // Load more when scrolling near the bottom
-          if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200) {
+          if (scrollInfo.metrics.pixels >=
+              scrollInfo.metrics.maxScrollExtent - 200) {
             controller.loadMoreProducts();
           }
           return false;
         },
         child: Obx(() {
           // Loading state
-          if (controller.isLoadingProducts && controller.categoryProducts.isEmpty) {
+          if (controller.isLoadingProducts &&
+              controller.categoryProducts.isEmpty) {
             return const LoadingWidget(message: "جاري تحميل المنتجات...");
           }
 
@@ -387,7 +415,8 @@ class _ProductsGrid extends StatelessWidget {
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
               ),
-              itemCount: controller.categoryProducts.length +
+              itemCount:
+                  controller.categoryProducts.length +
                   (controller.isLoadingMore ? 1 : 0),
               itemBuilder: (context, index) {
                 // Loading more indicator
@@ -395,7 +424,10 @@ class _ProductsGrid extends StatelessWidget {
                   return const Center(
                     child: Padding(
                       padding: EdgeInsets.all(16.0),
-                      child: LoadingWidget(size: 20, message: "تحميل المزيد..."),
+                      child: LoadingWidget(
+                        size: 20,
+                        message: "تحميل المزيد...",
+                      ),
                     ),
                   );
                 }
@@ -405,7 +437,8 @@ class _ProductsGrid extends StatelessWidget {
                 return ProductCard(
                   product: product,
                   isGridView: true,
-                  onTap: () => Get.toNamed(Routes.productDetails, arguments: product.id),
+                  onTap: () =>
+                      Get.toNamed(Routes.productDetails, arguments: product.id),
                 );
               },
             ),

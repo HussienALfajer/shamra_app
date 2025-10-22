@@ -11,7 +11,7 @@ class OrderRepository {
     String? notes,
     int? pointsToRedeem,
     String? currency,
-
+    Map<String, double>? location,
   }) async {
     try {
       return await OrderService.createOrder(
@@ -22,6 +22,7 @@ class OrderRepository {
         notes: notes,
         pointsToRedeem: pointsToRedeem,
         currency: currency,
+        location: location,
       );
     } catch (e) {
       rethrow;

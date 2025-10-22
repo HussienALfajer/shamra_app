@@ -4,6 +4,7 @@ import '../../../core/constants/colors.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/utils/phone_utils.dart';
 import '../../../routes/app_routes.dart';
+import '../../controllers/auth_controller.dart';
 import '../../widgets/common_widgets.dart';
 
 /// Reset Password Page (UI only)
@@ -19,6 +20,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _isPasswordVisible = false;
+  final _auth = Get.find<AuthController>();
   bool _isConfirmPasswordVisible = false;
   bool _isLoading = false;
 
@@ -125,20 +127,16 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     setState(() => _isLoading = true);
 
     try {
-      final repo = AuthRepository();
-      await repo.resetPassword(
+      final ok = await _auth.resetPassword(
         phoneNumber: PhoneUtils.normalizeToE164(phoneNumber),
         newPassword: _passwordController.text,
         otp: otp,
       );
-
-      ShamraSnackBar.show(context: context, message: 'تم تغيير كلمة المرور بنجاح', type: SnackBarType.success);
-      await Future.delayed(const Duration(seconds: 1));
-      Get.offAllNamed(Routes.login);
-    } catch (e) {
-      ShamraSnackBar.show(context: context, message: 'فشل تغيير كلمة المرور: ${e.toString()}', type: SnackBarType.error);
+      if (ok) {
+        await Future.delayed(const Duration(milliseconds: 600));
+        Get.offAllNamed(Routes.login);
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
-  }
-}
+  }}

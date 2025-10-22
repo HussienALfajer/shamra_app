@@ -87,16 +87,53 @@ class AuthService {
     }
   }
 
-  /// Register new user account.
+  /// Send OTP for registration (you already have send-otp generic).
+  static Future<void> sendOtpForRegistration({
+    required String phoneNumber,
+  }) async {
+    try {
+      final normalized = PhoneUtils.normalizeToE164(phoneNumber);
+      await DioService.post(
+        '/auth/send-otp',
+        data: {'phoneNumber': normalized},
+      );
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Verify OTP for registration -> returns registrationToken
+  static Future<String> verifyOtpForRegistration({
+    required String phoneNumber,
+    required String otp,
+  }) async {
+    try {
+      final normalized = PhoneUtils.normalizeToE164(phoneNumber);
+      final res = await DioService.post(
+        '/auth/register/verify-otp',
+        data: {'phoneNumber': normalized, 'otp': otp},
+      );
+      // Expecting { success, data: { registrationToken } }
+      return (res.data?['data']?['registrationToken'] ??
+              res.data?['data']?['registration_token'] ??
+              '')
+          as String;
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Register WITH registrationToken
   static Future<AuthResponseApi> register({
     required String firstName,
     required String lastName,
     required String password,
     required String phoneNumber,
     required String branchId,
-    String? fcmToken,
+    required String registrationToken, // <-- NEW required
   }) async {
     try {
+      final fcmToken = await NotificationService.getToken();
       final normalized = PhoneUtils.normalizeToE164(phoneNumber);
       final response = await DioService.post(
         ApiConstants.register,
@@ -106,7 +143,8 @@ class AuthService {
           'password': password,
           'branchId': branchId,
           'phoneNumber': normalized,
-          if (fcmToken != null && fcmToken.isNotEmpty) 'fcmToken': fcmToken,
+          'registrationToken': registrationToken, // <-- pass token
+          'fcmToken': fcmToken,
         },
       );
       return AuthResponseApi.fromJson(
@@ -118,7 +156,9 @@ class AuthService {
   }
 
   /// Select branch for authenticated user.
-  static Future<AuthResponseApi> selectBranch({required String branchId}) async {
+  static Future<AuthResponseApi> selectBranch({
+    required String branchId,
+  }) async {
     try {
       final response = await DioService.post(
         ApiConstants.selectBranch,
@@ -208,6 +248,22 @@ class AuthService {
         },
       );
       return Map<String, dynamic>.from(response.data ?? {});
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Verify reset OTP without consuming (server-side check only).
+  static Future<void> verifyResetOtp({
+    required String phoneNumber,
+    required String otp,
+  }) async {
+    try {
+      final normalized = PhoneUtils.normalizeToE164(phoneNumber);
+      await DioService.post(
+        '/auth/reset-password/verify-otp',
+        data: {'phoneNumber': normalized, 'otp': otp},
+      );
     } on DioException catch (e) {
       throw _handleError(e);
     }
