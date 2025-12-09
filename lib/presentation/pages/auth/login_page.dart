@@ -25,6 +25,7 @@ class _LoginPageState extends State<LoginPage> {
   // Flags from arguments
   bool get _cameFromRegister =>
       (Get.arguments is Map && Get.arguments['cameFrom'] == 'register');
+
   bool get _allowExitDirect =>
       (Get.arguments is Map && Get.arguments['allowExitDirect'] == true);
 
@@ -118,8 +119,9 @@ class _LoginPageState extends State<LoginPage> {
                               national: phone.number,
                               countryIso2: phone.countryISOCode,
                             );
-                            _phoneE164 =
-                            normalized.isNotEmpty ? normalized : null;
+                            _phoneE164 = normalized.isNotEmpty
+                                ? normalized
+                                : null;
                           },
                           onCountryChanged: (c) => _initialCountryCode = c.code,
                           validator: (phone) {
@@ -143,7 +145,7 @@ class _LoginPageState extends State<LoginPage> {
 
                       // Password (local controller)
                       Obx(
-                            () => ShamraTextField(
+                        () => ShamraTextField(
                           hintText: 'أدخل كلمة المرور',
                           icon: Icons.lock_outlined,
                           controller: _passwordController,
@@ -181,7 +183,7 @@ class _LoginPageState extends State<LoginPage> {
                               'phone': PhoneUtils.normalizeToE164(
                                 _phoneE164?.trim() ?? '',
                                 defaultIso2: _initialCountryCode,
-                              )
+                              ),
                             },
                           ),
                           child: Text(
@@ -199,31 +201,31 @@ class _LoginPageState extends State<LoginPage> {
 
                       // Login btn
                       Obx(
-                            () => ShamraButton(
+                        () => ShamraButton(
                           text: 'تسجيل الدخول',
                           onPressed: controller.isLoading
                               ? null
                               : () async {
-                            if (_formKey.currentState!.validate()) {
-                              final normalized =
-                              PhoneUtils.normalizeToE164(
-                                _phoneE164?.trim() ?? '',
-                                defaultIso2: _initialCountryCode,
-                              );
-                              if (normalized.isEmpty) {
-                                ShamraSnackBar.show(
-                                  context: context,
-                                  message: 'يرجى إدخال رقم الهاتف',
-                                  type: SnackBarType.warning,
-                                );
-                                return;
-                              }
-                              await controller.login(
-                                normalized,
-                                _passwordController.text,
-                              );
-                            }
-                          },
+                                  if (_formKey.currentState!.validate()) {
+                                    final normalized =
+                                        PhoneUtils.normalizeToE164(
+                                          _phoneE164?.trim() ?? '',
+                                          defaultIso2: _initialCountryCode,
+                                        );
+                                    if (normalized.isEmpty) {
+                                      ShamraSnackBar.show(
+                                        context: context,
+                                        message: 'يرجى إدخال رقم الهاتف',
+                                        type: SnackBarType.warning,
+                                      );
+                                      return;
+                                    }
+                                    await controller.login(
+                                      normalized,
+                                      _passwordController.text,
+                                    );
+                                  }
+                                },
                           isLoading: controller.isLoading,
                           icon: Icons.login_rounded,
                         ),

@@ -29,8 +29,8 @@ class ProductService {
           if (categoryId != null) 'categoryId': categoryId,
           if (subCategoryId != null) 'subCategoryId': subCategoryId,
           if (search != null) 'search': search,
-          if (isFeatured != null) 'isFeatured': isFeatured, // keep booleans
-          if (isOnSale != null) 'isOnSale': isOnSale,       // keep booleans
+          if (isFeatured != null) 'isFeatured': isFeatured,
+          if (isOnSale != null) 'isOnSale': isOnSale,
           'sort': sort,
           if (branchId != null && branchId.isNotEmpty)
             'selectedBranchId': branchId,
