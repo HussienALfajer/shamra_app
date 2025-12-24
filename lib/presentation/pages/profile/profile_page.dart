@@ -126,8 +126,10 @@ class _ProfilePageState extends State<ProfilePage> {
             children: [
               const SizedBox(height: 40),
               _buildUserInfo(user, authController),
-              const SizedBox(height: 24),
-              _buildPointsCard(user), // 🎯 الآن سيتحدث
+              if (user.role == 'customer') ...[
+                const SizedBox(height: 24),
+                _buildPointsCard(user), // 🎯 الآن سيتحدث
+              ],
               const SizedBox(height: 24),
               // _buildBranchInfo(authController),
               const SizedBox(height: 24),

@@ -430,7 +430,8 @@ class CartPage extends StatelessWidget {
       CartController cartController,
       ) async {
     final user = authController.currentUser;
-    if (user == null || user.points <= 0) {
+    // Only allow points system for customers
+    if (user == null || user.role != 'customer' || user.points <= 0) {
       return {'points': null, 'discount': 0.0};
     }
 

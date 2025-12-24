@@ -26,6 +26,7 @@ class CategoryController extends GetxController {
   // Filter states
   final RxString _searchQuery = ''.obs;
   final RxString _selectedSubCategoryId = ''.obs;
+  final RxString _selectedSubSubCategoryId = ''.obs;
   final RxBool _showSearch = false.obs;
 
   // Current category context
@@ -48,6 +49,7 @@ class CategoryController extends GetxController {
   // Getters - Filters
   String get searchQuery => _searchQuery.value;
   String get selectedSubCategoryId => _selectedSubCategoryId.value;
+  String get selectedSubSubCategoryId => _selectedSubSubCategoryId.value;
   bool get showSearch => _showSearch.value;
   String get currentCategoryName => _currentCategoryName;
 
@@ -104,11 +106,21 @@ class CategoryController extends GetxController {
       print('🔍 Loading products with filters:');
       print('  - Category: $currentCategoryId');
       print('  - SubCategory: ${_selectedSubCategoryId.value}');
+      print('  - SubSubCategory: ${_selectedSubSubCategoryId.value}');
       print('  - Search: ${_searchQuery.value}');
       print('  - Page: ${_currentPage.value}');
 
       // Choose API call based on current filters
-      if (_searchQuery.value.isNotEmpty) {
+      // Priority: SubSubCategory > SubCategory > Category
+      if (_selectedSubSubCategoryId.value.isNotEmpty) {
+        // Filter by sub-sub-category (highest priority)
+        result = await _productRepository.getProductsBySubSubCategory(
+          subSubCategoryId: _selectedSubSubCategoryId.value,
+          page: _currentPage.value,
+          limit: 20,
+          search: _searchQuery.value.isNotEmpty ? _searchQuery.value : null,
+        );
+      } else if (_searchQuery.value.isNotEmpty) {
         if (_selectedSubCategoryId.value.isNotEmpty) {
           result = await _productRepository.getProductsBySubCategory(
             subCategoryId: _selectedSubCategoryId.value,
@@ -204,6 +216,7 @@ class CategoryController extends GetxController {
   Future<void> filterBySubCategory(String subCategoryId) async {
     print('🏷️ Filtering by subcategory: $subCategoryId');
     _selectedSubCategoryId.value = subCategoryId;
+    _selectedSubSubCategoryId.value = ''; // Clear sub-sub-category when changing sub-category
     _searchQuery.value = ''; // Clear search when filtering
     await loadCategoryProducts(resetPagination: true);
   }
@@ -212,6 +225,22 @@ class CategoryController extends GetxController {
   Future<void> clearSubCategoryFilter() async {
     print('🏷️ Clearing subcategory filter');
     _selectedSubCategoryId.value = '';
+    _selectedSubSubCategoryId.value = ''; // Also clear sub-sub-category
+    await loadCategoryProducts(resetPagination: true);
+  }
+
+  /// Filter by sub-subcategory
+  Future<void> filterBySubSubCategory(String subSubCategoryId) async {
+    print('🏷️ Filtering by sub-subcategory: $subSubCategoryId');
+    _selectedSubSubCategoryId.value = subSubCategoryId;
+    _searchQuery.value = ''; // Clear search when filtering
+    await loadCategoryProducts(resetPagination: true);
+  }
+
+  /// Clear sub-subcategory filter
+  Future<void> clearSubSubCategoryFilter() async {
+    print('🏷️ Clearing sub-subcategory filter');
+    _selectedSubSubCategoryId.value = '';
     await loadCategoryProducts(resetPagination: true);
   }
 
@@ -238,6 +267,7 @@ class CategoryController extends GetxController {
     _resetPaginationOnly();
     _searchQuery.value = '';
     _selectedSubCategoryId.value = '';
+    _selectedSubSubCategoryId.value = '';
     _showSearch.value = false;
   }
 
@@ -245,6 +275,8 @@ class CategoryController extends GetxController {
   String getEmptyMessage() {
     if (_searchQuery.value.isNotEmpty) {
       return 'لا توجد نتائج للبحث عن "${_searchQuery.value}"';
+    } else if (_selectedSubSubCategoryId.value.isNotEmpty) {
+      return 'لا توجد منتجات في هذه الفئة الفرعية';
     } else if (_selectedSubCategoryId.value.isNotEmpty) {
       return 'لا توجد منتجات في هذه الفئة الفرعية';
     }

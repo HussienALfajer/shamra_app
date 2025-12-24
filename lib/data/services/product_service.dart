@@ -14,6 +14,7 @@ class ProductService {
     int limit = 20,
     String? categoryId,
     String? subCategoryId,
+    String? subSubCategoryId,
     String? search,
     String sort = '-createdAt',
     bool? isFeatured,
@@ -28,6 +29,7 @@ class ProductService {
           'limit': limit,
           if (categoryId != null) 'categoryId': categoryId,
           if (subCategoryId != null) 'subCategoryId': subCategoryId,
+          if (subSubCategoryId != null) 'subSubCategoryId': subSubCategoryId,
           if (search != null) 'search': search,
           if (isFeatured != null) 'isFeatured': isFeatured,
           if (isOnSale != null) 'isOnSale': isOnSale,
@@ -81,6 +83,24 @@ class ProductService {
         page: page,
         limit: limit,
         subCategoryId: subCategoryId,
+        search: search,
+      );
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  static Future<Map<String, dynamic>> getProductsBySubSubCategory({
+    required String subSubCategoryId,
+    int page = 1,
+    int limit = 20,
+    String? search,
+  }) async {
+    try {
+      return await getProducts(
+        page: page,
+        limit: limit,
+        subSubCategoryId: subSubCategoryId,
         search: search,
       );
     } on DioException catch (e) {

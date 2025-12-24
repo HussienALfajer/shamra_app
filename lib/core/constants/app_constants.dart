@@ -16,6 +16,7 @@ class ApiConstants {
   static const String products = '/products';
   static const String categories = '/categories';
   static const String subCategories = '/sub-categories';
+  static const String subSubCategories = '/sub-sub-categories';
   static const String branches = '/branches';
   static const String customers = '/customers';
   static const String orders = '/orders';

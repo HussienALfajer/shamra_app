@@ -192,13 +192,17 @@ class OrderController extends GetxController {
       _isPlacingOrder.value = true;
       _errorMessage.value = '';
 
+      // Safeguard: Only allow points redemption for customers
+      final effectivePointsToRedeem = 
+          (auth.currentUser!.role == 'customer') ? pointsToRedeem : null;
+
       final order = await _orderRepository.createOrder(
         customerId: auth.currentUser!.id,
         branchId: branchId,
         items: cart.getOrderItems(),
         discountAmount: discountAmount ?? 0.0,
         notes: notes,
-        pointsToRedeem: pointsToRedeem, // 🎯 إضافة
+        pointsToRedeem: effectivePointsToRedeem, // 🎯 إضافة
         currency: currency ?? 'USD', // 🎯 إضافة
         location: location,
       );

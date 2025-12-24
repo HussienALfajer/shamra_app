@@ -2,10 +2,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart' hide ErrorWidget;
 import 'package:get/get.dart';
 import '../../../core/constants/colors.dart';
+import '../../../data/models/sub_sub_category.dart';
 import '../../../data/utils/helpers.dart';
 import '../../../routes/app_routes.dart';
 import '../../controllers/category_controller.dart';
 import '../../controllers/sub_category_controller.dart';
+import '../../controllers/sub_sub_category_controller.dart';
 import '../../widgets/common_widgets.dart';
 import '../../widgets/product_card.dart';
 
@@ -22,6 +24,7 @@ class CategoryDetailsPage extends StatelessWidget {
     // Get controllers
     final categoryController = Get.find<CategoryController>();
     final subCategoryController = Get.find<SubCategoryController>();
+    final subSubCategoryController = Get.find<SubSubCategoryController>();
 
     // Initialize category page
     categoryController.initializeCategoryPage(categoryId, categoryName);
@@ -32,6 +35,7 @@ class CategoryDetailsPage extends StatelessWidget {
         categoryController.cleanupCategoryPage();
         subCategoryController.clearSelectedSubCategory();
         subCategoryController.clearFilters();
+        subSubCategoryController.reset();
         return true;
       },
       child: Scaffold(
@@ -66,6 +70,12 @@ class CategoryDetailsPage extends StatelessWidget {
             _SubCategoryFilters(
               categoryController: categoryController,
               subCategoryController: subCategoryController,
+            ),
+
+            // Sub-sub-category filters
+            _SubSubCategoryFilters(
+              categoryController: categoryController,
+              subSubCategoryController: subSubCategoryController,
             ),
 
             const Divider(height: 1, color: AppColors.divider),
@@ -190,6 +200,9 @@ class _SubCategoryFilters extends StatelessWidget {
                 onTap: () {
                   subCategoryController.clearSelectedSubCategory();
                   categoryController.clearSubCategoryFilter();
+                  final subSubCategoryController =
+                      Get.find<SubSubCategoryController>();
+                  subSubCategoryController.clearSubSubCategories();
                 },
               ),
             ),
@@ -277,6 +290,10 @@ class _SubCategoryChip extends StatelessWidget {
           );
           subCategoryController.selectSubCategory(subCategory);
           categoryController.filterBySubCategory(subCategory.id);
+          final subSubCategoryController = Get.find<SubSubCategoryController>();
+          subSubCategoryController.loadSubSubCategoriesBySubCategory(
+            subCategory.id,
+          );
         },
         child: Container(
           width: 75,
@@ -336,6 +353,188 @@ class _SubCategoryChip extends StatelessWidget {
                 Flexible(
                   child: Text(
                     subCategory.displayName,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.w500,
+                      color: isSelected
+                          ? AppColors.primary
+                          : AppColors.textPrimary,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+}
+
+/// Sub-sub-category filters widget
+class _SubSubCategoryFilters extends StatelessWidget {
+  final CategoryController categoryController;
+  final SubSubCategoryController subSubCategoryController;
+
+  const _SubSubCategoryFilters({
+    required this.categoryController,
+    required this.subSubCategoryController,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      // Only show when a sub-category is selected
+      if (categoryController.selectedSubCategoryId.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      if (subSubCategoryController.isLoading) {
+        return const SizedBox(
+          height: 90,
+          child: Center(child: LoadingWidget(message: "جاري تحميل الفئات...")),
+        );
+      }
+
+      if (subSubCategoryController.errorMessage.isNotEmpty) {
+        return ErrorWidget(
+          message: subSubCategoryController.errorMessage,
+          onRetry: () =>
+              subSubCategoryController.loadSubSubCategoriesBySubCategory(
+                categoryController.selectedSubCategoryId,
+              ),
+        );
+      }
+
+      final subSubCategories = subSubCategoryController.subSubCategories;
+      if (subSubCategories.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      return AnimatedSize(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        child: SizedBox(
+          height: 90,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            children: [
+              // "All" button
+              Obx(
+                () => _CategoryChip(
+                  title: "الكل",
+                  isSelected:
+                      categoryController.selectedSubSubCategoryId.isEmpty,
+                  onTap: () {
+                    subSubCategoryController.clearSelectedSubSubCategory();
+                    categoryController.clearSubSubCategoryFilter();
+                  },
+                ),
+              ),
+
+              // Sub-sub-category chips
+              ...subSubCategories.map(
+                (subSub) => _SubSubCategoryChip(
+                  subSubCategory: subSub,
+                  categoryController: categoryController,
+                  subSubCategoryController: subSubCategoryController,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+}
+
+/// Sub-sub-category chip widget
+class _SubSubCategoryChip extends StatelessWidget {
+  final SubSubCategory subSubCategory;
+  final CategoryController categoryController;
+  final SubSubCategoryController subSubCategoryController;
+
+  const _SubSubCategoryChip({
+    required this.subSubCategory,
+    required this.categoryController,
+    required this.subSubCategoryController,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final isSelected =
+          categoryController.selectedSubSubCategoryId == subSubCategory.id;
+
+      return GestureDetector(
+        onTap: () {
+          subSubCategoryController.selectSubSubCategory(subSubCategory);
+          categoryController.filterBySubSubCategory(subSubCategory.id);
+        },
+        child: Container(
+          width: 75,
+          margin: const EdgeInsets.only(left: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColors.primary.withOpacity(0.2)
+                : AppColors.chipBackground,
+            borderRadius: BorderRadius.circular(16),
+            border: isSelected
+                ? Border.all(color: AppColors.primary, width: 1.5)
+                : null,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 70,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.primary.withOpacity(0.1)
+                        : AppColors.lightGrey,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: subSubCategory.hasImage
+                        ? CachedNetworkImage(
+                            imageUrl: HelperMethod.getImageUrl(
+                              subSubCategory.image!,
+                            ),
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Icon(
+                              Icons.category_outlined,
+                              color: AppColors.grey,
+                              size: 20,
+                            ),
+                            errorWidget: (context, url, error) => Icon(
+                              Icons.category_outlined,
+                              color: AppColors.grey,
+                              size: 20,
+                            ),
+                          )
+                        : Icon(
+                            Icons.category_outlined,
+                            color: isSelected
+                                ? AppColors.primary
+                                : AppColors.grey,
+                            size: 20,
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 0),
+                Flexible(
+                  child: Text(
+                    subSubCategory.displayName,
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: isSelected

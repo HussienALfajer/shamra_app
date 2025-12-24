@@ -33,6 +33,7 @@ import '../presentation/controllers/order_controller.dart';
 import '../presentation/controllers/branch_controller.dart';
 import '../presentation/controllers/category_controller.dart';
 import '../presentation/controllers/sub_category_controller.dart';
+import '../presentation/controllers/sub_sub_category_controller.dart';
 import '../presentation/controllers/favorite_controller.dart';
 import '../presentation/controllers/app_controller.dart';
 
@@ -269,6 +270,7 @@ class ProductBinding extends Bindings {
     Get.lazyPut<CartController>(() => CartController());
     Get.lazyPut<CategoryController>(() => CategoryController());
     Get.lazyPut<SubCategoryController>(() => SubCategoryController());
+    Get.lazyPut<SubSubCategoryController>(() => SubSubCategoryController());
   }
 }
 

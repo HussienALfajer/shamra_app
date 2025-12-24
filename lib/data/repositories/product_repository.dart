@@ -65,6 +65,25 @@ class ProductRepository {
     }
   }
 
+  /// Products by sub-subcategory (returns pagination map)
+  Future<Map<String, dynamic>> getProductsBySubSubCategory({
+    required String subSubCategoryId,
+    int page = 1,
+    int limit = 20,
+    String? search,
+  }) async {
+    try {
+      return await ProductService.getProductsBySubSubCategory(
+        subSubCategoryId: subSubCategoryId,
+        page: page,
+        limit: limit,
+        search: search,
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   /// Featured products (paginated map) — supports category/subCategory filters
   Future<Map<String, dynamic>> getFeaturedProducts({
     int limit = 20,

@@ -389,7 +389,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                       _buildPriceSection(),
                       _buildDescriptionSection(),
                       _buildSpecificationsSection(),
-                      _buildStockInfo(),
                       _buildSimilarProducts(),
                       const SizedBox(height: 100),
                     ],
@@ -1151,12 +1150,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         keyLower.contains('ذاكرة') ||
         keyLower.contains('تخزين')) {
       return Icons.sd_storage_rounded;
-    } else if (
-        keyLower.contains('ram') ||
+    } else if (keyLower.contains('ram') ||
         keyLower.contains('الرام') ||
-        keyLower.contains('رام')
-    )
-    {
+        keyLower.contains('رام')) {
       return Icons.developer_board;
     }
     // Processor & CPU
@@ -1418,92 +1414,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
 
   String _formatSpecificationKey(String key) {
     return key;
-  }
-
-  Widget _buildStockInfo() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: product!.inStock
-            ? AppColors.success.withOpacity(0.05)
-            : AppColors.error.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: product!.inStock
-              ? AppColors.success.withOpacity(0.2)
-              : AppColors.error.withOpacity(0.2),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: product!.inStock
-                  ? AppColors.success.withOpacity(0.1)
-                  : AppColors.error.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              product!.inStock
-                  ? Icons.inventory_rounded
-                  : Icons.inventory_2_outlined,
-              color: product!.inStock ? AppColors.success : AppColors.error,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product!.inStock ? 'متوفر في المخزن' : 'غير متوفر حالياً',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: product!.inStock
-                        ? AppColors.success
-                        : AppColors.error,
-                  ),
-                ),
-                if (product!.inStock) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    product!.stockQuantity > 10
-                        ? 'متوفر بكمية كبيرة'
-                        : 'متبقي ${product!.stockQuantity} قطع فقط',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: product!.stockQuantity > 10
-                          ? AppColors.success
-                          : AppColors.warning,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (product!.inStock && product!.stockQuantity <= 5)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.warning.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text(
-                'كمية محدودة',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.warning,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
   }
 
   Widget _buildSimilarProducts() {
