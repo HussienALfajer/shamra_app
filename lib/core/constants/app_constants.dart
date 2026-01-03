@@ -2,8 +2,8 @@
 
 /// API endpoints and base URLs used by the app.
 class ApiConstants {
-  static const String baseUrl = 'http://62.171.153.198:3399/api/v1';
-  static const String storageUrl = 'http://62.171.153.198:3399';
+  static const String baseUrl = 'https://shamra.anycode-sy.com/api/api/v1';
+  static const String storageUrl = 'https://shamra.anycode-sy.com/api';
   // Auth endpoints
   static const String login = '/auth/login';
   static const String register = '/auth/register';
