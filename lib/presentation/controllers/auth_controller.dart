@@ -55,7 +55,13 @@ class AuthController extends GetxController {
   /// After successful login, checks if user has a selected branch:
   /// - If yes → navigate to Main
   /// - If no → navigate to Branch Selection
-  Future<bool> login(String phoneNumber, String password) async {
+  /// If [navigateOnSuccess] is false, it executes the optional [onLoginSuccess] callback and skips standard navigation.
+  Future<bool> login(
+      String phoneNumber, 
+      String password, {
+      bool navigateOnSuccess = true,
+      VoidCallback? onLoginSuccess,
+  }) async {
     try {
       _isLoading.value = true;
       _errorMessage.value = '';
@@ -65,43 +71,46 @@ class AuthController extends GetxController {
         password: password,
       );
 
-      if (response.data.user != null) {
-        _currentUser.value = User.fromJson(response.data.user.toJson());
-        _isLoggedIn.value = true;
+      _currentUser.value = User.fromJson(response.data.user.toJson());
+      _isLoggedIn.value = true;
 
-        // Save branch ID if user has selected branch
-        if (_currentUser.value!.hasSelectedBranch) {
-          final branchId = _currentUser.value!.selectedBranch.isNotEmpty
-              ? _currentUser.value!.selectedBranch
-              : _currentUser.value!.branchId;
+      // Save branch ID if user has selected branch
+      if (_currentUser.value!.hasSelectedBranch) {
+        final branchId = _currentUser.value!.selectedBranch.isNotEmpty
+            ? _currentUser.value!.selectedBranch
+            : _currentUser.value!.branchId;
 
-          if (branchId.isNotEmpty) {
-            await StorageService.saveBranchId(branchId);
-          }
+        if (branchId.isNotEmpty) {
+          await StorageService.saveBranchId(branchId);
         }
+      }
 
-        // Navigate based on branch selection status
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'تم تسجيل الدخول بنجاح',
+        type: SnackBarType.success,
+      );
+      
+      if (navigateOnSuccess) {
+         // Navigate based on branch selection status
         try {
           final appController = Get.find<AppController>();
           appController.recheckAuthStatus();
         } catch (_) {
           // Fallback navigation if AppController not found
           if (_currentUser.value!.hasSelectedBranch) {
-            Get.offAllNamed(Routes.main);
+            Get.offAllNamed<void>(Routes.main);
           } else {
-            Get.offAllNamed(Routes.branchSelection);
+            Get.offAllNamed<void>(Routes.branchSelection);
           }
         }
-
-        ShamraSnackBar.show(
-          context: Get.context!,
-          message: 'تم تسجيل الدخول بنجاح',
-          type: SnackBarType.success,
-        );
-        return true;
+      } else {
+        if (onLoginSuccess != null) {
+          onLoginSuccess();
+        }
       }
 
-      return false;
+      return true;
     } catch (e) {
       _errorMessage.value = e.toString();
       ShamraSnackBar.show(
@@ -251,6 +260,7 @@ class AuthController extends GetxController {
       _isLoading.value = true;
       final user = await _authRepository.getProfile();
       _currentUser.value = user;
+      await StorageService.saveUserData(user.toJson());
       update();
     } catch (e) {
       _errorMessage.value = e.toString();
@@ -276,6 +286,7 @@ class AuthController extends GetxController {
       );
 
       _currentUser.value = user;
+      await StorageService.saveUserData(user.toJson());
 
       ShamraSnackBar.show(
         context: Get.context!,
@@ -346,7 +357,7 @@ class AuthController extends GetxController {
         await appController.logout();
       } catch (_) {
         await StorageService.clearAll();
-        Get.offAllNamed(Routes.welcome);
+        Get.offAllNamed<void>(Routes.welcome);
       }
 
       ShamraSnackBar.show(
@@ -361,8 +372,43 @@ class AuthController extends GetxController {
         await appController.logout();
       } catch (_) {
         await StorageService.clearAll();
-        Get.offAllNamed(Routes.welcome);
+        Get.offAllNamed<void>(Routes.welcome);
       }
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  /// Delete user account and clear all data.
+  Future<void> deleteAccount() async {
+    try {
+      _isLoading.value = true;
+      await _authRepository.deleteAccount();
+
+      _currentUser.value = null;
+      _isLoggedIn.value = false;
+      _errorMessage.value = '';
+
+      try {
+        final appController = Get.find<AppController>();
+        await appController.logout();
+      } catch (_) {
+        await StorageService.clearAll();
+        Get.offAllNamed<void>(Routes.welcome);
+      }
+
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'تم حذف الحساب بنجاح',
+        type: SnackBarType.success,
+      );
+    } catch (e) {
+      _errorMessage.value = e.toString();
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'فشل حذف الحساب: ${e.toString()}',
+        type: SnackBarType.error,
+      );
     } finally {
       _isLoading.value = false;
     }
@@ -385,18 +431,14 @@ class AuthController extends GetxController {
       _isLoading.value = true;
       final response = await _authRepository.selectBranch(branchId: branchId);
 
-      if (response.data.user != null) {
-        final updatedUser = User.fromJson(response.data.user.toJson());
-        _currentUser.value = updatedUser;
+      final updatedUser = User.fromJson(response.data.user.toJson());
+      _currentUser.value = updatedUser;
 
-        await StorageService.saveUserData(updatedUser.toJson());
-        await StorageService.saveBranchId(branchId);
+      await StorageService.saveUserData(updatedUser.toJson());
+      await StorageService.saveBranchId(branchId);
 
-        update();
-        return true;
-      }
-
-      return false;
+      update();
+      return true;
     } catch (e) {
       _errorMessage.value = e.toString();
       return false;
@@ -411,31 +453,27 @@ class AuthController extends GetxController {
       _isLoading.value = true;
       final response = await _authRepository.selectBranch(branchId: branchId);
 
-      if (response.data.user != null) {
-        final updatedUser = User.fromJson(response.data.user.toJson());
-        _currentUser.value = updatedUser;
+      final updatedUser = User.fromJson(response.data.user.toJson());
+      _currentUser.value = updatedUser;
 
-        await StorageService.saveUserData(updatedUser.toJson());
-        await StorageService.saveBranchId(branchId);
+      await StorageService.saveUserData(updatedUser.toJson());
+      await StorageService.saveBranchId(branchId);
 
-        update();
+      update();
 
-        try {
-          final appController = Get.find<AppController>();
-          appController.recheckAuthStatus();
-        } catch (_) {
-          Get.offAllNamed(Routes.main);
-        }
-
-        ShamraSnackBar.show(
-          context: Get.context!,
-          message: 'تم اختيار الفرع بنجاح 🏬',
-          type: SnackBarType.success,
-        );
-        return true;
+      try {
+        final appController = Get.find<AppController>();
+        appController.recheckAuthStatus();
+      } catch (_) {
+        Get.offAllNamed<void>(Routes.main);
       }
 
-      return false;
+      ShamraSnackBar.show(
+        context: Get.context!,
+        message: 'تم اختيار الفرع بنجاح 🏬',
+        type: SnackBarType.success,
+      );
+      return true;
     } catch (e) {
       _errorMessage.value = e.toString();
       ShamraSnackBar.show(

@@ -584,6 +584,10 @@ class _RegisterPageState extends State<RegisterPage>
     final auth = Get.find<AuthController>();
     final sent = await auth.sendOtpForRegistration(normalized);
     if (sent) {
+      final args = Get.arguments as Map<String, dynamic>? ?? {};
+      final bool navOnSuccess = args['navigateOnSuccess'] ?? true;
+      final VoidCallback? onLoginSuccess = args['onLoginSuccess'];
+
       Get.toNamed(
         Routes.otp,
         arguments: {
@@ -593,6 +597,8 @@ class _RegisterPageState extends State<RegisterPage>
           'lastName': _lastNameController.text.trim(),
           'password': _passwordController.text,
           'branchId': _selectedBranch!.id,
+          'navigateOnSuccess': navOnSuccess,
+          'onLoginSuccess': onLoginSuccess,
         },
       );
     }

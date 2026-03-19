@@ -2,7 +2,7 @@ name: shamra_app
 description: "Shamra Electronics Mobile App - Browse and order electronics"
 publish_to: "none"
 
-version: 1.0.0+1
+version: 1.0.1
 
 environment:
   sdk: ^3.8.1

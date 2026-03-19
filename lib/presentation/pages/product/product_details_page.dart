@@ -1650,17 +1650,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
               Expanded(
                 child: ShamraButton(
                   text: isInCart ? 'تمت إضافته للسلة' : 'إضافة للسلة',
-                  onPressed: product!.inStock
-                      ? () => cartController.addToCart(product!)
-                      : () {
-                          ShamraSnackBar.show(
-                            context: Get.context!,
-                            message:
-                                'المنتج ${product!.name} غير متوفر حاليًا.',
-                            type: SnackBarType.error,
-                          );
-                        },
-                  isOutlined: !product!.inStock,
+                  onPressed: () => cartController.addToCart(product!),
+                  isOutlined: false,
                   icon: Icons.add_shopping_cart_rounded,
                   height: 56,
                 ),

@@ -41,14 +41,29 @@ class ProductCard extends StatelessWidget {
           constraints: BoxConstraints(
             minWidth: 140,
             maxWidth: isGridView ? double.infinity : 200,
-            minHeight: 200,
+            minHeight: 250,
           ),
           margin: const EdgeInsets.only(left: 12, bottom: 12),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.outline.withOpacity(0.5),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.shadowColor.withOpacity(0.06),
+                blurRadius: 15,
+                spreadRadius: 2,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
           child: Material(
             color: AppColors.white,
             borderRadius: BorderRadius.circular(16),
-            elevation: 3,
-            shadowColor: AppColors.shadowColor.withOpacity(0.08),
+            clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: onTap,
               borderRadius: BorderRadius.circular(16),
@@ -75,7 +90,9 @@ class ProductCard extends StatelessWidget {
                             topRight: Radius.circular(16),
                           ),
                           child: CachedNetworkImage(
-                            imageUrl: HelperMethod.getImageUrl(product.mainImage),
+                            imageUrl: HelperMethod.getImageUrl(
+                              product.mainImage,
+                            ),
                             fit: BoxFit.contain,
                             width: double.infinity,
                             height: double.infinity,
@@ -84,7 +101,9 @@ class ProductCard extends StatelessWidget {
                               child: const Center(
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    AppColors.primary,
+                                  ),
                                 ),
                               ),
                             ),
@@ -107,7 +126,10 @@ class ProductCard extends StatelessWidget {
                             top: 8,
                             right: 8,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [Colors.red, Colors.red.shade700],
@@ -119,7 +141,11 @@ class ProductCard extends StatelessWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.local_offer_rounded, color: AppColors.white, size: 12),
+                                  const Icon(
+                                    Icons.local_offer_rounded,
+                                    color: AppColors.white,
+                                    size: 12,
+                                  ),
                                   const SizedBox(width: 2),
                                   Text(
                                     'خصم ${product.discountPercentage?.toStringAsFixed(0)}%',
@@ -140,7 +166,10 @@ class ProductCard extends StatelessWidget {
                             top: 8,
                             left: 8,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: AppColors.secondaryGradient,
@@ -159,7 +188,11 @@ class ProductCard extends StatelessWidget {
                               child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.star_rounded, color: AppColors.white, size: 12),
+                                  Icon(
+                                    Icons.star_rounded,
+                                    color: AppColors.white,
+                                    size: 12,
+                                  ),
                                   SizedBox(width: 2),
                                   Text(
                                     'مميز',
@@ -175,12 +208,16 @@ class ProductCard extends StatelessWidget {
                           ),
 
                         // Match percent badge (optional)
-                        if (matchPercent != null && matchPercent! >= matchThreshold)
+                        if (matchPercent != null &&
+                            matchPercent! >= matchThreshold)
                           Positioned(
                             bottom: 8,
                             left: 8,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.success.withOpacity(0.9),
                                 borderRadius: BorderRadius.circular(8),
@@ -188,7 +225,11 @@ class ProductCard extends StatelessWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.verified, size: 10, color: AppColors.white),
+                                  const Icon(
+                                    Icons.verified,
+                                    size: 10,
+                                    color: AppColors.white,
+                                  ),
                                   const SizedBox(width: 2),
                                   Text(
                                     'مطابق ${matchPercent}%',

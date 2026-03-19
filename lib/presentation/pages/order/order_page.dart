@@ -7,6 +7,7 @@ import '../../controllers/order_controller.dart';
 import '../../controllers/auth_controller.dart';
 import '../../widgets/common_widgets.dart';
 import '../../../data/models/order.dart';
+import '../../widgets/guest_login_dialog.dart';
 
 class OrdersPage extends StatelessWidget {
   const OrdersPage({super.key});
@@ -281,7 +282,12 @@ class OrdersPage extends StatelessWidget {
         action: ShamraButton(
           text: "تسجيل دخول",
           icon: Icons.login,
-          onPressed: () => Get.toNamed(Routes.login),
+          onPressed: () {
+            GuestLoginDialog.show(
+              title: 'تسجيل الدخول',
+              message: 'يرجى تسجيل الدخول لعرض طلباتك السابقة وتتبعها.',
+            );
+          },
         ),
       ),
     );

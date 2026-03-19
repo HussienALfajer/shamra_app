@@ -152,9 +152,9 @@ class SearchPage extends StatelessWidget {
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 2,
+                                mainAxisExtent: 250,
                                 mainAxisSpacing: 12,
                                 crossAxisSpacing: 12,
-                                childAspectRatio: 0.62,
                               ),
                           delegate: SliverChildBuilderDelegate((
                             context,

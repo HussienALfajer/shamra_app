@@ -231,6 +231,15 @@ class AuthService {
     }
   }
 
+  /// Delete current user account.
+  static Future<void> deleteAccount() async {
+    try {
+      await DioService.delete('/auth/profile/delete');
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   /// Submit merchant request.
   static Future<Map<String, dynamic>> addMerchantRequest({
     required String storeName,

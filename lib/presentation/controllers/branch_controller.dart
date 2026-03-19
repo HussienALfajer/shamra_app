@@ -6,6 +6,8 @@ import '../../data/repositories/branch_repository.dart';
 import '../widgets/common_widgets.dart';
 import 'auth_controller.dart';
 import '../../core/services/storage_service.dart';
+import '../../routes/app_routes.dart';
+import 'app_controller.dart';
 
 /// Branch Controller
 /// - Loads active branches from repository
@@ -59,7 +61,7 @@ class BranchController extends GetxController {
   }
 
   /// Select a branch via API (requires user to be authenticated).
-  /// Mirrors the behavior used on the dedicated Branch Selection page.
+  /// Select a branch via API (requires user to be authenticated) or locally (for guests).
   Future<void> selectBranch(Branch branch) async {
     try {
       _isSelecting.value = true;
@@ -67,11 +69,33 @@ class BranchController extends GetxController {
       _selectedBranch.value = branch;
 
       final authController = Get.find<AuthController>();
-      final ok = await authController.selectBranch(branch.id);
 
-      if (!ok) {
-        _selectedBranch.value = null;
-        _errorMessage.value = authController.errorMessage;
+      if (!authController.isLoggedIn) {
+        // Guest mode logic: save locally and navigate
+        await cacheSelectedBranch(branch);
+
+        try {
+          final appController = Get.find<AppController>();
+          appController.recheckAuthStatus();
+        } catch (_) {
+          Get.offAllNamed(Routes.main);
+        }
+
+        if (Get.context != null) {
+          ShamraSnackBar.show(
+            context: Get.context!,
+            message: 'تم اختيار الفرع بنجاح 🏬',
+            type: SnackBarType.success,
+          );
+        }
+      } else {
+        // Authenticated logic: use API
+        final ok = await authController.selectBranch(branch.id);
+
+        if (!ok) {
+          _selectedBranch.value = null;
+          _errorMessage.value = authController.errorMessage;
+        }
       }
     } catch (e) {
       _errorMessage.value = e.toString();

@@ -1,6 +1,4 @@
-// lib/data/repositories/auth_repository.dart
 import 'package:shamra_app/data/models/auth_res.dart';
-import '../../core/services/notification_service.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../../core/services/storage_service.dart';
@@ -190,6 +188,15 @@ class AuthRepository {
   Future<void> logout() async {
     try {
       await AuthService.logout();
+    } finally {
+      await StorageService.clearAll();
+    }
+  }
+
+  /// Delete current user account.
+  Future<void> deleteAccount() async {
+    try {
+      await AuthService.deleteAccount();
     } finally {
       await StorageService.clearAll();
     }

@@ -46,8 +46,12 @@ class AppController extends GetxController {
         Get.offAllNamed(Routes.main);
       } else if (_isLoggedIn.value && !_hasBranchSelected.value) {
         Get.offAllNamed(Routes.branchSelection);
+      } else if (!_isLoggedIn.value && _hasBranchSelected.value) {
+        // Guest mode: Selected branch already, go to main
+        Get.offAllNamed(Routes.main);
       } else {
-        Get.offAllNamed(Routes.welcome);
+        // Guest mode: No branch selected, go to branch selection
+        Get.offAllNamed(Routes.branchSelection);
       }
     } catch (e) {
       debugPrint('checkAuthStatus error: $e');

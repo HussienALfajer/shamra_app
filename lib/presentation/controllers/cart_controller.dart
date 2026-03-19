@@ -1,5 +1,7 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import 'package:shamra_app/presentation/controllers/auth_controller.dart' as shamra_auth;
+import 'package:shamra_app/presentation/widgets/guest_login_dialog.dart';
 import 'package:shamra_app/data/models/order.dart';
 import '../../data/models/cart.dart';
 import '../../data/models/product.dart';
@@ -200,8 +202,20 @@ class CartController extends GetxController {
           TextButton(onPressed: () => Get.back(), child: const Text('إغلاق')),
           ElevatedButton(
             onPressed: () {
-              Get.back();
-              Get.toNamed('/checkout');
+              Get.back(); // إغلاق ملخص السلة
+
+              final authController = Get.find<shamra_auth.AuthController>();
+              if (authController.isLoggedIn) {
+                Get.toNamed('/checkout');
+              } else {
+                GuestLoginDialog.show(
+                  title: 'تسجيل الدخول مطلوب',
+                  message: 'يجب عليك تسجيل الدخول للمتابعة إلى إتمام الطلب.',
+                  onLoginSuccess: () {
+                    Get.toNamed('/checkout');
+                  },
+                );
+              }
             },
             child: const Text('إتمام الطلب'),
           ),

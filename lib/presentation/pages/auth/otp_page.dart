@@ -257,7 +257,16 @@ class _OtpPageState extends State<OtpPage> {
         );
 
         if (created) {
-          Get.offAllNamed(Routes.main);
+          final bool navOnSuccess = args['navigateOnSuccess'] ?? true;
+          final VoidCallback? onLoginSuccess = args['onLoginSuccess'];
+
+          if (navOnSuccess) {
+            Get.offAllNamed(Routes.main);
+          } else {
+            if (onLoginSuccess != null) {
+              onLoginSuccess();
+            }
+          }
         }
       } finally {
         if (mounted) setState(() => _isVerifying = false);

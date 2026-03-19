@@ -20,10 +20,11 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: WillPopScope(
-        onWillPop: () async {
-          final handled = main.backToPreviousTab();
-          return !handled;
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, dynamic result) async {
+          if (didPop) return;
+          main.backToPreviousTab();
         },
         child: Scaffold(
           backgroundColor: AppColors.background,
@@ -51,10 +52,10 @@ class _ProfilePageState extends State<ProfilePage> {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(60),
                 border: Border.all(
-                  color: AppColors.primary.withOpacity(0.2),
+                  color: AppColors.primary.withValues(alpha: 0.2),
                   width: 2,
                 ),
               ),
@@ -82,14 +83,14 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 32),
             ShamraButton(
               text: 'تسجيل دخول',
-              onPressed: () => Get.toNamed('/login'),
+              onPressed: () => Get.toNamed<void>('/login'),
               icon: Icons.login_rounded,
               width: double.infinity,
             ),
             const SizedBox(height: 16),
             ShamraButton(
               text: 'إنشاء حساب جديد',
-              onPressed: () => Get.toNamed('/register'),
+              onPressed: () => Get.toNamed<void>('/register'),
               icon: Icons.person_add_rounded,
               isOutlined: true,
               width: double.infinity,
@@ -224,10 +225,10 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withOpacity(0.1),
+                    color: AppColors.success.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: AppColors.success.withOpacity(0.3),
+                      color: AppColors.success.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Column(
@@ -263,10 +264,10 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.warning.withOpacity(0.1),
+                    color: AppColors.warning.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: AppColors.warning.withOpacity(0.3),
+                      color: AppColors.warning.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Column(
@@ -365,7 +366,7 @@ class _ProfilePageState extends State<ProfilePage> {
           // Edit Profile Button
           ShamraButton(
             text: 'تعديل الملف الشخصي',
-            onPressed: () => Get.toNamed('/edit-profile'),
+            onPressed: () => Get.toNamed<void>('/edit-profile'),
             icon: Icons.edit_outlined,
             isOutlined: true,
             width: double.infinity,
@@ -496,7 +497,7 @@ class _ProfilePageState extends State<ProfilePage> {
     Map<String, dynamic> request,
     AuthController authController,
   ) {
-    Color _getStatusColor(String status) {
+    Color getStatusColor(String status) {
       switch (status) {
         case 'pending':
           return AppColors.warning;
@@ -509,7 +510,7 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     }
 
-    IconData _getStatusIcon(String status) {
+    IconData getStatusIcon(String status) {
       switch (status) {
         case 'pending':
           return Icons.pending_rounded;
@@ -522,7 +523,7 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     }
 
-    String _getStatusText(String status) {
+    String getStatusText(String status) {
       switch (status) {
         case 'pending':
           return 'قيد المراجعة';
@@ -539,10 +540,10 @@ class _ProfilePageState extends State<ProfilePage> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _getStatusColor(request['status']).withOpacity(0.1),
+        color: getStatusColor(request['status']).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: _getStatusColor(request['status']).withOpacity(0.3),
+          color: getStatusColor(request['status']).withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -551,17 +552,17 @@ class _ProfilePageState extends State<ProfilePage> {
           Row(
             children: [
               Icon(
-                _getStatusIcon(request['status']),
-                color: _getStatusColor(request['status']),
+                getStatusIcon(request['status']),
+                color: getStatusColor(request['status']),
                 size: 20,
               ),
               const SizedBox(width: 8),
               Text(
-                _getStatusText(request['status']),
+                getStatusText(request['status']),
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: _getStatusColor(request['status']),
+                  color: getStatusColor(request['status']),
                 ),
               ),
             ],
@@ -634,6 +635,15 @@ class _ProfilePageState extends State<ProfilePage> {
           backgroundColor: AppColors.error,
           width: double.infinity,
         ),
+        const SizedBox(height: 16),
+        ShamraButton(
+          text: 'حذف الحساب',
+          onPressed: () => _showDeleteAccountDialog(authController),
+          icon: Icons.person_remove_rounded,
+          backgroundColor: AppColors.error,
+          isOutlined: true,
+          width: double.infinity,
+        ),
       ],
     );
   }
@@ -655,7 +665,7 @@ class _ProfilePageState extends State<ProfilePage> {
     if (!sent) return; // الدالة نفسها تعرض رسائل الخطأ
 
     // 2) فتح صفحة OTP بوضع إعادة التعيين (reset)
-    Get.toNamed(Routes.otp, arguments: {'phone': phone, 'flow': 'reset'});
+    Get.toNamed<void>(Routes.otp, arguments: {'phone': phone, 'flow': 'reset'});
   }
 
   void _showMerchantRequestDialog(AuthController authController) {
@@ -663,7 +673,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final addressController = TextEditingController();
     final phoneNumberController = TextEditingController();
 
-    Get.dialog(
+    Get.dialog<void>(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
@@ -724,7 +734,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     address: addressController.text,
                     phoneNumber: phoneNumberController.text,
                   );
-                  Get.back();
+                  Get.back<void>();
                 },
                 width: double.infinity,
               ),
@@ -736,7 +746,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _showLogoutDialog(AuthController authController) {
-    Get.dialog(
+    Get.dialog<void>(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
@@ -752,7 +762,7 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Get.back<void>(),
             child: const Text(
               'إلغاء',
               style: TextStyle(color: AppColors.textSecondary),
@@ -761,8 +771,44 @@ class _ProfilePageState extends State<ProfilePage> {
           ShamraButton(
             text: 'تسجيل الخروج',
             onPressed: () async {
-              Get.back();
+              Get.back<void>();
               await authController.logout();
+            },
+            backgroundColor: AppColors.error,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountDialog(AuthController authController) {
+    Get.dialog<void>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'حذف الحساب',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: AppColors.error,
+          ),
+        ),
+        content: const Text(
+          'هل أنت متأكد أنك تريد حذف حسابك نهائياً؟ هذا الإجراء لا يمكن التراجع عنه وسيتم حذف جميع بياناتك.',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back<void>(),
+            child: const Text(
+              'إلغاء',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+          ShamraButton(
+            text: 'حذف نهائي',
+            onPressed: () async {
+              Get.back<void>();
+              await authController.deleteAccount();
             },
             backgroundColor: AppColors.error,
           ),

@@ -328,6 +328,7 @@ class CustomerHomePage extends StatelessWidget {
         color: AppColors.primary,
         child: CustomScrollView(
           controller: controller.homeScrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             _buildSliverAppBar(),
 
@@ -657,7 +658,7 @@ class CustomerHomePage extends StatelessWidget {
           ),
           SizedBox(height: kSpace), // was 12
           SizedBox(
-            height: 260,
+            height: 250,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               // unified horizontal padding

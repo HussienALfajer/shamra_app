@@ -220,9 +220,16 @@ class _LoginPageState extends State<LoginPage> {
                                       );
                                       return;
                                     }
+                                    
+                                    final args = Get.arguments as Map<String, dynamic>? ?? {};
+                                    final bool navOnSuccess = args['navigateOnSuccess'] ?? true;
+                                    final VoidCallback? onLoginSuccess = args['onLoginSuccess'];
+
                                     await controller.login(
                                       normalized,
                                       _passwordController.text,
+                                      navigateOnSuccess: navOnSuccess,
+                                      onLoginSuccess: onLoginSuccess,
                                     );
                                   }
                                 },
